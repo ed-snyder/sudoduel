@@ -1,0 +1,159 @@
+:root {
+  --bg: #0b1020;
+  --panel: #111936;
+  --text: #f4f6fb;
+  --muted: #c9d3ef;
+  --primary: #5c7cfa;
+  --primary-600: #4b6af7;
+  --border: #233056;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: linear-gradient(180deg, var(--bg), #0e1430 50%, #0b1020 100%);
+  color: var(--text);
+}
+
+.Site {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.Container {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.Navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11, 16, 32, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.NavbarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.Brand {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.Nav {
+  display: flex;
+  gap: 14px;
+}
+
+.NavLink {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.NavLink:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.04);
+}
+.NavLink.Active {
+  color: var(--text);
+  background: rgba(92, 124, 250, 0.18);
+}
+
+.Content {
+  flex: 1;
+}
+
+.Section {
+  padding: 56px 0;
+}
+
+.HeroActions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.Button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: #0f1731;
+  text-decoration: none;
+  transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.Button:hover {
+  transform: translateY(-1px);
+  border-color: #2b3b6c;
+  background: #131d3e;
+}
+.Button.Primary {
+  background: var(--primary);
+  border-color: var(--primary-600);
+}
+.Button.Primary:hover {
+  background: var(--primary-600);
+}
+
+.ContactForm {
+  margin-top: 20px;
+  display: grid;
+  gap: 12px;
+  max-width: 520px;
+}
+.ContactForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+.ContactForm input,
+.ContactForm textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+.ContactForm input:focus,
+.ContactForm textarea:focus {
+  border-color: #2b3b6c;
+}
+
+.Footer {
+  border-top: 1px solid var(--border);
+  background: #0c132e;
+}
+.FooterInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 64px;
+}
+.FooterLink {
+  color: var(--muted);
+  text-decoration: none;
+}
