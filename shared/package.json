@@ -1,16 +1,17 @@
 {
-  "name": "shared",
+  "name": "sudoduel-shared",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Shared types and constants for Sudoduel",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "watch": "tsc --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.2.2"
   }
 }
