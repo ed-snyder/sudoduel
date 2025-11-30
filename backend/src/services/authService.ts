@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserModel } from '../models/User';
 import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
@@ -29,10 +29,17 @@ export const AuthService = {
     await PlayerRatingModel.create(profile.id, DEFAULT_LADDER_ID);
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+    const signOptions: SignOptions = {
+      expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'],
+    };
     const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { userId: Number(user.id) },
+      jwtSecret,
+      signOptions
     );
 
     return {
@@ -66,10 +73,17 @@ export const AuthService = {
     const profile = await PlayerProfileModel.findByUserId(user.id);
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+    const signOptions: SignOptions = {
+      expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'],
+    };
     const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { userId: Number(user.id) },
+      jwtSecret,
+      signOptions
     );
 
     return {

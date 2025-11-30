@@ -1,13 +1,14 @@
 interface PlayerGameState {
   playerId: number;
   slot: 1 | 2;
-  grid: number[][]; // Current state of their grid
+  grid: number[][];
   livesRemaining: number;
   cellsCompleted: number;
   mistakes: number;
   timeSpentSeconds: number;
   isLockedOut: boolean;
   isSolved: boolean;
+  lastMoveTime: number;
 }
 
 interface GameState {
@@ -18,14 +19,13 @@ interface GameState {
   player2: PlayerGameState;
   status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
   startedAt: number | null;
-  timeLimit: number; // seconds
+  timeLimit: number;
+  timeoutTimer: NodeJS.Timeout | null;
 }
 
-// In-memory game state storage
 const gameStates = new Map<number, GameState>();
 
 export const GameStateManager = {
-  // Initialize a new game
   createGame(
     matchId: number,
     puzzleId: number,
@@ -45,132 +45,237 @@ export const GameStateManager = {
       player1: {
         playerId: player1Id,
         slot: 1,
-        grid: JSON.parse(JSON.stringify(initialGridArray)), // Deep copy
+        grid: JSON.parse(JSON.stringify(initialGridArray)),
         livesRemaining: 3,
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
         timeSpentSeconds: 0,
         isLockedOut: false,
         isSolved: false,
+        lastMoveTime: Date.now(),
       },
       player2: {
         playerId: player2Id,
         slot: 2,
-        grid: JSON.parse(JSON.stringify(initialGridArray)), // Deep copy
+        grid: JSON.parse(JSON.stringify(initialGridArray)),
         livesRemaining: 3,
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
         timeSpentSeconds: 0,
         isLockedOut: false,
         isSolved: false,
+        lastMoveTime: Date.now(),
       },
       status: 'WAITING',
       startedAt: null,
       timeLimit,
+      timeoutTimer: null,
     };
 
     gameStates.set(matchId, gameState);
     return gameState;
   },
 
-  // Get game state
   getGame(matchId: number): GameState | undefined {
     return gameStates.get(matchId);
   },
 
-  // Start the game
-  startGame(matchId: number): void {
+  startGame(matchId: number, onTimeout: (matchId: number) => void): void {
     const game = gameStates.get(matchId);
-    if (game) {
-      game.status = 'IN_PROGRESS';
-      game.startedAt = Date.now();
-    }
+    if (!game) return;
+
+    game.status = 'IN_PROGRESS';
+    game.startedAt = Date.now();
+    game.player1.lastMoveTime = Date.now();
+    game.player2.lastMoveTime = Date.now();
+
+    game.timeoutTimer = setTimeout(() => {
+      onTimeout(matchId);
+    }, game.timeLimit * 1000);
   },
 
-  // Validate and apply a move
+  updatePlayerTime(matchId: number, playerId: number): void {
+    const game = gameStates.get(matchId);
+    if (!game || game.status !== 'IN_PROGRESS') return;
+
+    const player = game.player1.playerId === playerId ? game.player1 : game.player2;
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - player.lastMoveTime) / 1000);
+    player.timeSpentSeconds += elapsedSeconds;
+    player.lastMoveTime = now;
+  },
+
   applyMove(
     matchId: number,
     playerId: number,
     row: number,
     col: number,
     value: number
-  ): { success: boolean; correct?: boolean; player: PlayerGameState } {
+  ): { success: boolean; correct?: boolean; player: PlayerGameState; gameEnded?: boolean } {
     const game = gameStates.get(matchId);
-    if (!game) {
-      throw new Error('Game not found');
+    
+    if (!game || game.status !== 'IN_PROGRESS') {
+      throw new Error('Game not in progress');
     }
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
+    const opponent = game.player1.playerId === playerId ? game.player2 : game.player1;
 
-    // Check if player is locked out
+    this.updatePlayerTime(matchId, playerId);
+
     if (player.isLockedOut) {
-      return { success: false, player };
+      return { success: false, player, gameEnded: false };
     }
 
-    // Check if cell is editable (wasn't a given clue)
-    const initialCells = this.countInitialCells(player.grid);
-    if (player.grid[row][col] !== 0 && initialCells > 0) {
-      // This was a given clue, can't change it
-      return { success: false, player };
+    if (row < 0 || row >= 9 || col < 0 || col >= 9) {
+      return { success: false, player, gameEnded: false };
     }
 
-    // Check if move is correct
-    const correct = game.solutionGrid[row][col] === value;
+    if (player.grid[row] && player.grid[row][col] !== 0) {
+      const initialCells = this.countInitialCells(player.grid);
+      if (initialCells > 0) {
+        return { success: false, player, gameEnded: false };
+      }
+    }
+
+    const correct = game.solutionGrid[row] && game.solutionGrid[row][col] === value;
 
     if (correct) {
-      // Correct move
-      const wasEmpty = player.grid[row][col] === 0;
-      player.grid[row][col] = value;
+      const wasEmpty = player.grid[row] && player.grid[row][col] === 0;
+      if (player.grid[row]) {
+        player.grid[row][col] = value;
+      }
       
       if (wasEmpty) {
         player.cellsCompleted++;
       }
 
-      // Check if puzzle is solved
+      console.log(`✅ Correct move! Player ${playerId} cells: ${player.cellsCompleted}`);
+
       if (player.cellsCompleted === 81) {
         player.isSolved = true;
         game.status = 'COMPLETED';
+        
+        if (game.timeoutTimer) {
+          clearTimeout(game.timeoutTimer);
+        }
+        
+        console.log(`🎯 PUZZLE SOLVED by player ${playerId}!`);
+        return { success: true, correct, player, gameEnded: true };
+      }
+
+      console.log(`🔍 Checking opponent lockout. Opponent locked: ${opponent.isLockedOut}`);
+      if (opponent.isLockedOut) {
+        game.status = 'COMPLETED';
+        if (game.timeoutTimer) {
+          clearTimeout(game.timeoutTimer);
+        }
+        console.log(`🏆 GAME ENDS! Player ${playerId} wins, opponent is locked out`);
+        return { success: true, correct, player, gameEnded: true };
       }
     } else {
-      // Incorrect move
       player.mistakes++;
       player.livesRemaining--;
-      player.timeSpentSeconds += 10; // 10 second penalty
+      player.timeSpentSeconds += 10;
 
-      // Check if locked out
       if (player.livesRemaining <= 0) {
         player.isLockedOut = true;
+        
+        if (opponent.isLockedOut || opponent.cellsCompleted > player.cellsCompleted) {
+          game.status = 'COMPLETED';
+          if (game.timeoutTimer) {
+            clearTimeout(game.timeoutTimer);
+          }
+          return { success: true, correct: correct as boolean, player, gameEnded: true };
+        }
       }
     }
 
-    return { success: true, correct, player };
+    return { success: true, correct: correct as boolean, player, gameEnded: false };
   },
 
-  // Convert grid string to 9x9 array
+  getFinalResults(matchId: number): {
+    player1: any;
+    player2: any;
+    winnerId: number | null;
+    resultCode: number;
+  } | null {
+    const game = gameStates.get(matchId);
+    if (!game) return null;
+
+    const p1 = game.player1;
+    const p2 = game.player2;
+
+    let winnerId: number | null = null;
+    let resultCode: number = 3;
+
+    if (p1.isSolved && !p2.isSolved) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.isSolved && !p1.isSolved) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    } else if (p1.cellsCompleted > p2.cellsCompleted) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.cellsCompleted > p1.cellsCompleted) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    }
+
+    return {
+      player1: {
+        playerId: p1.playerId,
+        cellsCompleted: p1.cellsCompleted,
+        livesRemaining: p1.livesRemaining,
+        mistakes: p1.mistakes,
+        timeSpentSeconds: p1.timeSpentSeconds,
+        finalState: p1.isSolved ? 'SOLVED' : p1.isLockedOut ? 'LOCKED_OUT' : 'TIMEOUT',
+        isWinner: winnerId === p1.playerId,
+      },
+      player2: {
+        playerId: p2.playerId,
+        cellsCompleted: p2.cellsCompleted,
+        livesRemaining: p2.livesRemaining,
+        mistakes: p2.mistakes,
+        timeSpentSeconds: p2.timeSpentSeconds,
+        finalState: p2.isSolved ? 'SOLVED' : p2.isLockedOut ? 'LOCKED_OUT' : 'TIMEOUT',
+        isWinner: winnerId === p2.playerId,
+      },
+      winnerId,
+      resultCode,
+    };
+  },
+
   stringToGrid(gridString: string): number[][] {
     const grid: number[][] = [];
     for (let i = 0; i < 9; i++) {
       grid[i] = [];
       for (let j = 0; j < 9; j++) {
-        grid[i][j] = parseInt(gridString[i * 9 + j]);
+        const char = gridString[i * 9 + j];
+        grid[i][j] = char !== undefined ? parseInt(char) : 0;
       }
     }
     return grid;
   },
 
-  // Count initial filled cells
   countInitialCells(grid: number[][]): number {
     let count = 0;
     for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        if (grid[i][j] !== 0) count++;
+      if (grid[i]) {
+        for (let j = 0; j < 9; j++) {
+          if (grid[i] && grid[i][j] !== 0) count++;
+        }
       }
     }
     return count;
   },
 
-  // Remove game from memory
   removeGame(matchId: number): void {
+    const game = gameStates.get(matchId);
+    if (game?.timeoutTimer) {
+      clearTimeout(game.timeoutTimer);
+    }
     gameStates.delete(matchId);
   },
 };
