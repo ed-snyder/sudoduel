@@ -85,15 +85,19 @@ export const setupWebSocketServer = (server: Server) => {
           return;
         }
 
-        game = GameStateManager.createGame(
-          matchId,
-          puzzle.id,
-          puzzle.initial_grid,
-          puzzle.solution_grid,
-          Number(players[0].player_id),  // ADD Number() here
-          Number(players[1].player_id),  // ADD Number() here
-          300
-        );
+        const player1 = players.find(p => p.slot === 1)!;
+const player2 = players.find(p => p.slot === 2)!;
+
+game = GameStateManager.createGame(
+  matchId,
+  puzzle.id,
+  puzzle.initial_grid,
+  puzzle.solution_grid,
+  Number(player1.player_id),
+  Number(player2.player_id),
+  300
+);
+
       }
 
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
