@@ -1,76 +1,101 @@
-import { MatchmakingQueueModel } from '../models/MatchmakingQueue';
-import { MatchModel } from '../models/Match';
 import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
-import { PuzzleService } from './puzzleService';
+import { MatchmakingQueueModel } from '../models/MatchmakingQueue';
+import { MatchModel } from '../models/Match';
+import { PuzzleModel } from '../models/Puzzle';
 
 const DEFAULT_LADDER_ID = 1;
-const RATING_WINDOW = 200; // ±200 rating points
+const RATING_WINDOW = 200;
+
+// Store active matches for players (in-memory cache)
+const playerMatches = new Map<number, number>(); // playerId -> matchId
 
 export const MatchmakingService = {
-  // Join matchmaking queue
   async joinQueue(userId: number) {
-    // Get player profile
+    console.log(`🎯 Matchmaking: User ${userId} joining queue`);
+
     const profile = await PlayerProfileModel.findByUserId(userId);
+    console.log(`👤 Profile found:`, profile?.id);
+
     if (!profile) {
       throw new Error('Player profile not found');
     }
 
-    // Get player rating
+    // Check if player already has an active match
+    if (playerMatches.has(profile.id)) {
+      const matchId = playerMatches.get(profile.id)!;
+      console.log(`✅ Player ${profile.id} already has match ${matchId}`);
+      return { status: 'matched', match_id: matchId };
+    }
+
     const rating = await PlayerRatingModel.findByPlayerAndLadder(
       profile.id,
       DEFAULT_LADDER_ID
     );
+    console.log(`⭐ Rating:`, rating?.rating);
+
     if (!rating) {
-      throw new Error('Player rating not found');
+      // Create default rating if not exists
+      await PlayerRatingModel.create(profile.id, DEFAULT_LADDER_ID);
+      const newRating = await PlayerRatingModel.findByPlayerAndLadder(
+        profile.id,
+        DEFAULT_LADDER_ID
+      );
+      console.log(`🆕 Created new rating:`, newRating?.rating);
     }
+
+    const playerRating = rating?.rating || 1500;
+    const playerRd = rating?.rd || 350;
 
     // Check if already in queue
-    const inQueue = await MatchmakingQueueModel.isPlayerInQueue(
-      profile.id,
-      DEFAULT_LADDER_ID
-    );
-    if (inQueue) {
-      return { status: 'queued', message: 'Already in queue' };
-    }
+    const inQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
+    console.log(`📋 Already in queue:`, inQueue);
 
-    // Try to find an opponent
-    const opponent = await MatchmakingQueueModel.findOpponent(
-      profile.id,
-      DEFAULT_LADDER_ID,
-      rating.rating,
-      RATING_WINDOW
-    );
+    if (!inQueue) {
+      // Try to find an opponent first
+      console.log(`🔍 Looking for opponent...`);
+      const opponent = await MatchmakingQueueModel.findOpponent(
+        profile.id,
+        DEFAULT_LADDER_ID,
+        playerRating,
+        RATING_WINDOW
+      );
 
-    if (opponent) {
-      // Found a match! Create the match
-      const match = await this.createMatch(profile.id, opponent.player_id);
-      
-      // Remove both players from queue
-      await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
-      await MatchmakingQueueModel.dequeue(opponent.player_id, DEFAULT_LADDER_ID);
+      if (opponent) {
+        console.log(`✅ Found opponent:`, opponent.player_id);
+        // Create match
+        const match = await this.createMatch(profile.id, opponent.player_id);
+        
+        // Store match for both players
+        playerMatches.set(profile.id, match.id);
+        playerMatches.set(opponent.player_id, match.id);
+        
+        // Remove opponent from queue
+        await MatchmakingQueueModel.dequeue(opponent.player_id, DEFAULT_LADDER_ID);
+        
+        return { status: 'matched', match_id: match.id };
+      }
 
-      return {
-        status: 'matched',
-        match_id: match.id,
-      };
-    } else {
       // No opponent found, add to queue
+      console.log(`📝 Adding to queue...`);
       await MatchmakingQueueModel.enqueue(
         profile.id,
         DEFAULT_LADDER_ID,
-        rating.rating,
-        rating.rd
+        playerRating,
+        playerRd
       );
-
-      return {
-        status: 'queued',
-        message: 'Waiting for opponent...',
-      };
     }
+
+    // Check again if someone matched with us while we were processing
+    if (playerMatches.has(profile.id)) {
+      const matchId = playerMatches.get(profile.id)!;
+      console.log(`✅ Match found while processing: ${matchId}`);
+      return { status: 'matched', match_id: matchId };
+    }
+
+    return { status: 'queued', message: 'Waiting for opponent...' };
   },
 
-  // Leave matchmaking queue
   async leaveQueue(userId: number) {
     const profile = await PlayerProfileModel.findByUserId(userId);
     if (!profile) {
@@ -78,50 +103,54 @@ export const MatchmakingService = {
     }
 
     await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
-
+    playerMatches.delete(profile.id);
+    
     return { status: 'left_queue' };
   },
 
-  // Create a match between two players
   async createMatch(player1Id: number, player2Id: number) {
-    // Get a random puzzle
-    const puzzle = await PuzzleService.getRandomPuzzle(DEFAULT_LADDER_ID);
+    console.log(`🎮 Creating match: Player ${player1Id} vs Player ${player2Id}`);
+    
+    const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
+    if (!puzzle) {
+      throw new Error('No puzzle available');
+    }
 
-    // Create match
     const match = await MatchModel.create(DEFAULT_LADDER_ID, puzzle.id);
 
     // Get ratings for both players
-    const rating1 = await PlayerRatingModel.findByPlayerAndLadder(
-      player1Id,
-      DEFAULT_LADDER_ID
-    );
-    const rating2 = await PlayerRatingModel.findByPlayerAndLadder(
-      player2Id,
-      DEFAULT_LADDER_ID
-    );
+    const rating1 = await PlayerRatingModel.findByPlayerAndLadder(player1Id, DEFAULT_LADDER_ID);
+    const rating2 = await PlayerRatingModel.findByPlayerAndLadder(player2Id, DEFAULT_LADDER_ID);
 
-    if (!rating1 || !rating2) {
-      throw new Error('Player ratings not found');
-    }
-
-    // Add both players to match
+    // Add players to match
     await MatchModel.addPlayer(
       match.id,
       player1Id,
       1,
-      rating1.rating,
-      rating1.rd,
-      rating1.volatility
+      rating1?.rating || 1500,
+      rating1?.rd || 350,
+      rating1?.volatility || 0.06
     );
+
     await MatchModel.addPlayer(
       match.id,
       player2Id,
       2,
-      rating2.rating,
-      rating2.rd,
-      rating2.volatility
+      rating2?.rating || 1500,
+      rating2?.rd || 350,
+      rating2?.volatility || 0.06
     );
 
+    console.log(`✅ Match ${match.id} created`);
     return match;
+  },
+
+  // Clean up match from cache (call after game ends)
+  clearMatch(matchId: number) {
+    for (const [playerId, mId] of playerMatches.entries()) {
+      if (mId === matchId) {
+        playerMatches.delete(playerId);
+      }
+    }
   },
 };
