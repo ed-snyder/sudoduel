@@ -26,4 +26,15 @@ router.post('/leave', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
+// GET /api/matchmaking/status - Check matchmaking status (for polling)
+router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await MatchmakingService.checkStatus(req.userId!);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Matchmaking status error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 export default router;

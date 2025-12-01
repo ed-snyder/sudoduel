@@ -3,6 +3,8 @@ interface SudokuGridProps {
   initialGrid: number[][];
   selectedCell: { row: number; col: number } | null;
   onCellClick: (row: number, col: number) => void;
+  notes?: Map<string, number[]>;
+  notesMode?: boolean;
 }
 
 export default function SudokuGrid({
@@ -10,6 +12,8 @@ export default function SudokuGrid({
   initialGrid,
   selectedCell,
   onCellClick,
+  notes = new Map(),
+  notesMode = false,
 }: SudokuGridProps) {
   const isInitialCell = (row: number, col: number) => {
     return initialGrid[row][col] !== 0;
@@ -43,21 +47,42 @@ export default function SudokuGrid({
           const borderRight = (colIndex + 1) % 3 === 0 && colIndex < 8 ? 'border-r-2 border-gray-600' : 'border-r border-gray-700';
           const borderBottom = (rowIndex + 1) % 3 === 0 && rowIndex < 8 ? 'border-b-2 border-gray-600' : 'border-b border-gray-700';
 
+          const cellKey = `${rowIndex}-${colIndex}`;
+          const cellNotes = notes.get(cellKey) || [];
+          const hasValue = cell !== 0;
+          const showNotes = !hasValue && cellNotes.length > 0;
+
           return (
             <button
               key={`${rowIndex}-${colIndex}`}
               onClick={() => !isInitial && onCellClick(rowIndex, colIndex)}
               className={`
-                w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-lg sm:text-xl font-bold
+                w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
                 ${selected ? 'bg-blue-600' : highlighted ? 'bg-gray-700' : 'bg-gray-800'}
-                ${isInitial ? 'text-gray-300' : 'text-blue-400'}
-                ${!isInitial && 'hover:bg-gray-600 cursor-pointer'}
-                transition-colors
+                ${!isInitial && 'hover:bg-gray-600 active:bg-gray-500 cursor-pointer'}
+                transition-colors touch-manipulation
               `}
               disabled={isInitial}
             >
-              {cell !== 0 ? cell : ''}
+              {hasValue ? (
+                <span className={`text-sm sm:text-lg md:text-xl font-bold ${isInitial ? 'text-gray-300' : 'text-blue-400'}`}>
+                  {cell}
+                </span>
+              ) : showNotes ? (
+                <div className="grid grid-cols-3 gap-0 w-full h-full p-0.5">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                    <span
+                      key={num}
+                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-400 ${
+                        cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      {num}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </button>
           );
         })

@@ -2,8 +2,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { authAPI, playerAPI } from '../services/api';
 
 interface User {
+  // IMPORTANT: This is the player_profile ID, not the auth users.id
+  // We always normalize to the player profile so it matches backend player_id
   id: number;
-  email: string;
   display_name: string;
   rating?: number;
 }
@@ -39,7 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const playerInfo = await playerAPI.getMe();
       setUser({
         id: playerInfo.id,
-        email: '',
         display_name: playerInfo.display_name,
         rating: playerInfo.rating,
       });
@@ -53,14 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await authAPI.login(email, password);
     localStorage.setItem('token', response.token);
     setToken(response.token);
-    setUser(response.user);
+    // After login, normalize user to player_profile via /player/me
+    await refreshUser();
   };
 
   const signup = async (email: string, password: string, displayName: string) => {
     const response = await authAPI.signup(email, password, displayName);
     localStorage.setItem('token', response.token);
     setToken(response.token);
-    setUser(response.user);
+    // After signup, normalize user to player_profile via /player/me
+    await refreshUser();
   };
 
   const logout = () => {

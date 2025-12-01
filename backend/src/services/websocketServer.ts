@@ -101,7 +101,7 @@ game = GameStateManager.createGame(
       }
 
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
-        GameStateManager.startGame(matchId, handleTimeout);
+        GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
         await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
 
         broadcastToMatch(matchId, {
@@ -109,6 +109,8 @@ game = GameStateManager.createGame(
           data: {
             initial_grid: game.player1.grid,
             time_limit: game.timeLimit,
+            player1_time_remaining: game.player1.timeRemainingSeconds,
+            player2_time_remaining: game.player2.timeRemainingSeconds,
           },
         });
       }
@@ -122,11 +124,13 @@ game = GameStateManager.createGame(
             cells_completed: game.player1.cellsCompleted,
             lives_remaining: game.player1.livesRemaining,
             is_locked_out: game.player1.isLockedOut,
+            time_remaining: game.player1.timeRemainingSeconds,
           },
           player2: {
             cells_completed: game.player2.cellsCompleted,
             lives_remaining: game.player2.livesRemaining,
             is_locked_out: game.player2.isLockedOut,
+            time_remaining: game.player2.timeRemainingSeconds,
           },
         },
       }));
@@ -175,26 +179,43 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       return;
     }
     
+    console.log(`🔍 Applying move: userId=${userId}, userProfile.id=${userProfile.id}, row=${row}, col=${col}, value=${value}`);
     const result = GameStateManager.applyMove(matchId, userProfile.id, row, col, value);
 
     console.log(`✅ Move result:`, result);
+    console.log(`🔍 Move was ${result.correct ? 'CORRECT' : 'INCORRECT'}`);
+    console.log(`🔍 Player who made move: slot=${result.player.slot}, lives=${result.player.livesRemaining}, cells=${result.player.cellsCompleted}`);
     console.log(`🔍 gameEnded flag:`, result.gameEnded);
 
     if (result.success) {
+      const game = GameStateManager.getGame(matchId);
+      const timerValues = game ? GameStateManager.getTimerValues(matchId) : null;
+      
+      // Get opponent state for logging
+      const opponent = game?.player1.playerId === userProfile.id ? game.player2 : game?.player1;
+      console.log(`🔍 Broadcasting MOVE_RESULT: player slot=${result.player.slot}, opponent slot=${opponent?.slot}, opponent lives=${opponent?.livesRemaining}`);
+      
       broadcastToMatch(matchId, {
         type: 'MOVE_RESULT',
         data: {
-          player_id: userId,
+          player_id: userProfile.id, // Use player_profile.id, not user.id
+          slot: result.player.slot, // Include slot for proper identification
           row,
           col,
           value,
           correct: result.correct,
           player_state: {
+            slot: result.player.slot, // Include slot in player_state
             cells_completed: result.player.cellsCompleted,
             lives_remaining: result.player.livesRemaining,
             is_locked_out: result.player.isLockedOut,
             is_solved: result.player.isSolved,
+            time_remaining: result.player.timeRemainingSeconds,
           },
+          timer_update: timerValues ? {
+            player1_time_remaining: timerValues.player1,
+            player2_time_remaining: timerValues.player2,
+          } : null,
         },
       });
 
@@ -211,6 +232,49 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
     console.error(`❌ Error applying move:`, error);
   }
   break;
+    case 'ERASE_CELL':
+      console.log(`🗑️ Processing ERASE_CELL for user ${userId}`);
+      const { row: eraseRow, col: eraseCol } = data;
+      
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
+        
+        const result = GameStateManager.eraseCell(matchId, userProfile.id, eraseRow, eraseCol);
+
+        if (result.success) {
+          const game = GameStateManager.getGame(matchId);
+          const timerValues = game ? GameStateManager.getTimerValues(matchId) : null;
+          
+          broadcastToMatch(matchId, {
+            type: 'ERASE_RESULT',
+            data: {
+              player_id: userProfile.id,
+              slot: result.player.slot,
+              row: eraseRow,
+              col: eraseCol,
+              player_state: {
+                slot: result.player.slot,
+                cells_completed: result.player.cellsCompleted,
+                lives_remaining: result.player.livesRemaining,
+                is_locked_out: result.player.isLockedOut,
+                is_solved: result.player.isSolved,
+                time_remaining: result.player.timeRemainingSeconds,
+              },
+              timer_update: timerValues ? {
+                player1_time_remaining: timerValues.player1,
+                player2_time_remaining: timerValues.player2,
+              } : null,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Error erasing cell:`, error);
+      }
+      break;
     case 'PING':
       ws.send(JSON.stringify({ type: 'PONG' }));
       break;
@@ -232,6 +296,19 @@ function broadcastToMatch(matchId: number, message: any) {
 async function handleTimeout(matchId: number) {
   console.log(`⏱️ Match ${matchId} timed out`);
   await endGame(matchId);
+}
+
+function handleTimerUpdate(matchId: number) {
+  const timerValues = GameStateManager.getTimerValues(matchId);
+  if (timerValues) {
+    broadcastToMatch(matchId, {
+      type: 'TIMER_UPDATE',
+      data: {
+        player1_time_remaining: timerValues.player1,
+        player2_time_remaining: timerValues.player2,
+      },
+    });
+  }
 }
 
 async function endGame(matchId: number) {
@@ -309,10 +386,12 @@ async function endGame(matchId: number) {
       rating1.rating,
       rating1.rd,
       rating1.volatility,
+      rating1.last_update_at,
       rating2.id,
       rating2.rating,
       rating2.rd,
       rating2.volatility,
+      rating2.last_update_at,
       outcome
     );
     console.log(`✅ [5/6] New ratings calculated:`, newRatings);

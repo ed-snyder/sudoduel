@@ -11,22 +11,45 @@ const settings = {
 
 const glicko = new Glicko2.Glicko2(settings);
 
+// Glicko-2 constant for RD growth (c)
+const C = 63.2;
+
 export const RatingService = {
+  // Apply inactivity RD growth based on days since last update
+  applyInactivityGrowth(rd: number, lastUpdateAt: Date): number {
+    const now = new Date();
+    const daysSinceUpdate = (now.getTime() - new Date(lastUpdateAt).getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceUpdate <= 0) {
+      return rd; // No growth if updated today or in the future
+    }
+
+    // RD growth formula: newRD = min(350, sqrt(oldRD^2 + c^2 * days))
+    const newRd = Math.min(350, Math.sqrt(rd * rd + C * C * daysSinceUpdate));
+    return newRd;
+  },
+
   // Update ratings after a match
   async updateRatings(
     player1RatingId: number,
     player1Rating: number,
     player1Rd: number,
     player1Vol: number,
+    player1LastUpdate: Date,
     player2RatingId: number,
     player2Rating: number,
     player2Rd: number,
     player2Vol: number,
+    player2LastUpdate: Date,
     outcome: number // 1 = player1 wins, 0 = player2 wins, 0.5 = draw
   ) {
-    // Create Glicko-2 player objects
-    const p1 = glicko.makePlayer(player1Rating, player1Rd, player1Vol);
-    const p2 = glicko.makePlayer(player2Rating, player2Rd, player2Vol);
+    // Apply inactivity RD growth before Glicko-2 calculation
+    const p1RdAdjusted = this.applyInactivityGrowth(player1Rd, player1LastUpdate);
+    const p2RdAdjusted = this.applyInactivityGrowth(player2Rd, player2LastUpdate);
+
+    // Create Glicko-2 player objects with adjusted RD
+    const p1 = glicko.makePlayer(player1Rating, p1RdAdjusted, player1Vol);
+    const p2 = glicko.makePlayer(player2Rating, p2RdAdjusted, player2Vol);
 
     // Create matches array
     const matches: any[] = [];

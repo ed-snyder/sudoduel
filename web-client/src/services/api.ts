@@ -54,6 +54,7 @@ export const playerAPI = {
 export const matchmakingAPI = {
   join: () => request('/matchmaking/join', { method: 'POST' }),
   leave: () => request('/matchmaking/leave', { method: 'POST' }),
+  status: () => request('/matchmaking/status', { method: 'GET' }),
 };
 
 export default { authAPI, playerAPI, matchmakingAPI };

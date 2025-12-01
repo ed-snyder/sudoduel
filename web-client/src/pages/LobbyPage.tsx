@@ -10,7 +10,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   const { user, logout } = useAuth();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  // Use browser timer type instead of NodeJS.Timeout to avoid Node typings in the client bundle
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
   const stopPolling = () => {
@@ -58,14 +59,19 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       }
 
       try {
-        const response = await matchmakingAPI.join();
+        // Use status check instead of join() to avoid spamming the backend
+        const response = await matchmakingAPI.status();
         
         if (response.status === 'matched') {
           stopPolling();
           onMatchFound(response.match_id);
-        } else {
-          // Continue polling
+        } else if (response.status === 'queued') {
+          // Still in queue, continue polling
           pollForMatch();
+        } else {
+          // Not queued anymore (maybe left queue?), stop polling
+          setSearching(false);
+          stopPolling();
         }
       } catch (err) {
         setSearching(false);
