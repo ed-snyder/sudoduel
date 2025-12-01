@@ -169,10 +169,6 @@ export const GameStateManager = {
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
     const opponent = game.player1.playerId === playerId ? game.player2 : game.player1;
-    
-    console.log(`🔍 Player identification: playerId=${playerId}, game.player1.id=${game.player1.playerId}, game.player2.id=${game.player2.playerId}`);
-    console.log(`🔍 Selected player: slot=${player.slot}, lives=${player.livesRemaining}, cells=${player.cellsCompleted}`);
-    console.log(`🔍 Opponent: slot=${opponent.slot}, lives=${opponent.livesRemaining}, cells=${opponent.cellsCompleted}`);
 
     this.updatePlayerTime(matchId, playerId);
 
@@ -200,9 +196,6 @@ export const GameStateManager = {
     // Validate solution grid access and compare values
     const solutionValue = game.solutionGrid[row]?.[col];
     const correct = solutionValue !== undefined && Number(solutionValue) === Number(value);
-    
-    console.log(`🔍 Move validation: row=${row}, col=${col}, value=${value} (type: ${typeof value}), solutionValue=${solutionValue} (type: ${typeof solutionValue}), correct=${correct}`);
-    console.log(`🔍 Player ${playerId} (slot ${player.slot}) making move. Player lives: ${player.livesRemaining}, Opponent lives: ${opponent.livesRemaining}`);
 
     if (correct) {
       const wasEmpty = player.grid[row] && player.grid[row][col] === 0;
@@ -214,12 +207,9 @@ export const GameStateManager = {
         player.cellsCompleted++;
       }
 
-      console.log(`✅ Correct move! Player ${playerId} cells: ${player.cellsCompleted}`);
-
       if (player.cellsCompleted === 81) {
         // Puzzle solved by this player
         player.isSolved = true;
-        console.log(`🎯 PUZZLE SOLVED by player ${playerId}!`);
         return { success: true, correct, player, gameEnded: true };
       }
 
@@ -230,20 +220,15 @@ export const GameStateManager = {
       }
     } else {
       // Incorrect move - update THIS player's stats
-      console.log(`❌ INCORRECT move by Player ${playerId} (slot ${player.slot}). Updating THIS player's stats.`);
-      console.log(`   Before: lives=${player.livesRemaining}, mistakes=${player.mistakes}`);
       player.mistakes++;
       player.livesRemaining--;
       player.timeSpentSeconds += 10;
       // Time penalty: reduce remaining time by 10 seconds
       player.timeRemainingSeconds = Math.max(0, player.timeRemainingSeconds - 10);
-      console.log(`   After: lives=${player.livesRemaining}, mistakes=${player.mistakes}`);
-      console.log(`   Opponent (slot ${opponent.slot}) lives remain: ${opponent.livesRemaining}`);
 
       if (player.livesRemaining <= 0) {
         // Life-based lockout – only this player is locked out
         player.isLockedOut = true;
-        console.log(`🔒 Player ${playerId} is LOCKED OUT (lives exhausted).`);
 
         // After a lockout, re-check victory conditions
         const ended = this.checkVictoryConditions(game);

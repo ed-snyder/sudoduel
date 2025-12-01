@@ -42,7 +42,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('Connected to game server');
       setConnectionStatus('connected');
       setGameStatus('waiting');
     };
@@ -53,12 +52,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     };
 
     ws.onclose = () => {
-      console.log('Disconnected from game server');
       setConnectionStatus('disconnected');
     };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+    ws.onerror = () => {
       setConnectionStatus('disconnected');
     };
 
@@ -78,24 +75,16 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   }, [lastMoveResult]);
 
   const handleMessage = (message: any) => {
-    console.log('Received:', message);
-
     switch (message.type) {
       case 'GAME_STATE':
         const receivedSlot = message.data.your_slot;
-        console.log(`🎮🎮🎮 GAME_STATE received: your_slot=${receivedSlot} (type: ${typeof receivedSlot})`);
-        console.log(`🎮🎮🎮 Setting mySlot to ${receivedSlot}`);
         setMySlot(Number(receivedSlot)); // Ensure it's a number
-        // Get player profile ID from API to set myPlayerId
-        // For now, we'll use slot-based identification which is more reliable
         if (receivedSlot === 1 || receivedSlot === '1') {
-          console.log(`🎮 I am player 1`);
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
           setMyTimeRemaining(message.data.player1.time_remaining || 300);
           setOpponentTimeRemaining(message.data.player2.time_remaining || 300);
         } else if (receivedSlot === 2 || receivedSlot === '2') {
-          console.log(`🎮 I am player 2`);
           setMyState(message.data.player2);
           setOpponentState(message.data.player1);
           setMyTimeRemaining(message.data.player2.time_remaining || 300);
@@ -123,32 +112,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'MOVE_RESULT':
         const { player_id, slot, row, col, value, correct, player_state, timer_update } = message.data;
         const myPlayerId = user?.id;
-        
+
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
-        // myPlayerId comes from AuthContext and is normalized to player_profiles.id
-        const isMyMoveById = myPlayerId !== undefined && myPlayerId !== null && player_id === myPlayerId;
-
-        // Fallback: use slot comparison if for some reason myPlayerId is not available
-        const moveSlot = slot !== undefined ? Number(slot) : (player_state?.slot !== undefined ? Number(player_state.slot) : null);
-        const mySlotNum = Number(mySlot); // Ensure mySlot is a number
-        const isMyMoveBySlot = moveSlot !== null && moveSlot !== undefined && mySlotNum !== 0 && moveSlot === mySlotNum;
-
-        const isMyMove = isMyMoveById || (!myPlayerId && isMyMoveBySlot);
-
-        console.log('📨 MOVE_RESULT', {
-          player_id,
-          myPlayerId,
-          slot,
-          moveSlot,
-          mySlotNum,
-          isMyMoveById,
-          isMyMoveBySlot,
-          isMyMove,
-        });
+        const isMyMove = myPlayerId != null && player_id === myPlayerId;
 
         if (isMyMove) {
           // Update MY grid and state
-          console.log(`✅✅✅ UPDATING MY STATE (I made this move, slot ${mySlot})`);
           if (correct) {
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
@@ -161,15 +130,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             setMyTimeRemaining(player_state.time_remaining);
           }
           setLastMoveResult({ correct, row, col });
-          console.log(`✅✅✅ MY STATE UPDATED:`, player_state);
         } else {
           // Update opponent state only (not their grid - we can't see it!)
-          console.log(`🔴🔴🔴 UPDATING OPPONENT STATE (opponent made this move, their slot ${moveSlot}, my slot ${mySlot})`);
           setOpponentState(player_state);
           if (player_state.time_remaining !== undefined) {
             setOpponentTimeRemaining(player_state.time_remaining);
           }
-          console.log(`🔴🔴🔴 OPPONENT STATE UPDATED:`, player_state);
         }
 
         // Update timers if provided

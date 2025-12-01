@@ -22,7 +22,6 @@ export const setupWebSocketServer = (server: Server) => {
   const wss = new WebSocketServer({ server, path: '/ws/game' });
 
   wss.on('connection', async (ws: AuthenticatedWebSocket, req) => {
-    console.log('🔌 WebSocket connection attempt');
 
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const matchId = parseInt(url.searchParams.get('match_id') || '0');
@@ -69,8 +68,6 @@ export const setupWebSocketServer = (server: Server) => {
         ws.close(1008, 'Invalid match');
         return;
       }
-
-      console.log(`✅ Player ${decoded.userId} connected to match ${matchId}`);
 
       if (!clients.has(matchId)) {
         clients.set(matchId, new Set());
@@ -145,7 +142,6 @@ game = GameStateManager.createGame(
       });
 
       ws.on('close', () => {
-        console.log(`🔌 Player ${ws.userId} disconnected from match ${matchId}`);
         clients.get(matchId)?.delete(ws);
         
         if (clients.get(matchId)?.size === 0) {
@@ -169,7 +165,6 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
 
   switch (type) {
     case 'PLACE_NUMBER':
-  console.log(`🎯 Processing PLACE_NUMBER for user ${userId}`);
   const { row, col, value } = data;
   
   try {
@@ -179,21 +174,11 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       return;
     }
     
-    console.log(`🔍 Applying move: userId=${userId}, userProfile.id=${userProfile.id}, row=${row}, col=${col}, value=${value}`);
     const result = GameStateManager.applyMove(matchId, userProfile.id, row, col, value);
-
-    console.log(`✅ Move result:`, result);
-    console.log(`🔍 Move was ${result.correct ? 'CORRECT' : 'INCORRECT'}`);
-    console.log(`🔍 Player who made move: slot=${result.player.slot}, lives=${result.player.livesRemaining}, cells=${result.player.cellsCompleted}`);
-    console.log(`🔍 gameEnded flag:`, result.gameEnded);
 
     if (result.success) {
       const game = GameStateManager.getGame(matchId);
       const timerValues = game ? GameStateManager.getTimerValues(matchId) : null;
-      
-      // Get opponent state for logging
-      const opponent = game?.player1.playerId === userProfile.id ? game.player2 : game?.player1;
-      console.log(`🔍 Broadcasting MOVE_RESULT: player slot=${result.player.slot}, opponent slot=${opponent?.slot}, opponent lives=${opponent?.livesRemaining}`);
       
       broadcastToMatch(matchId, {
         type: 'MOVE_RESULT',
