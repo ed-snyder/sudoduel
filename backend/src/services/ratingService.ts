@@ -69,19 +69,23 @@ export const RatingService = {
     glicko.updateRatings(matches);
 
     // Save updated ratings to database
+    console.log(`💾 Saving rating 1: id=${player1RatingId} rating=${p1.getRating()} rd=${p1.getRd()} vol=${p1.getVol()}`);
     await PlayerRatingModel.update(
       player1RatingId,
       p1.getRating(),
       p1.getRd(),
       p1.getVol()
     );
+    console.log(`✅ Rating 1 saved`);
 
+    console.log(`💾 Saving rating 2: id=${player2RatingId} rating=${p2.getRating()} rd=${p2.getRd()} vol=${p2.getVol()}`);
     await PlayerRatingModel.update(
       player2RatingId,
       p2.getRating(),
       p2.getRd(),
       p2.getVol()
     );
+    console.log(`✅ Rating 2 saved`);
 
     return {
       player1: {

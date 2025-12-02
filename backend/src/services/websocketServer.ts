@@ -4,9 +4,10 @@ import jwt from 'jsonwebtoken';
 import { GameStateManager } from './gameStateManager';
 import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
-import { PlayerRatingModel } from '../models/PlayerRating';
 import { PlayerProfileModel } from '../models/PlayerProfile';
+import { PlayerRatingModel } from '../models/PlayerRating';
 import { RatingService } from './ratingService';
+import { MatchmakingService } from './matchmakingService';
 
 
 
@@ -82,20 +83,23 @@ export const setupWebSocketServer = (server: Server) => {
           return;
         }
 
-        const player1 = players.find(p => p.slot === 1)!;
-const player2 = players.find(p => p.slot === 2)!;
+        const slot1 = players.find(p => p.slot === 1)!;
+        const slot2 = players.find(p => p.slot === 2)!;
 
-game = GameStateManager.createGame(
-  matchId,
-  puzzle.id,
-  puzzle.initial_grid,
-  puzzle.solution_grid,
-  Number(player1.player_id),
-  Number(player2.player_id),
-  300
-);
-
+        game = GameStateManager.createGame(
+          matchId,
+          puzzle.id,
+          puzzle.initial_grid,
+          puzzle.solution_grid,
+          Number(slot1.player_id),
+          Number(slot2.player_id),
+          300
+        );
       }
+
+      // Compute opponent profile for this connection
+      const opponentRow = players.find(p => p.player_id !== profile.id)!;
+      const opponentProfile = await PlayerProfileModel.findById(opponentRow.player_id);
 
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
         GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
@@ -117,6 +121,8 @@ game = GameStateManager.createGame(
         data: {
           status: game.status,
           your_slot: playerSlot.slot,
+          your_name: profile.display_name,
+          opponent_name: opponentProfile?.display_name || 'Opponent',
           player1: {
             cells_completed: game.player1.cellsCompleted,
             lives_remaining: game.player1.livesRemaining,
@@ -165,58 +171,71 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
 
   switch (type) {
     case 'PLACE_NUMBER':
-  const { row, col, value } = data;
-  
-  try {
-    const userProfile = await PlayerProfileModel.findByUserId(userId);
-    if (!userProfile) {
-      console.error(`❌ Player profile not found for user ${userId}`);
-      return;
-    }
-    
-    const result = GameStateManager.applyMove(matchId, userProfile.id, row, col, value);
-
-    if (result.success) {
-      const game = GameStateManager.getGame(matchId);
-      const timerValues = game ? GameStateManager.getTimerValues(matchId) : null;
+      const { row, col, value } = data;
       
-      broadcastToMatch(matchId, {
-        type: 'MOVE_RESULT',
-        data: {
-          player_id: userProfile.id, // Use player_profile.id, not user.id
-          slot: result.player.slot, // Include slot for proper identification
-          row,
-          col,
-          value,
-          correct: result.correct,
-          player_state: {
-            slot: result.player.slot, // Include slot in player_state
-            cells_completed: result.player.cellsCompleted,
-            lives_remaining: result.player.livesRemaining,
-            is_locked_out: result.player.isLockedOut,
-            is_solved: result.player.isSolved,
-            time_remaining: result.player.timeRemainingSeconds,
-          },
-          timer_update: timerValues ? {
-            player1_time_remaining: timerValues.player1,
-            player2_time_remaining: timerValues.player2,
-          } : null,
-        },
-      });
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
 
-      console.log(`🚦 Checking if game ended: ${result.gameEnded}`);
-      if (result.gameEnded) {
-        console.log(`🏁 Game ended, calling endGame...`);
-        await endGame(matchId);
-        console.log(`✅ endGame completed`);
-      } else {
-        console.log(`⏳ Game continues...`);
+        console.log(
+          `[WS] PLACE_NUMBER from userId=${userId} playerId=${userProfile.id} row=${row} col=${col} value=${value}`
+        );
+        const result = GameStateManager.applyMove(matchId, userProfile.id, row, col, value);
+
+        console.log(
+          `[WS] MOVE_RESULT userId=${userId} playerId=${userProfile.id} ` +
+          `success=${result.success} correct=${result.correct} ` +
+          `livesRemaining=${result.player.livesRemaining} isLockedOut=${result.player.isLockedOut} ` +
+          `cellsCompleted=${result.player.cellsCompleted} gameEnded=${result.gameEnded}`
+        );
+
+        if (result.success) {
+          const game = GameStateManager.getGame(matchId);
+          const timerValues = game ? GameStateManager.getTimerValues(matchId) : null;
+          
+          broadcastToMatch(matchId, {
+            type: 'MOVE_RESULT',
+            data: {
+              player_id: userProfile.id, // Use player_profile.id, not user.id
+              slot: result.player.slot, // Include slot for proper identification
+              row,
+              col,
+              value,
+              correct: result.correct,
+              player_state: {
+                slot: result.player.slot, // Include slot in player_state
+                cells_completed: result.player.cellsCompleted,
+                lives_remaining: result.player.livesRemaining,
+                is_locked_out: result.player.isLockedOut,
+                is_solved: result.player.isSolved,
+                time_remaining: result.player.timeRemainingSeconds,
+              },
+              timer_update: timerValues ? {
+                player1_time_remaining: timerValues.player1,
+                player2_time_remaining: timerValues.player2,
+              } : null,
+            },
+          });
+
+          if (result.gameEnded) {
+            console.log(`[WS] gameEnded=true, calling endGame for match ${matchId}`);
+            await endGame(matchId);
+          }
+        } else {
+          // Log why the move was rejected (locked out or timed out)
+          console.log(
+            `[WS] MOVE_REJECTED userId=${userId} playerId=${userProfile.id} ` +
+            `livesRemaining=${result.player.livesRemaining} ` +
+            `isLockedOut=${result.player.isLockedOut}`
+          );
+        }
+      } catch (error) {
+        console.error(`❌ Error applying move:`, error);
       }
-    }
-  } catch (error) {
-    console.error(`❌ Error applying move:`, error);
-  }
-  break;
+      break;
     case 'ERASE_CELL':
       console.log(`🗑️ Processing ERASE_CELL for user ${userId}`);
       const { row: eraseRow, col: eraseCol } = data;
@@ -410,6 +429,9 @@ async function endGame(matchId: number) {
       volatilityAfter: newRatings.player2.volatility,
     });
     console.log(`✅ [6/6b] Player 2 stats saved`);
+
+    // Clear matchmaking cache for this match so players can join new games
+    MatchmakingService.clearMatch(matchId);
 
     console.log(`📤 Broadcasting GAME_END...`);
     broadcastToMatch(matchId, {

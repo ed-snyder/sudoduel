@@ -39,11 +39,18 @@ export const PlayerRatingModel = {
     rd: number,
     volatility: number
   ): Promise<void> {
-    await query(
+    const result = await query(
       `UPDATE player_ratings
        SET rating = $1, rd = $2, volatility = $3, games_played = games_played + 1, last_update_at = NOW()
-       WHERE id = $4`,
+       WHERE id = $4
+       RETURNING rating, rd, volatility, games_played`,
       [rating, rd, volatility, id]
     );
+    
+    if (result.rows.length === 0) {
+      console.error(`❌ Rating update failed: no row found with id=${id}`);
+    } else {
+      console.log(`✅ Rating updated in DB: id=${id} rating=${result.rows[0].rating} rd=${result.rows[0].rd} games_played=${result.rows[0].games_played}`);
+    }
   },
 };

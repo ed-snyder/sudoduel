@@ -16,7 +16,7 @@ interface PlayerState {
 }
 
 export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
-  const { token, user } = useAuth();
+  const { token, user, refreshUser } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
@@ -33,6 +33,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  const [myName, setMyName] = useState<string>(user?.display_name || 'You');
+  const [opponentName, setOpponentName] = useState<string>('Opponent');
 
   // Connect to WebSocket
   useEffect(() => {
@@ -79,6 +81,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'GAME_STATE':
         const receivedSlot = message.data.your_slot;
         setMySlot(Number(receivedSlot)); // Ensure it's a number
+        // Align local gameStatus with server status in case we connected after start
+        if (message.data.status === 'IN_PROGRESS') {
+          setGameStatus('playing');
+        } else if (message.data.status === 'WAITING') {
+          setGameStatus('waiting');
+        }
+        setMyName(message.data.your_name || user?.display_name || 'You');
+        setOpponentName(message.data.opponent_name || 'Opponent');
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
@@ -89,8 +99,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           setOpponentState(message.data.player1);
           setMyTimeRemaining(message.data.player2.time_remaining || 300);
           setOpponentTimeRemaining(message.data.player1.time_remaining || 300);
-        } else {
-          console.error(`⚠️ Invalid slot received: ${receivedSlot} (type: ${typeof receivedSlot})`);
         }
         break;
 
@@ -110,7 +118,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         break;
 
       case 'MOVE_RESULT':
-        const { player_id, slot, row, col, value, correct, player_state, timer_update } = message.data;
+        const { player_id, row, col, value, correct, player_state, timer_update } = message.data;
         const myPlayerId = user?.id;
 
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
@@ -199,6 +207,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'GAME_END':
         setGameStatus('ended');
         setGameResult(message.data);
+        // Refresh user profile/rating so Lobby shows updated rating without full reload
+        refreshUser().catch((err) => {
+          console.error('Failed to refresh user after GAME_END:', err);
+        });
         break;
     }
   };
@@ -340,9 +352,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     const opponentResult =
       myResult === gameResult.player1 ? gameResult.player2 : gameResult.player1;
 
+    // Ensure both are numbers for comparison
+    const winnerId = Number(gameResult.winner_id);
+    const myId = myPlayerId != null ? Number(myPlayerId) : null;
+    
     const didWin =
-      myPlayerId != null
-        ? gameResult.winner_id === myPlayerId
+      myId != null
+        ? winnerId === myId
         : myResult.isWinner;
 
     const isDraw = !gameResult.winner_id;
@@ -465,33 +481,35 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       {/* Match Header Row */}
       <div className="flex justify-between items-center w-full max-w-lg mb-2 gap-2">
+        {/* You */}
         <div className="bg-blue-900/50 rounded-lg p-2 sm:p-3 flex-1 min-w-0">
-          <p className="text-xs text-blue-300 uppercase">You</p>
-          <p className="text-white font-bold text-xs sm:text-sm">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-blue-300 font-semibold truncate mr-2">{myName}</span>
+            <span className={`font-mono font-bold ${myTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
+              {formatTime(myTimeRemaining)}
+            </span>
+          </div>
+          <p className="text-white font-bold text-xs sm:text-sm mt-1">
             ❤️ {myState.lives_remaining} | 📊 {myState.cells_completed}/81
           </p>
           {myState.is_locked_out && (
-            <p className="text-red-400 text-xs">LOCKED OUT</p>
+            <p className="text-red-400 text-xs mt-1">LOCKED OUT</p>
           )}
         </div>
         
-        <div className="text-center px-2">
-          <p className={`text-sm sm:text-lg font-bold font-mono ${myTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
-            {formatTime(myTimeRemaining)}
-          </p>
-          <p className="text-xs text-gray-400">vs</p>
-          <p className={`text-sm sm:text-lg font-bold font-mono ${opponentTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
-            {formatTime(opponentTimeRemaining)}
-          </p>
-        </div>
-        
+        {/* Opponent */}
         <div className="bg-red-900/50 rounded-lg p-2 sm:p-3 text-right flex-1 min-w-0">
-          <p className="text-xs text-red-300 uppercase">Opponent</p>
-          <p className="text-white font-bold text-xs sm:text-sm">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <span className={`font-mono font-bold ${opponentTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
+              {formatTime(opponentTimeRemaining)}
+            </span>
+            <span className="text-red-300 font-semibold truncate ml-2">{opponentName}</span>
+          </div>
+          <p className="text-white font-bold text-xs sm:text-sm mt-1">
             ❤️ {opponentState.lives_remaining} | 📊 {opponentState.cells_completed}/81
           </p>
           {opponentState.is_locked_out && (
-            <p className="text-green-400 text-xs">LOCKED OUT</p>
+            <p className="text-green-400 text-xs mt-1">LOCKED OUT</p>
           )}
         </div>
       </div>
@@ -499,7 +517,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       {/* Status Strip */}
       <div className="w-full max-w-lg mb-2 text-center">
         <p className="text-sm text-gray-300">
-          {statusMessage} • You: {myState.cells_completed}/81 • Opponent: {opponentState.cells_completed}/81
+          {statusMessage} • {myName}: {myState.cells_completed}/81 • {opponentName}: {opponentState.cells_completed}/81
         </p>
       </div>
 

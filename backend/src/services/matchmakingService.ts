@@ -5,7 +5,10 @@ import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
 
 const DEFAULT_LADDER_ID = 1;
-const RATING_WINDOW = 200;
+// For MVP, use a very wide rating window so players always find a match,
+// even if their ratings have diverged significantly.
+// Later this can be tightened and/or expanded over time spent in queue.
+const RATING_WINDOW = 1000;
 
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId
@@ -32,7 +35,7 @@ export const MatchmakingService = {
       profile.id,
       DEFAULT_LADDER_ID
     );
-    console.log(`⭐ Rating:`, rating?.rating);
+    console.log(`⭐ Rating loaded:`, rating ? `rating=${rating.rating} rd=${rating.rd} games_played=${rating.games_played}` : 'NOT FOUND');
 
     if (!rating) {
       // Create default rating if not exists
@@ -179,8 +182,10 @@ export const MatchmakingService = {
 
   // Clean up match from cache (call after game ends)
   clearMatch(matchId: number) {
+    console.log(`🧹 [Matchmaking] Clearing match ${matchId} from cache`);
     for (const [playerId, mId] of playerMatches.entries()) {
-      if (mId === matchId) {
+      if (Number(mId) === Number(matchId)) {
+        console.log(`🧹 [Matchmaking] Removing player ${playerId} (matchId=${mId}) from cache`);
         playerMatches.delete(playerId);
       }
     }
