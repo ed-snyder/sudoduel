@@ -8,7 +8,11 @@ const getApiUrl = (): string => {
     return import.meta.env.VITE_API_URL;
   }
   // Local development
-  return 'http://localhost:3001';
+  const url = 'http://localhost:3001';
+  if (typeof window !== 'undefined') {
+    console.log('[Config] Using API URL:', url);
+  }
+  return url;
 };
 
 const getWsUrl = (): string => {
@@ -38,12 +42,20 @@ export const api = {
     const authToken = token || getToken();
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
     
-    const response = await fetch(`${API_URL}${path}`, { headers });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
-      throw new Error(error.error || `API error: ${response.status}`);
+    try {
+      const response = await fetch(`${API_URL}${path}`, { headers });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
+        throw new Error(error.error || `API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors (backend not running, CORS, etc.)
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${API_URL}. Make sure the backend is running.`);
+      }
+      throw error;
     }
-    return response.json();
   },
   
   post: async <T>(path: string, body: unknown, token?: string): Promise<T> => {
@@ -53,16 +65,24 @@ export const api = {
     const authToken = token || getToken();
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
     
-    const response = await fetch(`${API_URL}${path}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
-      throw new Error(error.error || `API error: ${response.status}`);
+    try {
+      const response = await fetch(`${API_URL}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
+        throw new Error(error.error || `API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors (backend not running, CORS, etc.)
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${API_URL}. Make sure the backend is running.`);
+      }
+      throw error;
     }
-    return response.json();
   },
 };
 
