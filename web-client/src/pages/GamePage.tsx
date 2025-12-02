@@ -27,6 +27,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [myState, setMyState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
   const [opponentState, setOpponentState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
   const [mySlot, setMySlot] = useState<number>(0);
+  const mySlotRef = useRef<number>(0);
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
   const [myTimeRemaining, setMyTimeRemaining] = useState(90);
   const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(90);
@@ -88,6 +89,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'GAME_STATE':
         const receivedSlot = message.data.your_slot;
         setMySlot(Number(receivedSlot)); // Ensure it's a number
+        mySlotRef.current = Number(receivedSlot);
         // Align local gameStatus with server status in case we connected after start
         if (message.data.status === 'IN_PROGRESS') {
           setGameStatus('playing');
@@ -113,8 +115,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         const grid = message.data.initial_grid;
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
-        // Initialize timers from server
-        if (mySlot === 1) {
+        // Initialize timers from server (use mySlotRef to avoid stale closure)
+        if (mySlotRef.current === 1) {
           setMyTimeRemaining(message.data.player1_time_remaining || 90);
           setOpponentTimeRemaining(message.data.player2_time_remaining || 90);
         } else {
@@ -130,7 +132,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
         const isMyMoveById = myPlayerId != null && player_id === myPlayerId;
-        const isMyMoveBySlot = slot === mySlot;
+        const isMyMoveBySlot = slot === mySlotRef.current;
         const isMyMove = myPlayerId != null ? isMyMoveById : isMyMoveBySlot;
 
         if (isMyMove) {
@@ -199,13 +201,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'TIME_SYNC':
         // Update both timers and lock status from server
         // Don't update state if mySlot hasn't been set yet (wait for GAME_STATE)
-        if (mySlot === 0) {
+        if (mySlotRef.current === 0) {
           console.log(`[GamePage] TIME_SYNC ignored: mySlot not set yet (waiting for GAME_STATE)`);
           break;
         }
         
-        console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlot}`);
-        if (mySlot === 1) {
+        console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlotRef.current}`);
+        if (mySlotRef.current === 1) {
           setMyTimeRemaining(message.data.player1_time);
           setOpponentTimeRemaining(message.data.player2_time);
           setMyState(prev => {
@@ -224,7 +226,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             score: message.data.player2_score !== undefined ? message.data.player2_score : prev.score,
             cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
           }));
-        } else if (mySlot === 2) {
+        } else if (mySlotRef.current === 2) {
           setMyTimeRemaining(message.data.player2_time);
           setOpponentTimeRemaining(message.data.player1_time);
           setMyState(prev => {
@@ -462,8 +464,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Connecting screen
   if (gameStatus === 'connecting') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Connecting to game...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="text-gray-800 text-lg">Connecting to game...</div>
+        </div>
       </div>
     );
   }
@@ -471,9 +476,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Waiting for opponent
   if (gameStatus === 'waiting') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl animate-pulse">
-          Waiting for opponent to connect...
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="text-gray-800 text-lg mb-1">Waiting for opponent</div>
+          <div className="text-gray-500 text-sm">Please wait...</div>
         </div>
       </div>
     );
@@ -508,85 +515,83 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     const opponentScore = opponentResult.score || 0;
 
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800 rounded-xl p-6 sm:p-8 text-center max-w-md w-full shadow-2xl border border-gray-700">
-          {/* Result Header with Animation */}
-          <div className={`mb-6 transform transition-all duration-500 ${
-            isDraw ? 'scale-100' : didWin ? 'scale-110' : 'scale-95'
-          }`}>
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl p-6 sm:p-8 text-center max-w-md w-full shadow-lg border border-gray-200">
+          {/* Result Header */}
+          <div className="mb-6">
             <h1 className={`text-4xl sm:text-5xl font-bold mb-2 ${
-              isDraw ? 'text-yellow-400' : didWin ? 'text-green-400' : 'text-red-400'
+              isDraw ? 'text-gray-600' : didWin ? 'text-green-500' : 'text-gray-800'
             }`}>
               {isDraw ? '🤝 Draw!' : didWin ? '🏆 VICTORY!' : 'DEFEAT'}
             </h1>
             
-          {/* Win reason / subtitle */}
-          <p className="text-gray-300 text-sm sm:text-base">
-            {reason === 'FORFEIT' && (didWin ? 'Win by forfeit' : 'Defeat by forfeit')}
-            {reason === 'PUZZLE_SOLVED' && didWin && '✨ You completed the puzzle!'}
-            {reason === 'PUZZLE_SOLVED' && !didWin && '⚡ Opponent completed the puzzle'}
-            {reason === 'TIMEOUT_SCORE' && didWin && '🎯 Higher score at timeout!'}
-            {reason === 'TIMEOUT_SCORE' && !didWin && '⏱️ Lower score at timeout'}
-            {reason === 'DRAW' && 'Equal scores'}
-          </p>
+            {/* Win reason / subtitle */}
+            <p className="text-gray-600 text-sm sm:text-base">
+              {reason === 'FORFEIT' && (didWin ? 'Win by forfeit' : 'Defeat by forfeit')}
+              {reason === 'PUZZLE_SOLVED' && didWin && '✨ You completed the puzzle!'}
+              {reason === 'PUZZLE_SOLVED' && !didWin && '⚡ Opponent completed the puzzle'}
+              {reason === 'TIMEOUT_SCORE' && didWin && '🎯 Higher score at timeout!'}
+              {reason === 'TIMEOUT_SCORE' && !didWin && '⏱️ Lower score at timeout'}
+              {reason === 'DRAW' && 'Equal scores'}
+            </p>
           </div>
 
           {/* Score comparison */}
           <div className="flex justify-center gap-8 mb-6">
             <div>
               <div className="text-sm text-gray-500">You</div>
-              <div className="text-3xl font-bold text-gray-800">{myScore}</div>
+              <div className="text-3xl font-bold text-gray-800 font-mono">{myScore}</div>
             </div>
             <div className="text-2xl text-gray-300 self-center">—</div>
             <div>
               <div className="text-sm text-gray-500">Opponent</div>
-              <div className="text-3xl font-bold text-gray-800">{opponentScore}</div>
+              <div className="text-3xl font-bold text-gray-800 font-mono">{opponentScore}</div>
             </div>
           </div>
 
           {/* Stats comparison */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-            <div className={`bg-gray-700 rounded-lg p-3 sm:p-4 border-2 ${
-              didWin ? 'border-green-500' : isDraw ? 'border-yellow-500' : 'border-gray-600'
+            <div className={`bg-gray-50 rounded-lg p-3 sm:p-4 border ${
+              didWin ? 'border-green-500' : isDraw ? 'border-gray-300' : 'border-gray-200'
             }`}>
-              <p className="text-blue-400 font-bold mb-2 text-sm sm:text-base">You</p>
-              <div className="space-y-1 text-xs sm:text-sm">
-                <p className="text-white">📊 Score: {myScore}</p>
-                <p className="text-white">❌ {myResult.mistakes || 0} mistakes</p>
-                <p className="text-white">⏱️ {formatTime(myResult.timeRemaining || 0)} remaining</p>
+              <p className="text-blue-500 font-bold mb-2 text-sm sm:text-base">You</p>
+              <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                <p>Score: <span className="font-mono font-bold">{myScore}</span></p>
+                <p>Mistakes: <span className="font-mono">{myResult.mistakes || 0}</span></p>
+                <p>Time: <span className="font-mono">{formatTime(myResult.timeRemaining || 0)}</span></p>
               </div>
             </div>
-            <div className={`bg-gray-700 rounded-lg p-3 sm:p-4 border-2 ${
-              !didWin && !isDraw ? 'border-red-500' : isDraw ? 'border-yellow-500' : 'border-gray-600'
+            <div className={`bg-gray-50 rounded-lg p-3 sm:p-4 border ${
+              !didWin && !isDraw ? 'border-red-500' : isDraw ? 'border-gray-300' : 'border-gray-200'
             }`}>
-              <p className="text-red-400 font-bold mb-2 text-sm sm:text-base">Opponent</p>
-              <div className="space-y-1 text-xs sm:text-sm">
-                <p className="text-white">📊 Score: {opponentScore}</p>
-                <p className="text-white">❌ {opponentResult.mistakes || 0} mistakes</p>
-                <p className="text-white">⏱️ {formatTime(opponentResult.timeRemaining || 0)} remaining</p>
+              <p className="text-gray-600 font-bold mb-2 text-sm sm:text-base">Opponent</p>
+              <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                <p>Score: <span className="font-mono font-bold">{opponentScore}</span></p>
+                <p>Mistakes: <span className="font-mono">{opponentResult.mistakes || 0}</span></p>
+                <p>Time: <span className="font-mono">{formatTime(opponentResult.timeRemaining || 0)}</span></p>
               </div>
             </div>
           </div>
 
           {/* Rating change - Prominent */}
-          <div className={`bg-gradient-to-r rounded-lg p-4 sm:p-5 mb-6 ${
+          <div className={`bg-gray-50 rounded-lg p-4 sm:p-5 mb-6 border ${
             ratingChange > 0 
-              ? 'from-green-900/50 to-green-800/50 border border-green-500' 
+              ? 'border-green-500' 
               : ratingChange < 0
-              ? 'from-red-900/50 to-red-800/50 border border-red-500'
-              : 'from-gray-700 to-gray-600 border border-gray-500'
+              ? 'border-red-500'
+              : 'border-gray-200'
           }`}>
-            <p className="text-gray-300 mb-2 text-sm sm:text-base">Rating Change</p>
+            <p className="text-gray-600 mb-2 text-sm sm:text-base font-medium">Rating Change</p>
             <div className="flex items-center justify-center gap-2 sm:gap-3">
-              <span className="text-xl sm:text-2xl font-bold text-white">
+              <span className="text-xl sm:text-2xl font-bold text-gray-800 font-mono">
                 {Math.round(myResult.rating_before || 1500)}
               </span>
               <span className="text-gray-400 text-lg sm:text-xl">→</span>
-              <span className="text-2xl sm:text-3xl font-bold text-white">
+              <span className="text-2xl sm:text-3xl font-bold text-gray-800 font-mono">
                 {Math.round(myResult.rating_after || 1500)}
               </span>
-              <span className={`text-xl sm:text-2xl font-bold ${
-                ratingChange > 0 ? 'text-green-400' : ratingChange < 0 ? 'text-red-400' : 'text-gray-400'
+              <span className={`text-xl sm:text-2xl font-bold font-mono ${
+                ratingChange > 0 ? 'text-green-500' : ratingChange < 0 ? 'text-red-500' : 'text-gray-400'
               }`}>
                 ({ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)})
               </span>
@@ -595,7 +600,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
           <button
             onClick={onGameEnd}
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg transition w-full text-base sm:text-lg shadow-lg"
+            className="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 active:bg-blue-700 transition-colors text-base sm:text-lg"
           >
             Back to Lobby
           </button>
@@ -654,17 +659,23 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Main game UI
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col p-4">
-      {/* Top Utility Bar */}
-      <div className="w-full max-w-lg mx-auto mb-4 flex justify-between items-center">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Top Navigation Bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <button
           onClick={handleBackClick}
-          className="text-gray-400 hover:text-white transition text-sm"
+          className="text-blue-500 text-xl hover:text-blue-600 transition-colors"
         >
-          ← Back to Lobby
+          ←
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">9x9 • 5min Ranked</span>
+        <div className="flex-1 flex items-center justify-center">
+          <img
+            src="/sudoduel-logo.png"
+            alt="Sudoduel"
+            className="h-8 object-contain"
+          />
+        </div>
+        <div className="flex items-center justify-end gap-2 w-6">
           <div className={`w-2 h-2 rounded-full ${
             connectionStatus === 'connected' ? 'bg-green-500' : 
             connectionStatus === 'connecting' ? 'bg-yellow-500' : 
@@ -674,73 +685,76 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Match Header Row */}
-      <div className="flex justify-between items-center w-full max-w-lg mb-2 gap-2">
-        {/* You */}
-        <div className="bg-blue-900/50 rounded-lg p-2 sm:p-3 flex-1 min-w-0">
-          <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <div className="flex flex-col items-start truncate mr-2">
-              <span className="text-blue-300 font-semibold truncate">{myName}</span>
-              {myRating !== undefined && (
-                <span className="text-blue-200 text-[10px] sm:text-xs">⭐ {Math.round(myRating)}</span>
-              )}
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex justify-between items-start gap-4 max-w-md mx-auto">
+          {/* You */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold text-gray-800 truncate">{myName}</span>
+              <span
+                className={`font-mono font-bold text-base ml-2 ${
+                  myTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+                }`}
+              >
+                {formatTime(myTimeRemaining)}
+              </span>
             </div>
-            <span
-              className={`font-mono font-bold text-sm sm:text-base ${
-                myTimeRemaining < 60 ? 'text-red-400' : 'text-white'
-              }`}
-            >
-              {formatTime(myTimeRemaining)}
-            </span>
-          </div>
-          {/* Progress bar - based on score (max ~50 player-solved cells) */}
-          <div className="mt-1 h-1.5 rounded-full bg-blue-950/60 overflow-hidden">
-            <div
-              className="h-full bg-blue-400 transition-all duration-300"
-              style={{ width: `${Math.min(100, (myState.score / 50) * 100)}%` }}
-            />
-          </div>
-          <p className="text-white font-bold text-[11px] sm:text-xs mt-1 flex items-center justify-between">
-            <span>📊 Score: {myState.score}</span>
-            {scoreDiff > 0 && <span className="text-green-400 text-xs">▲</span>}
-          </p>
-          {myState.is_locked && (
-            <p className="text-red-400 text-[11px] mt-1">OUT OF TIME</p>
-          )}
-        </div>
-        
-        {/* Opponent */}
-        <div className="bg-red-900/50 rounded-lg p-2 sm:p-3 text-right flex-1 min-w-0">
-          <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <span
-              className={`font-mono font-bold text-sm sm:text-base ${
-                opponentTimeRemaining < 60 ? 'text-red-400' : 'text-white'
-              }`}
-            >
-              {formatTime(opponentTimeRemaining)}
-            </span>
-            <div className="flex flex-col items-end truncate ml-2">
-              <span className="text-red-300 font-semibold truncate">{opponentName}</span>
+            {myRating !== undefined && (
+              <div className="text-xs text-gray-500 mb-1">
+                Rating: <span className="font-mono">{Math.round(myRating)}</span>
+              </div>
+            )}
+            {/* Progress bar - based on score (max ~50 player-solved cells) */}
+            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden mb-1">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${Math.min(100, (myState.score / 50) * 100)}%` }}
+              />
             </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600 font-medium">Score: <span className="font-mono font-bold">{myState.score}</span></span>
+              {scoreDiff > 0 && <span className="text-green-500 text-xs">▲</span>}
+            </div>
+            {myState.is_locked && (
+              <p className="text-red-500 text-xs mt-1 font-medium">OUT OF TIME</p>
+            )}
           </div>
-          {/* Opponent progress bar */}
-          <div className="mt-1 h-1.5 rounded-full bg-red-950/60 overflow-hidden">
-            <div
-              className="h-full bg-red-400 transition-all duration-300"
-              style={{ width: `${Math.min(100, (opponentState.score / 50) * 100)}%` }}
-            />
+          
+          {/* VS Divider */}
+          <div className="text-gray-300 text-sm self-center px-2">VS</div>
+          
+          {/* Opponent */}
+          <div className="flex-1 min-w-0 text-right">
+            <div className="flex items-center justify-between mb-1">
+              <span
+                className={`font-mono font-bold text-base mr-2 ${
+                  opponentTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+                }`}
+              >
+                {formatTime(opponentTimeRemaining)}
+              </span>
+              <span className="font-semibold text-gray-800 truncate">{opponentName}</span>
+            </div>
+            {/* Opponent progress bar */}
+            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden mb-1">
+              <div
+                className="h-full bg-gray-400 transition-all duration-300"
+                style={{ width: `${Math.min(100, (opponentState.score / 50) * 100)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              {scoreDiff < 0 && <span className="text-red-500 text-xs">▼</span>}
+              <span className="text-gray-600 font-medium ml-auto">Score: <span className="font-mono font-bold">{opponentState.score}</span></span>
+            </div>
+            {opponentState.is_locked && (
+              <p className="text-gray-500 text-xs mt-1 font-medium">LOCKED</p>
+            )}
           </div>
-          <p className="text-white font-bold text-[11px] sm:text-xs mt-1 flex items-center justify-between">
-            <span>📊 Score: {opponentState.score}</span>
-            {scoreDiff < 0 && <span className="text-red-400 text-xs">▼</span>}
-          </p>
-          {opponentState.is_locked && (
-            <p className="text-green-400 text-[11px] mt-1">LOCKED</p>
-          )}
         </div>
       </div>
 
       {/* Status Strip */}
-      <div className={`w-full max-w-lg mb-2 text-center py-2 text-sm font-medium ${statusColor} bg-gray-50`}>
+      <div className={`px-4 py-2 text-center text-sm font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
         {statusMessage}
       </div>
 
@@ -754,8 +768,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       )}
 
       {/* Sudoku Grid - Centered */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className={`relative ${myState.is_locked ? 'pointer-events-none' : ''}`}>
+      <div className="flex-1 flex items-center justify-center px-4 py-6">
+        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <SudokuGrid
               grid={myGrid}
@@ -771,10 +785,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-
       {/* Notes mode indicator */}
       {notesMode && (
-        <div className="bg-blue-500/20 border border-blue-500 text-blue-300 px-4 py-2 rounded mb-2">
+        <div className="px-4 py-2 bg-blue-50 border-t border-blue-200 text-blue-600 text-sm font-medium text-center">
           📝 Notes Mode Active
         </div>
       )}

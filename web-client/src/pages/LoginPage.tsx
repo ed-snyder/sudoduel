@@ -29,91 +29,102 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-white text-center mb-2">
-          🎮 Sudoduel
-        </h1>
-        <p className="text-gray-400 text-center mb-8">
-          Competitive head-to-head Sudoku
-        </p>
-
-        <div className="flex mb-6">
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 text-center rounded-l-lg ${
-              isLogin
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 text-center rounded-r-lg ${
-              !isLogin
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Sign Up
-          </button>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Logo/Header */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <img 
+          src="/sudoduel-logo.png" 
+          alt="Sudoduel" 
+          className="h-28 mb-6 object-contain"
+        />
+        <p className="text-gray-500 mb-8">Competitive 1v1 Sudoku</p>
+        
+        {/* Tab Switcher */}
+        <div className="w-full max-w-sm mb-6">
+          <div className="flex bg-gray-50 rounded-lg p-1">
+            <button
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 py-2 text-center rounded-md font-medium transition-colors ${
+                isLogin
+                  ? 'bg-white text-gray-800 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 py-2 text-center rounded-md font-medium transition-colors ${
+                !isLogin
+                  ? 'bg-white text-gray-800 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
         </div>
 
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {/* Form */}
+        <div className="w-full max-w-sm space-y-4">
+          {error && (
+            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-gray-300 mb-1">Display Name</label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-gray-700 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your name"
+                placeholder="Display Name"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                 required={!isLogin}
               />
-            </div>
-          )}
+            )}
 
-          <div>
-            <label className="block text-gray-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-700 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="you@example.com"
+              placeholder="Email"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               required
             />
-          </div>
 
-          <div>
-            <label className="block text-gray-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-700 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
+              placeholder="Password"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               required
             />
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-semibold py-3 rounded-lg transition"
-          >
-            {loading ? 'Please wait...' : isLogin ? 'Login' : 'Create Account'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 active:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'Please wait...' : isLogin ? 'Log In' : 'Create Account'}
+            </button>
+          </form>
+        </div>
+        
+        {/* Footer link */}
+        {isLogin && (
+          <p className="mt-6 text-gray-500">
+            Don't have an account?{' '}
+            <button 
+              onClick={() => setIsLogin(false)}
+              className="text-blue-500 font-medium hover:text-blue-600 transition-colors"
+            >
+              Sign Up
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
