@@ -5,6 +5,8 @@ interface SudokuGridProps {
   onCellClick: (row: number, col: number) => void;
   notes?: Map<string, number[]>;
   notesMode?: boolean;
+  lockedOut?: boolean;
+  lastMoveResult?: { row: number; col: number; correct: boolean } | null;
 }
 
 export default function SudokuGrid({
@@ -14,6 +16,8 @@ export default function SudokuGrid({
   onCellClick,
   notes = new Map(),
   notesMode = false,
+  lockedOut = false,
+  lastMoveResult = null,
 }: SudokuGridProps) {
   const isInitialCell = (row: number, col: number) => {
     return initialGrid[row][col] !== 0;
@@ -23,29 +27,74 @@ export default function SudokuGrid({
     return selectedCell?.row === row && selectedCell?.col === col;
   };
 
+  // Get selected value once at the top level
+  const selectedValue = selectedCell 
+    ? (grid[selectedCell.row]?.[selectedCell.col] || null)
+    : null;
+  const hasSelectedValue = selectedValue !== null && selectedValue !== 0;
+
   const isSameBox = (row: number, col: number) => {
-    if (!selectedCell) return false;
+    if (!selectedCell || !hasSelectedValue) return false;
+    // Don't highlight the selected cell itself
+    if (row === selectedCell.row && col === selectedCell.col) return false;
     const boxRow = Math.floor(selectedCell.row / 3);
     const boxCol = Math.floor(selectedCell.col / 3);
     return Math.floor(row / 3) === boxRow && Math.floor(col / 3) === boxCol;
   };
 
   const isSameRowOrCol = (row: number, col: number) => {
-    if (!selectedCell) return false;
+    if (!selectedCell || !hasSelectedValue) return false;
+    // Don't highlight the selected cell itself
+    if (row === selectedCell.row && col === selectedCell.col) return false;
     return row === selectedCell.row || col === selectedCell.col;
   };
 
+  const isSameNumberAsSelected = (row: number, col: number) => {
+    if (!selectedCell || !hasSelectedValue) return false;
+    // Don't highlight the selected cell itself
+    if (row === selectedCell.row && col === selectedCell.col) return false;
+    const cellValue = grid[row]?.[col];
+    return cellValue === selectedValue;
+  };
+
+  const isErrorFlash = (row: number, col: number) => {
+    return (
+      lastMoveResult != null &&
+      !lastMoveResult.correct &&
+      lastMoveResult.row === row &&
+      lastMoveResult.col === col
+    );
+  };
+
   return (
-    <div className="grid grid-cols-9 gap-0 border-2 border-gray-600 bg-gray-800">
+    <div
+      className={`
+        grid grid-cols-9 gap-0 border-2 border-gray-700 
+        ${lockedOut ? 'bg-gray-100' : 'bg-white'}
+        transition-colors
+      `}
+    >
       {grid.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
           const isInitial = isInitialCell(rowIndex, colIndex);
           const selected = isSelected(rowIndex, colIndex);
-          const highlighted = isSameRowOrCol(rowIndex, colIndex) || isSameBox(rowIndex, colIndex);
+          // Only highlight related cells if selected cell has a value, and exclude the selected cell itself
+          const related =
+            !selected &&
+            hasSelectedValue &&
+            (isSameRowOrCol(rowIndex, colIndex) ||
+              isSameBox(rowIndex, colIndex) ||
+              isSameNumberAsSelected(rowIndex, colIndex));
 
           // Border styling for 3x3 boxes
-          const borderRight = (colIndex + 1) % 3 === 0 && colIndex < 8 ? 'border-r-2 border-gray-600' : 'border-r border-gray-700';
-          const borderBottom = (rowIndex + 1) % 3 === 0 && rowIndex < 8 ? 'border-b-2 border-gray-600' : 'border-b border-gray-700';
+          const borderRight =
+            (colIndex + 1) % 3 === 0 && colIndex < 8
+              ? 'border-r-2 border-gray-700'
+              : 'border-r border-gray-400';
+          const borderBottom =
+            (rowIndex + 1) % 3 === 0 && rowIndex < 8
+              ? 'border-b-2 border-gray-700'
+              : 'border-b border-gray-400';
 
           const cellKey = `${rowIndex}-${colIndex}`;
           const cellNotes = notes.get(cellKey) || [];
@@ -55,18 +104,37 @@ export default function SudokuGrid({
           return (
             <button
               key={`${rowIndex}-${colIndex}`}
-              onClick={() => !isInitial && onCellClick(rowIndex, colIndex)}
+              onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
               className={`
                 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
-                ${selected ? 'bg-blue-600' : highlighted ? 'bg-gray-700' : 'bg-gray-800'}
-                ${!isInitial && 'hover:bg-gray-600 active:bg-gray-500 cursor-pointer'}
-                transition-colors touch-manipulation
+                ${
+                  lockedOut
+                    ? 'bg-gray-100'
+                    : isErrorFlash(rowIndex, colIndex)
+                    ? 'bg-red-100'
+                    : selected
+                    ? 'bg-blue-300'
+                    : related
+                    ? 'bg-blue-100'
+                    : 'bg-white'
+                }
+                ${
+                  !lockedOut
+                    ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                    : 'cursor-default'
+                }
+                transition-colors duration-150 touch-manipulation
               `}
-              disabled={isInitial}
+              disabled={lockedOut}
             >
               {hasValue ? (
-                <span className={`text-sm sm:text-lg md:text-xl font-bold ${isInitial ? 'text-gray-300' : 'text-blue-400'}`}>
+                <span
+                  className={`
+                    text-sm sm:text-lg md:text-xl font-bold
+                    ${isInitial ? 'text-gray-800' : 'text-blue-500'}
+                  `}
+                >
                   {cell}
                 </span>
               ) : showNotes ? (
@@ -74,7 +142,7 @@ export default function SudokuGrid({
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <span
                       key={num}
-                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-400 ${
+                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-500 ${
                         cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                       }`}
                     >

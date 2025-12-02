@@ -2,12 +2,11 @@ interface PlayerGameState {
   playerId: number;
   slot: 1 | 2;
   grid: number[][];
-  livesRemaining: number;
-  cellsCompleted: number;
-  mistakes: number;
-  timeSpentSeconds: number;
-  timeRemainingSeconds: number; // Per-player timer (starts at 300)
-  isLockedOut: boolean;
+  timeRemaining: number;      // Time-as-resource timer (starts at 90, can go up/down)
+  score: number;              // Cells completed by player (not including initial clues)
+  cellsCompleted: number;     // Total cells filled (including initial clues)
+  mistakes: number;           // Track for stats
+  isLocked: boolean;          // true when timer hits 0
   isSolved: boolean;
   lastMoveTime: number;
 }
@@ -24,6 +23,7 @@ interface GameState {
   timeLimit: number;
   timeoutTimer: NodeJS.Timeout | null;
   timerInterval: NodeJS.Timeout | null; // Interval for per-player timer countdown
+  forfeitWinnerId?: number | null; // Optional winner override for forfeits
 }
 
 const gameStates = new Map<number, GameState>();
@@ -50,12 +50,11 @@ export const GameStateManager = {
         playerId: player1Id,
         slot: 1,
         grid: JSON.parse(JSON.stringify(initialGridArray)),
-        livesRemaining: 3,
+        timeRemaining: 90,          // Start with 90 seconds
+        score: 0,                   // Cells solved by player (not including initial clues)
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
-        timeSpentSeconds: 0,
-        timeRemainingSeconds: timeLimit, // Initialize to time limit (300 seconds)
-        isLockedOut: false,
+        isLocked: false,
         isSolved: false,
         lastMoveTime: Date.now(),
       },
@@ -63,12 +62,11 @@ export const GameStateManager = {
         playerId: player2Id,
         slot: 2,
         grid: JSON.parse(JSON.stringify(initialGridArray)),
-        livesRemaining: 3,
+        timeRemaining: 90,          // Start with 90 seconds
+        score: 0,                   // Cells solved by player (not including initial clues)
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
-        timeSpentSeconds: 0,
-        timeRemainingSeconds: timeLimit, // Initialize to time limit (300 seconds)
-        isLockedOut: false,
+        isLocked: false,
         isSolved: false,
         lastMoveTime: Date.now(),
       },
@@ -77,6 +75,7 @@ export const GameStateManager = {
       timeLimit,
       timeoutTimer: null,
       timerInterval: null,
+      forfeitWinnerId: null,
     };
 
     gameStates.set(matchId, gameState);
@@ -107,23 +106,24 @@ export const GameStateManager = {
       }
 
       // Decrement each non-locked, non-solved player's timer
-      if (!game.player1.isLockedOut && !game.player1.isSolved && game.player1.timeRemainingSeconds > 0) {
-        game.player1.timeRemainingSeconds--;
-        if (game.player1.timeRemainingSeconds <= 0) {
-          // Player 1 timed out – treat as lockout for gameplay purposes
-          game.player1.isLockedOut = true;
+      if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
+        game.player1.timeRemaining--;
+        if (game.player1.timeRemaining <= 0) {
+          // Player 1 timed out – lock them out
+          game.player1.isLocked = true;
         }
       }
-      if (!game.player2.isLockedOut && !game.player2.isSolved && game.player2.timeRemainingSeconds > 0) {
-        game.player2.timeRemainingSeconds--;
-        if (game.player2.timeRemainingSeconds <= 0) {
-          // Player 2 timed out – treat as lockout for gameplay purposes
-          game.player2.isLockedOut = true;
+      if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0) {
+        game.player2.timeRemaining--;
+        if (game.player2.timeRemaining <= 0) {
+          // Player 2 timed out – lock them out
+          game.player2.isLocked = true;
         }
       }
 
-      // If both players are now locked out (by lives or time), end by score
-      if (game.player1.isLockedOut && game.player2.isLockedOut) {
+      // Check if game should end (both locked or one solved)
+      const ended = this.checkVictoryConditions(game);
+      if (ended) {
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
           game.timerInterval = null;
@@ -148,10 +148,8 @@ export const GameStateManager = {
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
     const now = Date.now();
-    const elapsedSeconds = Math.floor((now - player.lastMoveTime) / 1000);
-    player.timeSpentSeconds += elapsedSeconds;
     player.lastMoveTime = now;
-    // Note: timeRemainingSeconds is managed by the interval timer, not here
+    // Note: timeRemaining is managed by the interval timer and move bonuses/penalties
   },
 
   applyMove(
@@ -160,21 +158,12 @@ export const GameStateManager = {
     row: number,
     col: number,
     value: number
-  ): { success: boolean; correct?: boolean; player: PlayerGameState; gameEnded?: boolean } {
+  ): { success: boolean; correct?: boolean; player: PlayerGameState; gameEnded?: boolean; winner?: number | null } {
     const game = gameStates.get(matchId);
     
     if (!game || game.status !== 'IN_PROGRESS') {
       throw new Error('Game not in progress');
     }
-
-    // Debug: Log game state structure before player lookup
-    console.log(
-      `[applyMove] Game state: p1.playerId=${game.player1.playerId} (${typeof game.player1.playerId}) p1.slot=${game.player1.slot} ` +
-      `p1.livesRemaining=${game.player1.livesRemaining} p1.isLockedOut=${game.player1.isLockedOut} ` +
-      `p2.playerId=${game.player2.playerId} (${typeof game.player2.playerId}) p2.slot=${game.player2.slot} ` +
-      `p2.livesRemaining=${game.player2.livesRemaining} p2.isLockedOut=${game.player2.isLockedOut} ` +
-      `looking for playerId=${playerId} (${typeof playerId})`
-    );
 
     // Ensure both are numbers for comparison
     const p1Id = Number(game.player1.playerId);
@@ -184,40 +173,19 @@ export const GameStateManager = {
     const player = p1Id === searchId ? game.player1 : game.player2;
     const opponent = p1Id === searchId ? game.player2 : game.player1;
 
-    // Debug: Log full game state before processing move
-    console.log(
-      `[applyMove] AFTER lookup: playerId=${playerId} found slot=${player.slot} ` +
-      `player.livesRemaining=${player.livesRemaining} player.isLockedOut=${player.isLockedOut} ` +
-      `opponent.livesRemaining=${opponent.livesRemaining} opponent.isLockedOut=${opponent.isLockedOut} ` +
-      `player.cellsCompleted=${player.cellsCompleted} opponent.cellsCompleted=${opponent.cellsCompleted}`
-    );
-
-    this.updatePlayerTime(matchId, playerId);
-
-    // Check if player's time has run out
-    if (player.timeRemainingSeconds <= 0) {
-      // Time expired – this player can no longer move
-      console.log(
-        `[applyMove] Rejecting move: player ${playerId} slot=${player.slot} timeRemainingSeconds=${player.timeRemainingSeconds} (timed out)`
-      );
+    // Can't move if locked
+    if (player.isLocked) {
+      console.log(`[applyMove] Rejecting move: player ${playerId} (slot=${player.slot}) is locked. Opponent (slot=${opponent.slot}) locked=${opponent.isLocked}, opponent score=${opponent.score}, player score=${player.score}`);
       return { success: false, player, gameEnded: false };
     }
 
-    if (player.isLockedOut) {
-      console.log(
-        `[applyMove] Rejecting move: player ${playerId} slot=${player.slot} isLockedOut=true`
-      );
-      return { success: false, player, gameEnded: false };
-    }
-
+    // Can't edit initial clues
     if (row < 0 || row >= 9 || col < 0 || col >= 9) {
       return { success: false, player, gameEnded: false };
     }
 
-    // Check if this cell is an initial clue (cannot be modified)
-    const isInitialCell = game.initialGrid[row] && game.initialGrid[row][col] !== 0;
-    if (isInitialCell) {
-      console.log(`❌ Cannot modify initial clue at row=${row}, col=${col}`);
+    const initialValue = game.initialGrid[row]?.[col];
+    if (initialValue !== 0) {
       return { success: false, player, gameEnded: false };
     }
 
@@ -232,38 +200,61 @@ export const GameStateManager = {
       }
       
       if (wasEmpty) {
+        // Only count user-placed cells (not initial clues) toward score
+        player.score++;
         player.cellsCompleted++;
+        // +3 seconds for correct answer
+        player.timeRemaining += 3;
       }
 
+      // Check for puzzle completion (all 81 cells filled)
       if (player.cellsCompleted === 81) {
-        // Puzzle solved by this player
         player.isSolved = true;
-        return { success: true, correct, player, gameEnded: true };
+        console.log(`[applyMove] Player ${player.slot} solved the puzzle!`);
+        // Don't set status here - let endGame handle it
+        return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
       }
 
-      // Check if this correct move satisfies any victory conditions (e.g., opponent locked and score surpassed)
-      const ended = this.checkVictoryConditions(game);
-      if (ended) {
-        return { success: true, correct, player, gameEnded: true };
+      // Check if opponent is locked and we've surpassed their score
+      if (opponent.isLocked && player.score > opponent.score) {
+        console.log(`[applyMove] Victory condition: opponent (slot=${opponent.slot}) is locked, player (slot=${player.slot}) score=${player.score} > opponent score=${opponent.score}`);
+        // Don't set status here - let endGame handle it
+        return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
+      }
+      
+      // Log when opponent is locked but we haven't surpassed them yet
+      if (opponent.isLocked && player.score <= opponent.score) {
+        console.log(`[applyMove] Opponent (slot=${opponent.slot}) is locked, but player (slot=${player.slot}) score=${player.score} <= opponent score=${opponent.score}. Game continues.`);
       }
     } else {
-      // Incorrect move - update THIS player's stats
+      // Incorrect move
       player.mistakes++;
-      player.livesRemaining--;
-      player.timeSpentSeconds += 10;
-      // Time penalty: reduce remaining time by 10 seconds
-      player.timeRemainingSeconds = Math.max(0, player.timeRemainingSeconds - 10);
-
-      if (player.livesRemaining <= 0) {
-        // Life-based lockout – only this player is locked out
-        player.isLockedOut = true;
-
-        // After a lockout, re-check victory conditions
-        const ended = this.checkVictoryConditions(game);
-        if (ended) {
-          return { success: true, correct: correct as boolean, player, gameEnded: true };
+      // -15 seconds for mistake (can go to 0, not negative)
+      player.timeRemaining = Math.max(0, player.timeRemaining - 15);
+      
+      // Revert cell to empty (player must try again)
+      if (player.grid[row]) {
+        player.grid[row][col] = 0;
+      }
+      
+      // Check for lockout (timer hit 0)
+      if (player.timeRemaining <= 0) {
+        player.isLocked = true;
+        
+        // If both players locked, game ends
+        if (opponent.isLocked) {
+          // Don't set status here - let endGame handle it
+          const winner = player.score > opponent.score ? player.slot :
+                         opponent.score > player.score ? opponent.slot : null;
+          return { success: true, correct: false, player, gameEnded: true, winner };
         }
+        
         // Otherwise, opponent can continue playing
+        // Check if opponent has already surpassed our score
+        if (opponent.score > player.score) {
+          // Don't set status here - let endGame handle it
+          return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
+        }
       }
     }
 
@@ -286,37 +277,49 @@ export const GameStateManager = {
     let winnerId: number | null = null;
     let resultCode: number = 3;
 
-    if (p1.isSolved && !p2.isSolved) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.isSolved && !p1.isSolved) {
-      winnerId = p2.playerId;
-      resultCode = 2;
-    } else if (p1.cellsCompleted > p2.cellsCompleted) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.cellsCompleted > p1.cellsCompleted) {
-      winnerId = p2.playerId;
-      resultCode = 2;
+    // Forfeit override: if a winner was explicitly set by forfeit, use that
+    if (game.forfeitWinnerId != null) {
+      winnerId = game.forfeitWinnerId;
+      resultCode = winnerId === p1.playerId ? 1 : 2;
+    } else {
+      // Win condition 1: Puzzle solved
+      if (p1.isSolved && !p2.isSolved) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.isSolved && !p1.isSolved) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } 
+      // Win condition 2-4: Score comparison (higher score wins, draw if equal)
+      else if (p1.score > p2.score) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.score > p1.score) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else {
+        // Equal scores = draw
+        resultCode = 3;
+      }
     }
 
     return {
       player1: {
         playerId: p1.playerId,
+        score: p1.score,
         cellsCompleted: p1.cellsCompleted,
-        livesRemaining: p1.livesRemaining,
         mistakes: p1.mistakes,
-        timeSpentSeconds: p1.timeSpentSeconds,
-        finalState: p1.isSolved ? 'SOLVED' : p1.isLockedOut ? 'LOCKED_OUT' : 'TIMEOUT',
+        timeRemaining: p1.timeRemaining,
+        finalState: p1.isSolved ? 'SOLVED' : p1.isLocked ? 'LOCKED_OUT' : 'TIMEOUT',
         isWinner: winnerId === p1.playerId,
       },
       player2: {
         playerId: p2.playerId,
+        score: p2.score,
         cellsCompleted: p2.cellsCompleted,
-        livesRemaining: p2.livesRemaining,
         mistakes: p2.mistakes,
-        timeSpentSeconds: p2.timeSpentSeconds,
-        finalState: p2.isSolved ? 'SOLVED' : p2.isLockedOut ? 'LOCKED_OUT' : 'TIMEOUT',
+        timeRemaining: p2.timeRemaining,
+        finalState: p2.isSolved ? 'SOLVED' : p2.isLocked ? 'LOCKED_OUT' : 'TIMEOUT',
         isWinner: winnerId === p2.playerId,
       },
       winnerId,
@@ -324,51 +327,57 @@ export const GameStateManager = {
     };
   },
 
+  // Mark a player as forfeiting the match. The opponent wins regardless of score.
+  forfeit(matchId: number, forfeitingPlayerId: number): void {
+    const game = gameStates.get(matchId);
+    if (!game || game.status !== 'IN_PROGRESS') return;
+
+    const p1 = game.player1;
+    const p2 = game.player2;
+    const forfeiter = p1.playerId === forfeitingPlayerId ? p1 : p2;
+    const winner = forfeiter === p1 ? p2 : p1;
+
+    // Set winner override for getFinalResults
+    game.forfeitWinnerId = winner.playerId;
+
+    // Mark forfeiting player as effectively out of the game
+    forfeiter.isLocked = true;
+    forfeiter.timeRemaining = 0;
+  },
+
   /**
    * Check whether the current game state satisfies any terminal victory conditions.
    * This does NOT mutate match status or clear timers; it simply inspects state.
    *
-   * Conditions:
-   *  - Someone has solved the puzzle
-   *  - One player is locked out and the other has strictly more completed cells
-   *  - Both players are locked out (by lives or time) – winner by cells, or draw
+   * Win Conditions (checked in order):
+   *  1. Complete the board (all 81 cells) → Instant win
+   *  2. Opponent locks out + your score > opponent's → Win
+   *  3. Opponent locks out + you surpass their score before you lock → Win
+   *  4. Both locked → Higher score wins (draw if equal)
    */
   checkVictoryConditions(game: GameState): boolean {
     const p1 = game.player1;
     const p2 = game.player2;
 
-    console.log(
-      `[checkVictoryConditions] p1: playerId=${p1.playerId} slot=${p1.slot} ` +
-      `isSolved=${p1.isSolved} isLockedOut=${p1.isLockedOut} cellsCompleted=${p1.cellsCompleted} ` +
-      `p2: playerId=${p2.playerId} slot=${p2.slot} ` +
-      `isSolved=${p2.isSolved} isLockedOut=${p2.isLockedOut} cellsCompleted=${p2.cellsCompleted}`
-    );
-
-    // Condition A: one player has solved the puzzle
+    // Condition 1: Someone has solved the puzzle
     if (p1.isSolved || p2.isSolved) {
-      console.log(`[checkVictoryConditions] Condition A: puzzle solved`);
       return true;
     }
 
-    // Condition B: Opponent is locked out and active player has surpassed their score
-    // (This is handled indirectly by callers: after a move or lockout, we check once)
-    if (p1.isLockedOut && !p2.isLockedOut && p2.cellsCompleted > p1.cellsCompleted) {
-      console.log(`[checkVictoryConditions] Condition B: p1 locked, p2 has more cells`);
+    // Condition 2 & 3: One player is locked and the other has surpassed their score
+    if (p1.isLocked && !p2.isLocked && p2.score > p1.score) {
       return true;
     }
-    if (p2.isLockedOut && !p1.isLockedOut && p1.cellsCompleted > p2.cellsCompleted) {
-      console.log(`[checkVictoryConditions] Condition B: p2 locked, p1 has more cells`);
+    if (p2.isLocked && !p1.isLocked && p1.score > p2.score) {
       return true;
     }
 
-    // Condition C/D: Both players are locked out (by lives or time)
-    if (p1.isLockedOut && p2.isLockedOut) {
-      console.log(`[checkVictoryConditions] Condition C: both players locked out`);
+    // Condition 4: Both players are locked out
+    if (p1.isLocked && p2.isLocked) {
       return true;
     }
 
     // No terminal condition met yet
-    console.log(`[checkVictoryConditions] No terminal condition met`);
     return false;
   },
 
@@ -412,8 +421,8 @@ export const GameStateManager = {
     const game = gameStates.get(matchId);
     if (!game) return null;
     return {
-      player1: game.player1.timeRemainingSeconds,
-      player2: game.player2.timeRemainingSeconds,
+      player1: game.player1.timeRemaining,
+      player2: game.player2.timeRemaining,
     };
   },
 
@@ -432,7 +441,7 @@ export const GameStateManager = {
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
 
-    if (player.isLockedOut || player.timeRemainingSeconds <= 0) {
+    if (player.isLocked || player.timeRemaining <= 0) {
       return { success: false, player };
     }
 

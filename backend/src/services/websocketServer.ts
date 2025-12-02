@@ -93,7 +93,7 @@ export const setupWebSocketServer = (server: Server) => {
           puzzle.solution_grid,
           Number(slot1.player_id),
           Number(slot2.player_id),
-          300
+          90
         );
       }
 
@@ -109,9 +109,8 @@ export const setupWebSocketServer = (server: Server) => {
           type: 'GAME_START',
           data: {
             initial_grid: game.player1.grid,
-            time_limit: game.timeLimit,
-            player1_time_remaining: game.player1.timeRemainingSeconds,
-            player2_time_remaining: game.player2.timeRemainingSeconds,
+            player1_time_remaining: game.player1.timeRemaining,
+            player2_time_remaining: game.player2.timeRemaining,
           },
         });
       }
@@ -124,16 +123,16 @@ export const setupWebSocketServer = (server: Server) => {
           your_name: profile.display_name,
           opponent_name: opponentProfile?.display_name || 'Opponent',
           player1: {
+            score: game.player1.score,
             cells_completed: game.player1.cellsCompleted,
-            lives_remaining: game.player1.livesRemaining,
-            is_locked_out: game.player1.isLockedOut,
-            time_remaining: game.player1.timeRemainingSeconds,
+            time_remaining: game.player1.timeRemaining,
+            is_locked: game.player1.isLocked,
           },
           player2: {
+            score: game.player2.score,
             cells_completed: game.player2.cellsCompleted,
-            lives_remaining: game.player2.livesRemaining,
-            is_locked_out: game.player2.isLockedOut,
-            time_remaining: game.player2.timeRemainingSeconds,
+            time_remaining: game.player2.timeRemaining,
+            is_locked: game.player2.isLocked,
           },
         },
       }));
@@ -188,8 +187,8 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         console.log(
           `[WS] MOVE_RESULT userId=${userId} playerId=${userProfile.id} ` +
           `success=${result.success} correct=${result.correct} ` +
-          `livesRemaining=${result.player.livesRemaining} isLockedOut=${result.player.isLockedOut} ` +
-          `cellsCompleted=${result.player.cellsCompleted} gameEnded=${result.gameEnded}`
+          `score=${result.player.score} isLocked=${result.player.isLocked} ` +
+          `cellsCompleted=${result.player.cellsCompleted} timeRemaining=${result.player.timeRemaining} gameEnded=${result.gameEnded}`
         );
 
         if (result.success) {
@@ -199,20 +198,23 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           broadcastToMatch(matchId, {
             type: 'MOVE_RESULT',
             data: {
-              player_id: userProfile.id, // Use player_profile.id, not user.id
-              slot: result.player.slot, // Include slot for proper identification
+              player_id: userProfile.id,
+              slot: result.player.slot,
               row,
               col,
               value,
               correct: result.correct,
+              time_change: result.correct ? 3 : -15,
               player_state: {
-                slot: result.player.slot, // Include slot in player_state
+                slot: result.player.slot,
+                score: result.player.score,
                 cells_completed: result.player.cellsCompleted,
-                lives_remaining: result.player.livesRemaining,
-                is_locked_out: result.player.isLockedOut,
+                is_locked: result.player.isLocked,
                 is_solved: result.player.isSolved,
-                time_remaining: result.player.timeRemainingSeconds,
+                time_remaining: result.player.timeRemaining,
               },
+              game_ended: result.gameEnded || false,
+              winner_slot: result.winner || null,
               timer_update: timerValues ? {
                 player1_time_remaining: timerValues.player1,
                 player2_time_remaining: timerValues.player2,
@@ -228,8 +230,8 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           // Log why the move was rejected (locked out or timed out)
           console.log(
             `[WS] MOVE_REJECTED userId=${userId} playerId=${userProfile.id} ` +
-            `livesRemaining=${result.player.livesRemaining} ` +
-            `isLockedOut=${result.player.isLockedOut}`
+            `isLocked=${result.player.isLocked} ` +
+            `timeRemaining=${result.player.timeRemaining}`
           );
         }
       } catch (error) {
@@ -262,11 +264,11 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
               col: eraseCol,
               player_state: {
                 slot: result.player.slot,
+                score: result.player.score,
                 cells_completed: result.player.cellsCompleted,
-                lives_remaining: result.player.livesRemaining,
-                is_locked_out: result.player.isLockedOut,
+                is_locked: result.player.isLocked,
                 is_solved: result.player.isSolved,
-                time_remaining: result.player.timeRemainingSeconds,
+                time_remaining: result.player.timeRemaining,
               },
               timer_update: timerValues ? {
                 player1_time_remaining: timerValues.player1,
@@ -277,6 +279,28 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         }
       } catch (error) {
         console.error(`❌ Error erasing cell:`, error);
+      }
+      break;
+    case 'FORFEIT':
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
+
+        const game = GameStateManager.getGame(matchId);
+        if (!game || game.status !== 'IN_PROGRESS') {
+          console.log(`[WS] FORFEIT ignored: match ${matchId} not in progress`);
+          return;
+        }
+
+        console.log(`[WS] FORFEIT from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
+        // Mark forfeit in game state and then end the game (ratings, stats, GAME_END)
+        GameStateManager.forfeit(matchId, userProfile.id);
+        await endGame(matchId);
+      } catch (error) {
+        console.error(`❌ Error handling FORFEIT:`, error);
       }
       break;
     case 'PING':
@@ -303,13 +327,20 @@ async function handleTimeout(matchId: number) {
 }
 
 function handleTimerUpdate(matchId: number) {
-  const timerValues = GameStateManager.getTimerValues(matchId);
-  if (timerValues) {
+  const game = GameStateManager.getGame(matchId);
+  if (game) {
+    // Include score and other state in TIME_SYNC so frontend stays in sync
     broadcastToMatch(matchId, {
-      type: 'TIMER_UPDATE',
+      type: 'TIME_SYNC',
       data: {
-        player1_time_remaining: timerValues.player1,
-        player2_time_remaining: timerValues.player2,
+        player1_time: game.player1.timeRemaining,
+        player2_time: game.player2.timeRemaining,
+        player1_locked: game.player1.isLocked,
+        player2_locked: game.player2.isLocked,
+        player1_score: game.player1.score,
+        player2_score: game.player2.score,
+        player1_cells_completed: game.player1.cellsCompleted,
+        player2_cells_completed: game.player2.cellsCompleted,
       },
     });
   }
@@ -322,11 +353,18 @@ async function endGame(matchId: number) {
   console.log(`🎮 Game exists:`, !!game);
   console.log(`🎮 Game status:`, game?.status);
 
-  if (!game || game.status === 'COMPLETED') {
-    console.log(`⚠️ endGame early return - game already completed or doesn't exist`);
+  if (!game) {
+    console.log(`⚠️ endGame early return - game doesn't exist`);
     return;
   }
 
+  // Only proceed if game is still IN_PROGRESS (allow multiple calls but only process once)
+  if (game.status === 'COMPLETED') {
+    console.log(`⚠️ endGame early return - game already completed`);
+    return;
+  }
+
+  // Set status to COMPLETED immediately to prevent race conditions
   game.status = 'COMPLETED';
   console.log(`✅ Set game.status to COMPLETED in memory`);
 
@@ -403,10 +441,10 @@ async function endGame(matchId: number) {
     console.log(`💾 [6/6] Saving player stats for player ${results.player1.playerId}...`);
     await MatchModel.updatePlayerStats(matchId, results.player1.playerId, {
       cellsCompleted: results.player1.cellsCompleted,
-      livesUsed: 3 - results.player1.livesRemaining,
-      livesRemaining: results.player1.livesRemaining,
+      livesUsed: 0, // No longer using lives
+      livesRemaining: 0, // No longer using lives
       mistakes: results.player1.mistakes,
-      timeSpentSeconds: results.player1.timeSpentSeconds,
+      timeSpentSeconds: 0, // Not tracking time spent in new system
       finalState: results.player1.finalState,
       isWinner: results.player1.isWinner,
       ratingAfter: newRatings.player1.rating,
@@ -418,10 +456,10 @@ async function endGame(matchId: number) {
     console.log(`💾 [6/6] Saving player stats for player ${results.player2.playerId}...`);
     await MatchModel.updatePlayerStats(matchId, results.player2.playerId, {
       cellsCompleted: results.player2.cellsCompleted,
-      livesUsed: 3 - results.player2.livesRemaining,
-      livesRemaining: results.player2.livesRemaining,
+      livesUsed: 0, // No longer using lives
+      livesRemaining: 0, // No longer using lives
       mistakes: results.player2.mistakes,
-      timeSpentSeconds: results.player2.timeSpentSeconds,
+      timeSpentSeconds: 0, // Not tracking time spent in new system
       finalState: results.player2.finalState,
       isWinner: results.player2.isWinner,
       ratingAfter: newRatings.player2.rating,
@@ -434,12 +472,36 @@ async function endGame(matchId: number) {
     MatchmakingService.clearMatch(matchId);
 
     console.log(`📤 Broadcasting GAME_END...`);
+    
+    // Determine winner slot and reason
+    let winnerSlot: 1 | 2 | null = null;
+    let reason: 'PUZZLE_SOLVED' | 'TIMEOUT_SCORE' | 'DRAW' | 'FORFEIT' = 'DRAW';
+    
+    if (results.winnerId === results.player1.playerId) {
+      winnerSlot = 1;
+    } else if (results.winnerId === results.player2.playerId) {
+      winnerSlot = 2;
+    }
+
+    // Determine reason: FORFEIT override if set, otherwise based on final states
+    if (game?.forfeitWinnerId != null) {
+      reason = 'FORFEIT';
+    } else if (winnerSlot === null) {
+      reason = 'DRAW';
+    } else {
+      const winnerResult = winnerSlot === 1 ? results.player1 : results.player2;
+      reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
+    }
+    
     broadcastToMatch(matchId, {
       type: 'GAME_END',
       data: {
-        winner_id: results.winnerId,
-        result: results.winnerId === results.player1.playerId ? 'WIN' : 
-                results.winnerId === results.player2.playerId ? 'LOSS' : 'DRAW',
+        winner_slot: winnerSlot,
+        reason,
+        final_scores: {
+          player1: results.player1.score,
+          player2: results.player2.score,
+        },
         player1: {
           ...results.player1,
           rating_before: rating1.rating,

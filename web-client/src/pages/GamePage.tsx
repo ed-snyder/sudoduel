@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SudokuGrid from '../components/SudokuGrid';
 import NumberPad from '../components/NumberPad';
+import { ForfeitModal } from '../components/ForfeitModal';
 
 interface GamePageProps {
   matchId: number;
@@ -9,9 +10,10 @@ interface GamePageProps {
 }
 
 interface PlayerState {
-  cells_completed: number;
-  lives_remaining: number;
-  is_locked_out: boolean;
+  score: number;              // Cells completed by player (not including initial clues)
+  cells_completed: number;    // Total cells filled (including initial clues)
+  time_remaining: number;    // Time-as-resource timer
+  is_locked: boolean;        // true when timer hits 0
   is_solved: boolean;
 }
 
@@ -22,19 +24,24 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [myState, setMyState] = useState<PlayerState>({ cells_completed: 0, lives_remaining: 3, is_locked_out: false, is_solved: false });
-  const [opponentState, setOpponentState] = useState<PlayerState>({ cells_completed: 0, lives_remaining: 3, is_locked_out: false, is_solved: false });
+  const [myState, setMyState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
+  const [opponentState, setOpponentState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
   const [mySlot, setMySlot] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
-  const [myTimeRemaining, setMyTimeRemaining] = useState(300);
-  const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(300);
+  const [myTimeRemaining, setMyTimeRemaining] = useState(90);
+  const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(90);
+  const [timeChange, setTimeChange] = useState<number | null>(null); // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
+  const [opponentMoveFeedback, setOpponentMoveFeedback] = useState<{ correct: boolean } | null>(null); // Track opponent move feedback
+  const opponentFeedbackTimeoutRef = useRef<number | null>(null);
+  const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const [myName, setMyName] = useState<string>(user?.display_name || 'You');
   const [opponentName, setOpponentName] = useState<string>('Opponent');
+  const [myRating, setMyRating] = useState<number | undefined>(user?.rating);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -92,13 +99,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
-          setMyTimeRemaining(message.data.player1.time_remaining || 300);
-          setOpponentTimeRemaining(message.data.player2.time_remaining || 300);
+          setMyTimeRemaining(message.data.player1.time_remaining || 90);
+          setOpponentTimeRemaining(message.data.player2.time_remaining || 90);
         } else if (receivedSlot === 2 || receivedSlot === '2') {
           setMyState(message.data.player2);
           setOpponentState(message.data.player1);
-          setMyTimeRemaining(message.data.player2.time_remaining || 300);
-          setOpponentTimeRemaining(message.data.player1.time_remaining || 300);
+          setMyTimeRemaining(message.data.player2.time_remaining || 90);
+          setOpponentTimeRemaining(message.data.player1.time_remaining || 90);
         }
         break;
 
@@ -108,42 +115,67 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         setInitialGrid(grid.map((row: number[]) => [...row]));
         // Initialize timers from server
         if (mySlot === 1) {
-          setMyTimeRemaining(message.data.player1_time_remaining || 300);
-          setOpponentTimeRemaining(message.data.player2_time_remaining || 300);
+          setMyTimeRemaining(message.data.player1_time_remaining || 90);
+          setOpponentTimeRemaining(message.data.player2_time_remaining || 90);
         } else {
-          setMyTimeRemaining(message.data.player2_time_remaining || 300);
-          setOpponentTimeRemaining(message.data.player1_time_remaining || 300);
+          setMyTimeRemaining(message.data.player2_time_remaining || 90);
+          setOpponentTimeRemaining(message.data.player1_time_remaining || 90);
         }
         setGameStatus('playing');
         break;
 
       case 'MOVE_RESULT':
-        const { player_id, row, col, value, correct, player_state, timer_update } = message.data;
+        const { player_id, slot, row, col, value, correct, time_change, player_state, game_ended, timer_update } = message.data;
         const myPlayerId = user?.id;
 
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
-        const isMyMove = myPlayerId != null && player_id === myPlayerId;
+        const isMyMoveById = myPlayerId != null && player_id === myPlayerId;
+        const isMyMoveBySlot = slot === mySlot;
+        const isMyMove = myPlayerId != null ? isMyMoveById : isMyMoveBySlot;
 
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
+            // Correct move: update grid
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = value;
               return newGrid;
             });
+            setTimeChange(time_change || 3); // +3 seconds
+          } else {
+            // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
+            setMyGrid((prev) => {
+              const newGrid = prev.map((r) => [...r]);
+              newGrid[row][col] = 0;
+              return newGrid;
+            });
+            setTimeChange(time_change || -15); // -15 seconds
           }
           setMyState(player_state);
           if (player_state.time_remaining !== undefined) {
             setMyTimeRemaining(player_state.time_remaining);
           }
           setLastMoveResult({ correct, row, col });
+          
+          // Clear time change feedback after 2 seconds
+          setTimeout(() => setTimeChange(null), 2000);
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
           if (player_state.time_remaining !== undefined) {
             setOpponentTimeRemaining(player_state.time_remaining);
           }
+          // Show opponent move feedback (short, non-sticky)
+          setOpponentMoveFeedback({ correct });
+          // Clear any existing timeout before setting a new one
+          if (opponentFeedbackTimeoutRef.current !== null) {
+            clearTimeout(opponentFeedbackTimeoutRef.current);
+          }
+          opponentFeedbackTimeoutRef.current = window.setTimeout(() => {
+            setOpponentMoveFeedback(null);
+            opponentFeedbackTimeoutRef.current = null;
+          }, 1200); // ~1.2s so it feels snappy
         }
 
         // Update timers if provided
@@ -156,16 +188,61 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             setOpponentTimeRemaining(timer_update.player1_time_remaining);
           }
         }
+        
+        // Check if game ended - trigger end game handling immediately
+        if (game_ended) {
+          console.log(`[GamePage] Game ended from MOVE_RESULT, waiting for GAME_END message`);
+          // The GAME_END message will be sent by the backend, but we can prepare for it
+        }
         break;
 
-      case 'TIMER_UPDATE':
-        // Update both timers from server
+      case 'TIME_SYNC':
+        // Update both timers and lock status from server
+        // Don't update state if mySlot hasn't been set yet (wait for GAME_STATE)
+        if (mySlot === 0) {
+          console.log(`[GamePage] TIME_SYNC ignored: mySlot not set yet (waiting for GAME_STATE)`);
+          break;
+        }
+        
+        console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlot}`);
         if (mySlot === 1) {
-          setMyTimeRemaining(message.data.player1_time_remaining);
-          setOpponentTimeRemaining(message.data.player2_time_remaining);
-        } else {
-          setMyTimeRemaining(message.data.player2_time_remaining);
-          setOpponentTimeRemaining(message.data.player1_time_remaining);
+          setMyTimeRemaining(message.data.player1_time);
+          setOpponentTimeRemaining(message.data.player2_time);
+          setMyState(prev => {
+            const newState = {
+              ...prev,
+              is_locked: message.data.player1_locked,
+              score: message.data.player1_score !== undefined ? message.data.player1_score : prev.score,
+              cells_completed: message.data.player1_cells_completed !== undefined ? message.data.player1_cells_completed : prev.cells_completed,
+            };
+            console.log(`[GamePage] Updating myState (slot 1): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
+            return newState;
+          });
+          setOpponentState(prev => ({
+            ...prev,
+            is_locked: message.data.player2_locked,
+            score: message.data.player2_score !== undefined ? message.data.player2_score : prev.score,
+            cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
+          }));
+        } else if (mySlot === 2) {
+          setMyTimeRemaining(message.data.player2_time);
+          setOpponentTimeRemaining(message.data.player1_time);
+          setMyState(prev => {
+            const newState = {
+              ...prev,
+              is_locked: message.data.player2_locked,
+              score: message.data.player2_score !== undefined ? message.data.player2_score : prev.score,
+              cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
+            };
+            console.log(`[GamePage] Updating myState (slot 2): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
+            return newState;
+          });
+          setOpponentState(prev => ({
+            ...prev,
+            is_locked: message.data.player1_locked,
+            score: message.data.player1_score !== undefined ? message.data.player1_score : prev.score,
+            cells_completed: message.data.player1_cells_completed !== undefined ? message.data.player1_cells_completed : prev.cells_completed,
+          }));
         }
         break;
 
@@ -216,12 +293,57 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   };
 
   const handleCellClick = (row: number, col: number) => {
-    if (gameStatus !== 'playing' || myState?.is_locked_out) return;
+    if (gameStatus !== 'playing' || myState?.is_locked) {
+      console.log(`[GamePage] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
+      return;
+    }
+
+    // Check if cell is an initial clue - allow clicking for highlighting but log it
+    const isInitial = initialGrid[row]?.[col] !== 0;
+    if (isInitial) {
+      console.log(`[GamePage] Clicked initial clue cell (${row}, ${col}) - allowing for highlighting`);
+    }
+
+    // If tapping the same cell again, clear selection/highlights
+    if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+      setSelectedCell(null);
+      return;
+    }
+
+    // Select the cell (whether empty or has a number)
+    // SudokuGrid will handle highlighting based on whether selected cell has a value
+    // CRITICAL: This preserves the UX feature where clicking a cell with a number
+    // highlights all identical numbers and related cells (row/column/3x3 box)
+    console.log(`[GamePage] Selecting cell (${row}, ${col}), current value: ${myGrid[row]?.[col]}, isInitial: ${isInitial}`);
     setSelectedCell({ row, col });
   };
 
+  const handleBackClick = () => {
+    if (gameStatus === 'playing') {
+      // Active game – confirm forfeit
+      setShowForfeitModal(true);
+    } else {
+      // Game already ended or not started – safe to leave
+      onGameEnd();
+    }
+  };
+
+  const handleForfeit = () => {
+    if (wsRef.current && gameStatus === 'playing') {
+      wsRef.current.send(JSON.stringify({ type: 'FORFEIT' }));
+    }
+    setShowForfeitModal(false);
+  };
+
   const handleNumberClick = (num: number) => {
-    if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked_out) return;
+    if (!selectedCell || gameStatus !== 'playing') {
+      console.log(`[GamePage] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
+      return;
+    }
+    if (myState?.is_locked) {
+      console.log(`[GamePage] Number click blocked: myState.is_locked=${myState.is_locked}, myState.score=${myState.score}, opponentState.is_locked=${opponentState.is_locked}, opponentState.score=${opponentState.score}`);
+      return;
+    }
 
     if (notesMode) {
       // In notes mode: toggle the number in notes for this cell
@@ -247,6 +369,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       });
     } else {
       // Normal mode: place number
+      // Prevent placing numbers in initial clue cells
+      if (initialGrid[selectedCell.row]?.[selectedCell.col] !== 0) {
+        return;
+      }
+      
       wsRef.current?.send(
         JSON.stringify({
           type: 'PLACE_NUMBER',
@@ -263,7 +390,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   };
 
   const handleErase = () => {
-    if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked_out) return;
+    if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
     
     // Check if cell is initial clue - can't erase those
     if (initialGrid[selectedCell.row] && initialGrid[selectedCell.row][selectedCell.col] !== 0) {
@@ -315,6 +442,23 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Keep local rating in sync when user updates (e.g., after refreshUser)
+  useEffect(() => {
+    if (user?.rating !== undefined) {
+      setMyRating(user.rating);
+    }
+  }, [user]);
+
+  // Compute digit counts for number pad depletion styling (purely visual)
+  const digitCounts: Record<number, number> = {};
+  myGrid.forEach((row) => {
+    row.forEach((value) => {
+      if (value >= 1 && value <= 9) {
+        digitCounts[value] = (digitCounts[value] || 0) + 1;
+      }
+    });
+  });
+
   // Connecting screen
   if (gameStatus === 'connecting') {
     return (
@@ -352,17 +496,16 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     const opponentResult =
       myResult === gameResult.player1 ? gameResult.player2 : gameResult.player1;
 
-    // Ensure both are numbers for comparison
-    const winnerId = Number(gameResult.winner_id);
-    const myId = myPlayerId != null ? Number(myPlayerId) : null;
+    // Determine result based on winner_slot and reason
+    const winnerSlot = gameResult.winner_slot;
+    const reason = gameResult.reason || 'DRAW';
+    const isDraw = winnerSlot === null || reason === 'DRAW';
     
-    const didWin =
-      myId != null
-        ? winnerId === myId
-        : myResult.isWinner;
-
-    const isDraw = !gameResult.winner_id;
+    // Determine if I won based on winner_slot
+    const didWin = winnerSlot !== null && winnerSlot === mySlot;
     const ratingChange = myResult.rating_change || 0;
+    const myScore = myResult.score || 0;
+    const opponentScore = opponentResult.score || 0;
 
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
@@ -374,18 +517,31 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             <h1 className={`text-4xl sm:text-5xl font-bold mb-2 ${
               isDraw ? 'text-yellow-400' : didWin ? 'text-green-400' : 'text-red-400'
             }`}>
-              {isDraw ? '🤝 Draw!' : didWin ? '🎉 Victory!' : '😔 Defeat'}
+              {isDraw ? '🤝 Draw!' : didWin ? '🏆 VICTORY!' : 'DEFEAT'}
             </h1>
             
-            {/* Win reason */}
-            <p className="text-gray-300 text-sm sm:text-base">
-              {myResult.finalState === 'SOLVED' && '✨ You completed the puzzle!'}
-              {myResult.finalState === 'LOCKED_OUT' && '💔 You ran out of lives'}
-              {myResult.finalState === 'TIMEOUT' && '⏱️ Time ran out'}
-              {opponentResult.finalState === 'LOCKED_OUT' && didWin && '🎯 Opponent ran out of lives'}
-              {opponentResult.finalState === 'SOLVED' && !didWin && '⚡ Opponent completed the puzzle'}
-              {isDraw && 'Equal cells at timeout'}
-            </p>
+          {/* Win reason / subtitle */}
+          <p className="text-gray-300 text-sm sm:text-base">
+            {reason === 'FORFEIT' && (didWin ? 'Win by forfeit' : 'Defeat by forfeit')}
+            {reason === 'PUZZLE_SOLVED' && didWin && '✨ You completed the puzzle!'}
+            {reason === 'PUZZLE_SOLVED' && !didWin && '⚡ Opponent completed the puzzle'}
+            {reason === 'TIMEOUT_SCORE' && didWin && '🎯 Higher score at timeout!'}
+            {reason === 'TIMEOUT_SCORE' && !didWin && '⏱️ Lower score at timeout'}
+            {reason === 'DRAW' && 'Equal scores'}
+          </p>
+          </div>
+
+          {/* Score comparison */}
+          <div className="flex justify-center gap-8 mb-6">
+            <div>
+              <div className="text-sm text-gray-500">You</div>
+              <div className="text-3xl font-bold text-gray-800">{myScore}</div>
+            </div>
+            <div className="text-2xl text-gray-300 self-center">—</div>
+            <div>
+              <div className="text-sm text-gray-500">Opponent</div>
+              <div className="text-3xl font-bold text-gray-800">{opponentScore}</div>
+            </div>
           </div>
 
           {/* Stats comparison */}
@@ -395,10 +551,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             }`}>
               <p className="text-blue-400 font-bold mb-2 text-sm sm:text-base">You</p>
               <div className="space-y-1 text-xs sm:text-sm">
-                <p className="text-white">📊 {myResult.cellsCompleted} cells</p>
-                <p className="text-white">❌ {myResult.mistakes} mistakes</p>
-                <p className="text-white">❤️ {myResult.livesRemaining} lives</p>
-                <p className="text-white">⏱️ {formatTime(myResult.timeSpentSeconds || 0)}</p>
+                <p className="text-white">📊 Score: {myScore}</p>
+                <p className="text-white">❌ {myResult.mistakes || 0} mistakes</p>
+                <p className="text-white">⏱️ {formatTime(myResult.timeRemaining || 0)} remaining</p>
               </div>
             </div>
             <div className={`bg-gray-700 rounded-lg p-3 sm:p-4 border-2 ${
@@ -406,10 +561,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             }`}>
               <p className="text-red-400 font-bold mb-2 text-sm sm:text-base">Opponent</p>
               <div className="space-y-1 text-xs sm:text-sm">
-                <p className="text-white">📊 {opponentResult.cellsCompleted} cells</p>
-                <p className="text-white">❌ {opponentResult.mistakes} mistakes</p>
-                <p className="text-white">❤️ {opponentResult.livesRemaining} lives</p>
-                <p className="text-white">⏱️ {formatTime(opponentResult.timeSpentSeconds || 0)}</p>
+                <p className="text-white">📊 Score: {opponentScore}</p>
+                <p className="text-white">❌ {opponentResult.mistakes || 0} mistakes</p>
+                <p className="text-white">⏱️ {formatTime(opponentResult.timeRemaining || 0)} remaining</p>
               </div>
             </div>
           </div>
@@ -450,13 +604,53 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     );
   }
 
-  // Calculate status message
-  const cellDiff = myState.cells_completed - opponentState.cells_completed;
-  const statusMessage = cellDiff > 0 
-    ? `You're ahead by ${cellDiff} cell${cellDiff !== 1 ? 's' : ''}`
-    : cellDiff < 0
-    ? `Opponent is ahead by ${Math.abs(cellDiff)} cell${Math.abs(cellDiff) !== 1 ? 's' : ''}`
-    : 'Tied';
+  // Calculate status message based on score (not cells_completed)
+  const scoreDiff = myState.score - opponentState.score;
+  let statusMessage = 'Neck and neck!';
+  let statusColor = 'text-gray-600';
+  
+  if (gameStatus === 'playing') {
+    // Priority 1: Opponent move feedback (highest priority for visibility)
+    if (opponentMoveFeedback) {
+      if (opponentMoveFeedback.correct) {
+        statusMessage = `🎯 ${opponentName} scored a cell!`;
+        statusColor = 'text-green-500';
+      } else {
+        statusMessage = `❌ ${opponentName} made a mistake!`;
+        statusColor = 'text-red-500';
+      }
+    }
+    // Priority 2: My move feedback
+    else if (lastMoveResult && lastMoveResult.correct === false) {
+      statusMessage = '❌ Mistake! -15 seconds';
+      statusColor = 'text-red-500';
+    } else if (lastMoveResult && lastMoveResult.correct === true) {
+      statusMessage = '✓ Correct! +3 seconds';
+      statusColor = 'text-green-500';
+    }
+    // Priority 3: Lockout states
+    else if (myState.is_locked) {
+      statusMessage = "⏱️ You're locked! Watching opponent...";
+      statusColor = 'text-gray-500';
+    } else if (opponentState.is_locked) {
+      statusMessage = '🔥 Opponent locked! Keep going!';
+      statusColor = 'text-green-600';
+    }
+    // Priority 4: Low time warning
+    else if (myTimeRemaining < 30) {
+      statusMessage = '⚠️ Low time! Play carefully';
+      statusColor = 'text-orange-500';
+    }
+    // Priority 5: Score comparison
+    else if (scoreDiff > 0) {
+      statusMessage = `You're ahead by ${scoreDiff} cell${scoreDiff > 1 ? 's' : ''}! 🔥`;
+      statusColor = 'text-green-600';
+    } else if (scoreDiff < 0) {
+      const diff = Math.abs(scoreDiff);
+      statusMessage = `Opponent leads by ${diff} cell${diff > 1 ? 's' : ''}`;
+      statusColor = 'text-orange-500';
+    }
+  }
 
   // Main game UI
   return (
@@ -464,7 +658,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       {/* Top Utility Bar */}
       <div className="w-full max-w-lg mx-auto mb-4 flex justify-between items-center">
         <button
-          onClick={onGameEnd}
+          onClick={handleBackClick}
           className="text-gray-400 hover:text-white transition text-sm"
         >
           ← Back to Lobby
@@ -483,77 +677,100 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       <div className="flex justify-between items-center w-full max-w-lg mb-2 gap-2">
         {/* You */}
         <div className="bg-blue-900/50 rounded-lg p-2 sm:p-3 flex-1 min-w-0">
-          <div className="flex items-center justify-between text-xs sm:text-sm">
-            <span className="text-blue-300 font-semibold truncate mr-2">{myName}</span>
-            <span className={`font-mono font-bold ${myTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
+          <div className="flex items-center justify-between text-[11px] sm:text-xs">
+            <div className="flex flex-col items-start truncate mr-2">
+              <span className="text-blue-300 font-semibold truncate">{myName}</span>
+              {myRating !== undefined && (
+                <span className="text-blue-200 text-[10px] sm:text-xs">⭐ {Math.round(myRating)}</span>
+              )}
+            </div>
+            <span
+              className={`font-mono font-bold text-sm sm:text-base ${
+                myTimeRemaining < 60 ? 'text-red-400' : 'text-white'
+              }`}
+            >
               {formatTime(myTimeRemaining)}
             </span>
           </div>
-          <p className="text-white font-bold text-xs sm:text-sm mt-1">
-            ❤️ {myState.lives_remaining} | 📊 {myState.cells_completed}/81
+          {/* Progress bar - based on score (max ~50 player-solved cells) */}
+          <div className="mt-1 h-1.5 rounded-full bg-blue-950/60 overflow-hidden">
+            <div
+              className="h-full bg-blue-400 transition-all duration-300"
+              style={{ width: `${Math.min(100, (myState.score / 50) * 100)}%` }}
+            />
+          </div>
+          <p className="text-white font-bold text-[11px] sm:text-xs mt-1 flex items-center justify-between">
+            <span>📊 Score: {myState.score}</span>
+            {scoreDiff > 0 && <span className="text-green-400 text-xs">▲</span>}
           </p>
-          {myState.is_locked_out && (
-            <p className="text-red-400 text-xs mt-1">LOCKED OUT</p>
+          {myState.is_locked && (
+            <p className="text-red-400 text-[11px] mt-1">OUT OF TIME</p>
           )}
         </div>
         
         {/* Opponent */}
         <div className="bg-red-900/50 rounded-lg p-2 sm:p-3 text-right flex-1 min-w-0">
-          <div className="flex items-center justify-between text-xs sm:text-sm">
-            <span className={`font-mono font-bold ${opponentTimeRemaining < 60 ? 'text-red-400' : 'text-white'}`}>
+          <div className="flex items-center justify-between text-[11px] sm:text-xs">
+            <span
+              className={`font-mono font-bold text-sm sm:text-base ${
+                opponentTimeRemaining < 60 ? 'text-red-400' : 'text-white'
+              }`}
+            >
               {formatTime(opponentTimeRemaining)}
             </span>
-            <span className="text-red-300 font-semibold truncate ml-2">{opponentName}</span>
+            <div className="flex flex-col items-end truncate ml-2">
+              <span className="text-red-300 font-semibold truncate">{opponentName}</span>
+            </div>
           </div>
-          <p className="text-white font-bold text-xs sm:text-sm mt-1">
-            ❤️ {opponentState.lives_remaining} | 📊 {opponentState.cells_completed}/81
+          {/* Opponent progress bar */}
+          <div className="mt-1 h-1.5 rounded-full bg-red-950/60 overflow-hidden">
+            <div
+              className="h-full bg-red-400 transition-all duration-300"
+              style={{ width: `${Math.min(100, (opponentState.score / 50) * 100)}%` }}
+            />
+          </div>
+          <p className="text-white font-bold text-[11px] sm:text-xs mt-1 flex items-center justify-between">
+            <span>📊 Score: {opponentState.score}</span>
+            {scoreDiff < 0 && <span className="text-red-400 text-xs">▼</span>}
           </p>
-          {opponentState.is_locked_out && (
-            <p className="text-green-400 text-xs mt-1">LOCKED OUT</p>
+          {opponentState.is_locked && (
+            <p className="text-green-400 text-[11px] mt-1">LOCKED</p>
           )}
         </div>
       </div>
 
       {/* Status Strip */}
-      <div className="w-full max-w-lg mb-2 text-center">
-        <p className="text-sm text-gray-300">
-          {statusMessage} • {myName}: {myState.cells_completed}/81 • {opponentName}: {opponentState.cells_completed}/81
-        </p>
+      <div className={`w-full max-w-lg mb-2 text-center py-2 text-sm font-medium ${statusColor} bg-gray-50`}>
+        {statusMessage}
       </div>
 
-      {/* Status messages */}
-      {myState.is_locked_out && (
-        <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded mb-4">
-          ⚠️ You're locked out! Waiting for timer or opponent...
-        </div>
-      )}
-      
-      {opponentState.is_locked_out && !myState.is_locked_out && (
-        <div className="bg-green-500/20 border border-green-500 text-green-300 px-4 py-2 rounded mb-4">
-          ✅ Opponent is locked out! Keep going to win!
+      {/* Time change feedback */}
+      {timeChange !== null && (
+        <div className={`text-center py-1 mb-2 ${
+          timeChange > 0 ? 'text-green-500' : 'text-red-500'
+        } font-semibold`}>
+          {timeChange > 0 ? `+${timeChange}s` : `${timeChange}s`}
         </div>
       )}
 
       {/* Sudoku Grid - Centered */}
       <div className="flex-1 flex items-center justify-center">
-        {myGrid.length > 0 && (
-          <SudokuGrid
-            grid={myGrid}
-            initialGrid={initialGrid}
-            selectedCell={selectedCell}
-            onCellClick={handleCellClick}
-            notes={notes}
-            notesMode={notesMode}
-          />
-        )}
+        <div className={`relative ${myState.is_locked ? 'pointer-events-none' : ''}`}>
+          {myGrid.length > 0 && (
+            <SudokuGrid
+              grid={myGrid}
+              initialGrid={initialGrid}
+              selectedCell={selectedCell}
+              onCellClick={handleCellClick}
+              notes={notes}
+              notesMode={notesMode}
+              lockedOut={myState.is_locked}
+              lastMoveResult={lastMoveResult}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Last move feedback */}
-      {lastMoveResult && (
-        <div className={`mt-2 px-4 py-1 rounded ${lastMoveResult.correct ? 'bg-green-500/50 text-green-200' : 'bg-red-500/50 text-red-200'}`}>
-          {lastMoveResult.correct ? '✓ Correct!' : '✗ Wrong! -1 life, +10s penalty'}
-        </div>
-      )}
 
       {/* Notes mode indicator */}
       {notesMode && (
@@ -568,7 +785,15 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         onErase={handleErase}
         onToggleNotes={handleToggleNotes}
         notesMode={notesMode}
-        disabled={gameStatus !== 'playing' || myState.is_locked_out}
+        disabled={gameStatus !== 'playing' || myState.is_locked}
+        digitCounts={digitCounts}
+      />
+
+      {/* Forfeit confirmation modal */}
+      <ForfeitModal
+        isOpen={showForfeitModal}
+        onConfirm={handleForfeit}
+        onCancel={() => setShowForfeitModal(false)}
       />
     </div>
   );
