@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { authAPI, playerAPI } from '../services/api';
 
 interface User {
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const playerInfo = await playerAPI.getMe();
+      const playerInfo = await playerAPI.getMe() as { id: number; display_name: string; rating?: number };
       setUser({
         id: playerInfo.id,
         display_name: playerInfo.display_name,
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
+    const response = await authAPI.login(email, password) as { token: string };
     localStorage.setItem('token', response.token);
     setToken(response.token);
     // After login, normalize user to player_profile via /player/me
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signup = async (email: string, password: string, displayName: string) => {
-    const response = await authAPI.signup(email, password, displayName);
+    const response = await authAPI.signup(email, password, displayName) as { token: string };
     localStorage.setItem('token', response.token);
     setToken(response.token);
     // After signup, normalize user to player_profile via /player/me

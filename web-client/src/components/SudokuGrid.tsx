@@ -15,7 +15,7 @@ export default function SudokuGrid({
   selectedCell,
   onCellClick,
   notes = new Map(),
-  notesMode = false,
+  notesMode: _notesMode = false, // Reserved for future notes mode feature
   lockedOut = false,
   lastMoveResult = null,
 }: SudokuGridProps) {

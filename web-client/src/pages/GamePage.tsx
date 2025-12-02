@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import SudokuGrid from '../components/SudokuGrid';
 import NumberPad from '../components/NumberPad';
 import { ForfeitModal } from '../components/ForfeitModal';
+import { createGameSocket } from '../config';
 
 interface GamePageProps {
   matchId: number;
@@ -46,9 +47,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Connect to WebSocket
   useEffect(() => {
-    const ws = new WebSocket(
-      `ws://localhost:3001/ws/game?match_id=${matchId}&token=${token}`
-    );
+    if (!token) return;
+    const ws = createGameSocket(matchId, token);
     wsRef.current = ws;
 
     ws.onopen = () => {

@@ -28,11 +28,11 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
     attemptsRef.current = 0;
 
     try {
-      const response = await matchmakingAPI.join();
+      const response = await matchmakingAPI.join() as { status: string; match_id?: number };
       
       if (response.status === 'matched') {
         stopPolling();
-        onMatchFound(response.match_id);
+        onMatchFound(response.match_id!);
       } else {
         // Start polling
         pollForMatch();
@@ -60,11 +60,11 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
 
       try {
         // Use status check instead of join() to avoid spamming the backend
-        const response = await matchmakingAPI.status();
+        const response = await matchmakingAPI.status() as { status: string; match_id?: number };
         
         if (response.status === 'matched') {
           stopPolling();
-          onMatchFound(response.match_id);
+          onMatchFound(response.match_id!);
         } else if (response.status === 'queued') {
           // Still in queue, continue polling
           pollForMatch();
