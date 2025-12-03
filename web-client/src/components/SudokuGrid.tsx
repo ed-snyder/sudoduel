@@ -78,6 +78,8 @@ export default function SudokuGrid({
         aspectRatio: '1 / 1',
         maxHeight: 'min(100%, calc(100vh - 200px))', // Adjusted for expanded status bar and timer-only layout
         maxWidth: '100%',
+        marginBottom: '0px',
+        paddingBottom: '0px',
       }}
     >
       {grid.map((row, rowIndex) =>
