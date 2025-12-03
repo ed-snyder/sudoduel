@@ -662,7 +662,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Opponent Info Bar (Top) - Left: Name (ELO), Right: Timer in neon pink */}
-      <div className="flex items-center justify-between px-2 sm:px-4 py-0.5 sm:py-1 border-b border-gray-200">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1 border-b border-gray-200">
         <div className="flex items-center gap-1 sm:gap-1.5">
           <span className="text-lg sm:text-2xl text-fuchsia-500 font-medium">{opponentName}</span>
           {opponentRating !== undefined && (
@@ -676,13 +676,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Status Strip - Minimal padding */}
-      <div className={`px-2 sm:px-4 py-1 sm:py-2 text-center text-xs sm:text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200 flex items-center justify-center`}>
+      {/* Status Strip */}
+      <div className={`px-3 sm:px-4 py-1 sm:py-2.5 text-center text-xs sm:text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200 flex items-center justify-center`}>
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Centered with minimal spacing */}
-      <div className="flex-1 flex items-center justify-center px-1 sm:px-4 min-h-0" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
+      {/* Sudoku Grid - Centered close to top and bottom */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
@@ -701,8 +701,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Timer Only - Centered, large, raspberry blue, minimal gap from grid */}
-      <div className="flex items-center justify-center px-2 sm:px-4 py-0.5 sm:py-1">
+      {/* Your Timer Only - Centered, large, raspberry blue, close to grid */}
+      <div className="flex items-center justify-center px-3 sm:px-4 py-1 sm:py-2">
         <div className={`font-mono font-bold text-lg sm:text-2xl ${
           myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
@@ -710,14 +710,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Action Buttons: [Erase] [Emote] [Notes] - Minimal spacing */}
-      <div className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1 sm:py-1.5 border-t border-gray-200">
+      {/* Action Buttons: [Erase] [Emote] [Notes] - Close to grid */}
+      <div className="flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 border-t border-gray-200">
         {/* Erase */}
         <button
           onClick={handleErase}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 min-h-[36px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
+            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
@@ -732,7 +732,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           onClick={handleEmote}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 min-h-[36px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
+            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
@@ -747,7 +747,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           onClick={handleToggleNotes}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 min-h-[36px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium relative
+            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium relative
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : notesMode
@@ -763,9 +763,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </button>
       </div>
 
-      {/* Number Pad (1-9 only) - Minimal spacing */}
-      <div className="px-2 sm:px-4 py-1.5 sm:py-2.5 border-t border-gray-200 bg-white">
-        <div className="grid grid-cols-9 gap-0.5 sm:gap-1 md:gap-2 max-w-md mx-auto">
+      {/* Number Pad (1-9 only) - Close to grid */}
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 bg-white">
+        <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
             const depleted = count >= 9;
@@ -775,7 +775,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className={`
-                  min-h-[36px] sm:min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
+                  min-h-[40px] sm:min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
                   ${depleted
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : gameStatus !== 'playing' || myState.is_locked
