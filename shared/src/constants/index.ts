@@ -20,7 +20,7 @@ export const SUDOKU_BOX_SIZE = 3;
 
 // Time-as-resource system constants
 export const STARTING_TIME_SECONDS = 90;
-export const TIME_BONUS_CORRECT = 3;
-export const TIME_PENALTY_INCORRECT = 15;
+export const TIME_BONUS_CORRECT = 4;
+export const TIME_PENALTY_INCORRECT = 12;
 
 export const MATCHMAKING_RATING_WINDOW = 200; // ± rating difference for matching

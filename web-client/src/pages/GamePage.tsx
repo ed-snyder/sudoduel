@@ -627,10 +627,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }
     // Priority 2: My move feedback
     else if (lastMoveResult && lastMoveResult.correct === false) {
-      statusMessage = '❌ Mistake! -15 seconds';
+      statusMessage = '❌ Mistake! -12 seconds';
       statusColor = 'text-red-500';
     } else if (lastMoveResult && lastMoveResult.correct === true) {
-      statusMessage = '✓ Correct! +3 seconds';
+      statusMessage = '✓ Correct! +4 seconds';
       statusColor = 'text-green-500';
     }
     // Priority 3: Lockout states
