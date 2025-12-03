@@ -4,6 +4,7 @@ import SudokuGrid from '../components/SudokuGrid';
 import NumberPad from '../components/NumberPad';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { createGameSocket } from '../config';
+import { STARTING_TIME_SECONDS } from '../constants';
 
 interface GamePageProps {
   matchId: number;
@@ -25,13 +26,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [myState, setMyState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
-  const [opponentState, setOpponentState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: 90, is_locked: false, is_solved: false });
+  const [myState, setMyState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
+  const [opponentState, setOpponentState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
   const [mySlot, setMySlot] = useState<number>(0);
   const mySlotRef = useRef<number>(0);
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
-  const [myTimeRemaining, setMyTimeRemaining] = useState(90);
-  const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(90);
+  const [myTimeRemaining, setMyTimeRemaining] = useState(STARTING_TIME_SECONDS);
+  const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [timeChange, setTimeChange] = useState<number | null>(null); // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
@@ -101,13 +102,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
-          setMyTimeRemaining(message.data.player1.time_remaining || 90);
-          setOpponentTimeRemaining(message.data.player2.time_remaining || 90);
+          setMyTimeRemaining(message.data.player1.time_remaining || STARTING_TIME_SECONDS);
+          setOpponentTimeRemaining(message.data.player2.time_remaining || STARTING_TIME_SECONDS);
         } else if (receivedSlot === 2 || receivedSlot === '2') {
           setMyState(message.data.player2);
           setOpponentState(message.data.player1);
-          setMyTimeRemaining(message.data.player2.time_remaining || 90);
-          setOpponentTimeRemaining(message.data.player1.time_remaining || 90);
+          setMyTimeRemaining(message.data.player2.time_remaining || STARTING_TIME_SECONDS);
+          setOpponentTimeRemaining(message.data.player1.time_remaining || STARTING_TIME_SECONDS);
         }
         break;
 
@@ -117,11 +118,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         setInitialGrid(grid.map((row: number[]) => [...row]));
         // Initialize timers from server (use mySlotRef to avoid stale closure)
         if (mySlotRef.current === 1) {
-          setMyTimeRemaining(message.data.player1_time_remaining || 90);
-          setOpponentTimeRemaining(message.data.player2_time_remaining || 90);
+          setMyTimeRemaining(message.data.player1_time_remaining || STARTING_TIME_SECONDS);
+          setOpponentTimeRemaining(message.data.player2_time_remaining || STARTING_TIME_SECONDS);
         } else {
-          setMyTimeRemaining(message.data.player2_time_remaining || 90);
-          setOpponentTimeRemaining(message.data.player1_time_remaining || 90);
+          setMyTimeRemaining(message.data.player2_time_remaining || STARTING_TIME_SECONDS);
+          setOpponentTimeRemaining(message.data.player1_time_remaining || STARTING_TIME_SECONDS);
         }
         setGameStatus('playing');
         break;

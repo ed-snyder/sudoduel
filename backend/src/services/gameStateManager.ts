@@ -1,8 +1,10 @@
+import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../../../shared/src/constants';
+
 interface PlayerGameState {
   playerId: number;
   slot: 1 | 2;
   grid: number[][];
-  timeRemaining: number;      // Time-as-resource timer (starts at 90, can go up/down)
+  timeRemaining: number;      // Time-as-resource timer (starts at STARTING_TIME_SECONDS, can go up/down)
   score: number;              // Cells completed by player (not including initial clues)
   cellsCompleted: number;     // Total cells filled (including initial clues)
   mistakes: number;           // Track for stats
@@ -50,7 +52,7 @@ export const GameStateManager = {
         playerId: player1Id,
         slot: 1,
         grid: JSON.parse(JSON.stringify(initialGridArray)),
-        timeRemaining: 90,          // Start with 90 seconds
+        timeRemaining: STARTING_TIME_SECONDS,
         score: 0,                   // Cells solved by player (not including initial clues)
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
@@ -62,7 +64,7 @@ export const GameStateManager = {
         playerId: player2Id,
         slot: 2,
         grid: JSON.parse(JSON.stringify(initialGridArray)),
-        timeRemaining: 90,          // Start with 90 seconds
+        timeRemaining: STARTING_TIME_SECONDS,
         score: 0,                   // Cells solved by player (not including initial clues)
         cellsCompleted: this.countInitialCells(initialGridArray),
         mistakes: 0,
@@ -203,8 +205,8 @@ export const GameStateManager = {
         // Only count user-placed cells (not initial clues) toward score
         player.score++;
         player.cellsCompleted++;
-        // +3 seconds for correct answer
-        player.timeRemaining += 3;
+        // Time bonus for correct answer
+        player.timeRemaining += TIME_BONUS_CORRECT;
       }
 
       // Check for puzzle completion (all 81 cells filled)
@@ -229,8 +231,8 @@ export const GameStateManager = {
     } else {
       // Incorrect move
       player.mistakes++;
-      // -15 seconds for mistake (can go to 0, not negative)
-      player.timeRemaining = Math.max(0, player.timeRemaining - 15);
+      // Time penalty for mistake (can go to 0, not negative)
+      player.timeRemaining = Math.max(0, player.timeRemaining - TIME_PENALTY_INCORRECT);
       
       // Revert cell to empty (player must try again)
       if (player.grid[row]) {

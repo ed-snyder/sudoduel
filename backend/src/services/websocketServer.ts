@@ -8,6 +8,7 @@ import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
+import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../../../shared/src/constants';
 
 
 
@@ -93,7 +94,7 @@ export const setupWebSocketServer = (server: Server) => {
           puzzle.solution_grid,
           Number(slot1.player_id),
           Number(slot2.player_id),
-          90
+          STARTING_TIME_SECONDS
         );
       }
 
@@ -204,7 +205,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
               col,
               value,
               correct: result.correct,
-              time_change: result.correct ? 3 : -15,
+              time_change: result.correct ? TIME_BONUS_CORRECT : -TIME_PENALTY_INCORRECT,
               player_state: {
                 slot: result.player.slot,
                 score: result.player.score,

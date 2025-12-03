@@ -19,7 +19,7 @@ export const SUDOKU_GRID_SIZE = 9;
 export const SUDOKU_BOX_SIZE = 3;
 
 // Time-as-resource system constants
-export const STARTING_TIME_SECONDS = 90;
+export const STARTING_TIME_SECONDS = 180;
 export const TIME_BONUS_CORRECT = 4;
 export const TIME_PENALTY_INCORRECT = 12;
 

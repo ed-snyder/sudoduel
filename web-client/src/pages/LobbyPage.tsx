@@ -158,7 +158,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             >
               Find Match
             </button>
-            <p className="mt-3 text-gray-400 text-sm">Ranked • 90 seconds</p>
+            <p className="mt-3 text-gray-400 text-sm">Ranked • 180 seconds</p>
           </>
         )}
       </div>
