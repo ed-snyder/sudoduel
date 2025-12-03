@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SudokuGrid from '../components/SudokuGrid';
-import NumberPad from '../components/NumberPad';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
@@ -33,7 +32,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
   const [myTimeRemaining, setMyTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(STARTING_TIME_SECONDS);
-  const [timeChange, setTimeChange] = useState<number | null>(null); // Track time change for feedback (+3 or -15)
+  // Time change feedback removed - status strip handles feedback now // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
   const [opponentMoveFeedback, setOpponentMoveFeedback] = useState<{ correct: boolean } | null>(null); // Track opponent move feedback
@@ -41,10 +40,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  // Connection status removed - no longer displayed in UI
   const [myName, setMyName] = useState<string>(user?.display_name || 'You');
   const [opponentName, setOpponentName] = useState<string>('Opponent');
   const [myRating, setMyRating] = useState<number | undefined>(user?.rating);
+  const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -53,7 +53,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      setConnectionStatus('connected');
       setGameStatus('waiting');
     };
 
@@ -63,11 +62,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     };
 
     ws.onclose = () => {
-      setConnectionStatus('disconnected');
+      // Connection closed
     };
 
     ws.onerror = () => {
-      setConnectionStatus('disconnected');
+      // Connection error
     };
 
     return () => {
@@ -104,11 +103,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           setOpponentState(message.data.player2);
           setMyTimeRemaining(message.data.player1.time_remaining || STARTING_TIME_SECONDS);
           setOpponentTimeRemaining(message.data.player2.time_remaining || STARTING_TIME_SECONDS);
+          setOpponentRating(message.data.opponent_rating);
         } else if (receivedSlot === 2 || receivedSlot === '2') {
           setMyState(message.data.player2);
           setOpponentState(message.data.player1);
           setMyTimeRemaining(message.data.player2.time_remaining || STARTING_TIME_SECONDS);
           setOpponentTimeRemaining(message.data.player1.time_remaining || STARTING_TIME_SECONDS);
+          setOpponentRating(message.data.opponent_rating);
         }
         break;
 
@@ -128,7 +129,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         break;
 
       case 'MOVE_RESULT':
-        const { player_id, slot, row, col, value, correct, time_change, player_state, game_ended, timer_update } = message.data;
+        const { player_id, slot, row, col, value, correct, player_state, game_ended, timer_update } = message.data;
         const myPlayerId = user?.id;
 
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
@@ -145,7 +146,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = value;
               return newGrid;
             });
-            setTimeChange(time_change || 3); // +3 seconds
+            // Time change feedback now shown in status strip
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
             setMyGrid((prev) => {
@@ -153,13 +154,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = 0;
               return newGrid;
             });
-            setTimeChange(time_change || -15); // -15 seconds
+            // Time change feedback now shown in status strip
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
           
-          // Clear time change feedback after 2 seconds
-          setTimeout(() => setTimeChange(null), 2000);
+          // Time change feedback now shown in status strip
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
@@ -324,15 +324,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     setSelectedCell({ row, col });
   };
 
-  const handleBackClick = () => {
-    if (gameStatus === 'playing') {
-      // Active game – confirm forfeit
-      setShowForfeitModal(true);
-    } else {
-      // Game already ended or not started – safe to leave
-      onGameEnd();
-    }
-  };
+  // Back button removed - forfeit can be accessed via other means if needed
+  // const handleBackClick = () => { ... }
 
   const handleForfeit = () => {
     if (wsRef.current && gameStatus === 'playing') {
@@ -661,118 +654,43 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }
   }
 
-  // Main game UI
+  // Handle emote button (placeholder)
+  const handleEmote = () => {
+    // Show toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+    toast.textContent = 'Coming soon';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.remove();
+    }, 2000);
+  };
+
+  // Main game UI - Chess.com style layout
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Top Navigation Bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <button
-          onClick={handleBackClick}
-          className="text-blue-500 text-xl hover:text-blue-600 transition-colors"
-        >
-          ←
-        </button>
-        <div className="flex-1 flex items-center justify-center">
-          <img
-            src="/sudoduel-logo.png"
-            alt="Sudoduel"
-            className="h-8 object-contain"
-          />
+      {/* Opponent Info Bar (Top) */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 font-medium">{opponentName}</span>
+          {opponentRating !== undefined && (
+            <span className="text-xs text-gray-400 font-mono">({Math.round(opponentRating)})</span>
+          )}
         </div>
-        <div className="flex items-center justify-end gap-2 w-6">
-          <div className={`w-2 h-2 rounded-full ${
-            connectionStatus === 'connected' ? 'bg-green-500' : 
-            connectionStatus === 'connecting' ? 'bg-yellow-500' : 
-            'bg-red-500'
-          }`} title={connectionStatus} />
-        </div>
-      </div>
-
-      {/* Match Header Row */}
-      <div className="px-4 py-3 border-b border-gray-200">
-        <div className="flex justify-between items-start gap-4 max-w-md mx-auto">
-          {/* You */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-gray-800 truncate">{myName}</span>
-              <span
-                className={`font-mono font-bold text-base ml-2 ${
-                  myTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
-                }`}
-              >
-                {formatTime(myTimeRemaining)}
-              </span>
-            </div>
-            {myRating !== undefined && (
-              <div className="text-xs text-gray-500 mb-1">
-                Rating: <span className="font-mono">{Math.round(myRating)}</span>
-              </div>
-            )}
-            {/* Progress bar - based on score (max ~50 player-solved cells) */}
-            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden mb-1">
-              <div
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${Math.min(100, (myState.score / 50) * 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-600 font-medium">Score: <span className="font-mono font-bold">{myState.score}</span></span>
-              {scoreDiff > 0 && <span className="text-green-500 text-xs">▲</span>}
-            </div>
-            {myState.is_locked && (
-              <p className="text-red-500 text-xs mt-1 font-medium">OUT OF TIME</p>
-            )}
-          </div>
-          
-          {/* VS Divider */}
-          <div className="text-gray-300 text-sm self-center px-2">VS</div>
-          
-          {/* Opponent */}
-          <div className="flex-1 min-w-0 text-right">
-            <div className="flex items-center justify-between mb-1">
-              <span
-                className={`font-mono font-bold text-base mr-2 ${
-                  opponentTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
-                }`}
-              >
-                {formatTime(opponentTimeRemaining)}
-              </span>
-              <span className="font-semibold text-gray-800 truncate">{opponentName}</span>
-            </div>
-            {/* Opponent progress bar */}
-            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden mb-1">
-              <div
-                className="h-full bg-gray-400 transition-all duration-300"
-                style={{ width: `${Math.min(100, (opponentState.score / 50) * 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              {scoreDiff < 0 && <span className="text-red-500 text-xs">▼</span>}
-              <span className="text-gray-600 font-medium ml-auto">Score: <span className="font-mono font-bold">{opponentState.score}</span></span>
-            </div>
-            {opponentState.is_locked && (
-              <p className="text-gray-500 text-xs mt-1 font-medium">LOCKED</p>
-            )}
-          </div>
+        <div className={`font-mono font-bold text-2xl ${
+          opponentTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+        }`}>
+          {formatTime(opponentTimeRemaining)}
         </div>
       </div>
 
       {/* Status Strip */}
-      <div className={`px-4 py-2 text-center text-sm font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
+      <div className={`px-4 py-1.5 text-center text-xs font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
         {statusMessage}
       </div>
 
-      {/* Time change feedback */}
-      {timeChange !== null && (
-        <div className={`text-center py-1 mb-2 ${
-          timeChange > 0 ? 'text-green-500' : 'text-red-500'
-        } font-semibold`}>
-          {timeChange > 0 ? `+${timeChange}s` : `${timeChange}s`}
-        </div>
-      )}
-
-      {/* Sudoku Grid - Centered */}
-      <div className="flex-1 flex items-center justify-center px-4 py-6">
+      {/* Sudoku Grid - Centered (UNCHANGED SIZE) */}
+      <div className="flex-1 flex items-center justify-center px-4 py-4">
         <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <SudokuGrid
@@ -789,22 +707,101 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Notes mode indicator */}
-      {notesMode && (
-        <div className="px-4 py-2 bg-blue-50 border-t border-blue-200 text-blue-600 text-sm font-medium text-center">
-          📝 Notes Mode Active
+      {/* Your Info Bar (Below grid) */}
+      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 font-medium">{myName}</span>
+          {myRating !== undefined && (
+            <span className="text-xs text-gray-400 font-mono">({Math.round(myRating)})</span>
+          )}
         </div>
-      )}
+        <div className={`font-mono font-bold text-2xl ${
+          myTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+        }`}>
+          {formatTime(myTimeRemaining)}
+        </div>
+      </div>
 
-      {/* Number Pad */}
-      <NumberPad
-        onNumberClick={handleNumberClick}
-        onErase={handleErase}
-        onToggleNotes={handleToggleNotes}
-        notesMode={notesMode}
-        disabled={gameStatus !== 'playing' || myState.is_locked}
-        digitCounts={digitCounts}
-      />
+      {/* Action Buttons: [Erase] [Emote] [Notes] */}
+      <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-gray-200">
+        {/* Erase */}
+        <button
+          onClick={handleErase}
+          disabled={gameStatus !== 'playing' || myState.is_locked}
+          className={`
+            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium
+            ${gameStatus !== 'playing' || myState.is_locked
+              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+            }
+          `}
+        >
+          Erase
+        </button>
+
+        {/* Emote */}
+        <button
+          onClick={handleEmote}
+          disabled={gameStatus !== 'playing' || myState.is_locked}
+          className={`
+            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium
+            ${gameStatus !== 'playing' || myState.is_locked
+              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+            }
+          `}
+        >
+          Emote
+        </button>
+
+        {/* Notes */}
+        <button
+          onClick={handleToggleNotes}
+          disabled={gameStatus !== 'playing' || myState.is_locked}
+          className={`
+            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium relative
+            ${gameStatus !== 'playing' || myState.is_locked
+              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+              : notesMode
+              ? 'bg-blue-50 text-blue-500 hover:bg-blue-100'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }
+          `}
+        >
+          Notes
+          {notesMode && (
+            <span className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 bg-blue-500 text-white rounded-full font-semibold">ON</span>
+          )}
+        </button>
+      </div>
+
+      {/* Number Pad (1-9 only) */}
+      <div className="px-4 py-3 border-t border-gray-200 bg-white">
+        <div className="grid grid-cols-9 gap-2 max-w-md mx-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+            const count = digitCounts[num] || 0;
+            const depleted = count >= 9;
+            return (
+              <button
+                key={num}
+                onClick={() => handleNumberClick(num)}
+                disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
+                className={`
+                  w-full aspect-square rounded-lg transition-colors touch-manipulation text-xl font-bold
+                  ${depleted
+                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    : gameStatus !== 'playing' || myState.is_locked
+                    ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
+                  }
+                `}
+              >
+                {num}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Forfeit confirmation modal */}
       <ForfeitModal
