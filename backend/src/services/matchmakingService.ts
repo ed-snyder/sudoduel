@@ -31,7 +31,7 @@ export const MatchmakingService = {
       return { status: 'matched', match_id: matchId };
     }
 
-    const rating = await PlayerRatingModel.findByPlayerAndLadder(
+    let rating = await PlayerRatingModel.findByPlayerAndLadder(
       profile.id,
       DEFAULT_LADDER_ID
     );
@@ -40,11 +40,11 @@ export const MatchmakingService = {
     if (!rating) {
       // Create default rating if not exists
       await PlayerRatingModel.create(profile.id, DEFAULT_LADDER_ID);
-      const newRating = await PlayerRatingModel.findByPlayerAndLadder(
+      rating = await PlayerRatingModel.findByPlayerAndLadder(
         profile.id,
         DEFAULT_LADDER_ID
       );
-      console.log(`🆕 Created new rating:`, newRating?.rating);
+      console.log(`🆕 Created new rating:`, rating?.rating);
     }
 
     const playerRating = rating?.rating || 1500;
@@ -77,6 +77,15 @@ export const MatchmakingService = {
     );
 
     if (opponent) {
+      // Check if opponent already has a match (race condition protection)
+      if (playerMatches.has(opponent.player_id)) {
+        const matchId = playerMatches.get(opponent.player_id)!;
+        // Opponent already matched, join their match
+        playerMatches.set(profile.id, matchId);
+        await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+        return { status: 'matched', match_id: matchId };
+      }
+
       console.log(`✅ Found opponent:`, opponent.player_id);
       // Create match
       const match = await this.createMatch(profile.id, opponent.player_id);
@@ -104,7 +113,43 @@ export const MatchmakingService = {
     if (playerMatches.has(profile.id)) {
       const matchId = playerMatches.get(profile.id)!;
       console.log(`✅ Match found while processing: ${matchId}`);
+      // Remove from queue since we're matched
+      await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
       return { status: 'matched', match_id: matchId };
+    }
+
+    // Check one more time for an opponent after adding to queue
+    // (in case someone joined while we were processing)
+    const opponentAfterEnqueue = await MatchmakingQueueModel.findOpponent(
+      profile.id,
+      DEFAULT_LADDER_ID,
+      playerRating,
+      RATING_WINDOW
+    );
+
+    if (opponentAfterEnqueue) {
+      // Check if opponent already has a match (race condition protection)
+      if (playerMatches.has(opponentAfterEnqueue.player_id)) {
+        const matchId = playerMatches.get(opponentAfterEnqueue.player_id)!;
+        // Opponent already matched, join their match
+        playerMatches.set(profile.id, matchId);
+        await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+        return { status: 'matched', match_id: matchId };
+      }
+
+      console.log(`✅ Found opponent after enqueue:`, opponentAfterEnqueue.player_id);
+      // Create match
+      const match = await this.createMatch(profile.id, opponentAfterEnqueue.player_id);
+      
+      // Store match for both players
+      playerMatches.set(profile.id, match.id);
+      playerMatches.set(opponentAfterEnqueue.player_id, match.id);
+      
+      // Remove both from queue
+      await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+      await MatchmakingQueueModel.dequeue(opponentAfterEnqueue.player_id, DEFAULT_LADDER_ID);
+      
+      return { status: 'matched', match_id: match.id };
     }
 
     return { status: 'queued', message: 'Waiting for opponent...' };
@@ -137,6 +182,45 @@ export const MatchmakingService = {
     // Check if we're in queue
     const inQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
     if (inQueue) {
+      // Try to find an opponent while we're in queue
+      const rating = await PlayerRatingModel.findByPlayerAndLadder(
+        profile.id,
+        DEFAULT_LADDER_ID
+      );
+      const playerRating = rating?.rating || 1500;
+      
+      const opponent = await MatchmakingQueueModel.findOpponent(
+        profile.id,
+        DEFAULT_LADDER_ID,
+        playerRating,
+        RATING_WINDOW
+      );
+
+      if (opponent) {
+        // Check if opponent already has a match (race condition protection)
+        if (playerMatches.has(opponent.player_id)) {
+          const matchId = playerMatches.get(opponent.player_id)!;
+          // Opponent already matched, join their match
+          playerMatches.set(profile.id, matchId);
+          await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+          return { status: 'matched', match_id: matchId };
+        }
+
+        console.log(`✅ Found opponent during status check:`, opponent.player_id);
+        // Create match
+        const match = await this.createMatch(profile.id, opponent.player_id);
+        
+        // Store match for both players
+        playerMatches.set(profile.id, match.id);
+        playerMatches.set(opponent.player_id, match.id);
+        
+        // Remove both from queue
+        await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+        await MatchmakingQueueModel.dequeue(opponent.player_id, DEFAULT_LADDER_ID);
+        
+        return { status: 'matched', match_id: match.id };
+      }
+
       return { status: 'queued', message: 'Waiting for opponent...' };
     }
 
