@@ -35,8 +35,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Time change feedback removed - status strip handles feedback now // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
-  const [opponentMoveFeedback, setOpponentMoveFeedback] = useState<{ correct: boolean } | null>(null); // Track opponent move feedback
-  const opponentFeedbackTimeoutRef = useRef<number | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
@@ -160,16 +158,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
-          // Show opponent move feedback (short, non-sticky)
-          setOpponentMoveFeedback({ correct });
-          // Clear any existing timeout before setting a new one
-          if (opponentFeedbackTimeoutRef.current !== null) {
-            clearTimeout(opponentFeedbackTimeoutRef.current);
-          }
-          opponentFeedbackTimeoutRef.current = window.setTimeout(() => {
-            setOpponentMoveFeedback(null);
-            opponentFeedbackTimeoutRef.current = null;
-          }, 1200); // ~1.2s so it feels snappy
         }
 
         // Update timers from timer_update (authoritative source for both players)
@@ -598,54 +586,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     );
   }
 
-  // Calculate status message based on score (not cells_completed)
-  const scoreDiff = myState.score - opponentState.score;
-  let statusMessage = 'Neck and neck!';
-  let statusColor = 'text-gray-600';
-  
-  if (gameStatus === 'playing') {
-    // Priority 1: Opponent move feedback (highest priority for visibility)
-    if (opponentMoveFeedback) {
-      if (opponentMoveFeedback.correct) {
-        statusMessage = `🎯 ${opponentName} scored a cell!`;
-        statusColor = 'text-green-500';
-      } else {
-        statusMessage = `❌ ${opponentName} made a mistake!`;
-        statusColor = 'text-red-500';
-      }
-    }
-    // Priority 2: My move feedback
-    else if (lastMoveResult && lastMoveResult.correct === false) {
-      statusMessage = '❌ Mistake! -12 seconds';
-      statusColor = 'text-red-500';
-    } else if (lastMoveResult && lastMoveResult.correct === true) {
-      statusMessage = '✓ Correct! +4 seconds';
-      statusColor = 'text-green-500';
-    }
-    // Priority 3: Lockout states
-    else if (myState.is_locked) {
-      statusMessage = "⏱️ You're locked! Watching opponent...";
-      statusColor = 'text-gray-500';
-    } else if (opponentState.is_locked) {
-      statusMessage = '🔥 Opponent locked! Keep going!';
-      statusColor = 'text-green-600';
-    }
-    // Priority 4: Low time warning
-    else if (myTimeRemaining < 30) {
-      statusMessage = '⚠️ Low time! Play carefully';
-      statusColor = 'text-orange-500';
-    }
-    // Priority 5: Score comparison
-    else if (scoreDiff > 0) {
-      statusMessage = `You're ahead by ${scoreDiff} cell${scoreDiff > 1 ? 's' : ''}! 🔥`;
-      statusColor = 'text-green-600';
-    } else if (scoreDiff < 0) {
-      const diff = Math.abs(scoreDiff);
-      statusMessage = `Opponent leads by ${diff} cell${diff > 1 ? 's' : ''}`;
-      statusColor = 'text-orange-500';
-    }
-  }
-
   // Handle emote button (placeholder)
   const handleEmote = () => {
     // Show toast notification
@@ -658,31 +598,48 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }, 2000);
   };
 
-  // Main game UI - Chess.com style layout
+  // Main game UI - Compact layout with header above grid
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
-      {/* Opponent Info Bar (Top) - Left: Name (ELO), Right: Timer in neon pink */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1 border-b border-gray-200">
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <span className="text-lg sm:text-2xl text-fuchsia-500 font-medium">{opponentName}</span>
-          {opponentRating !== undefined && (
-            <span className="text-xs sm:text-base text-fuchsia-400 font-mono">({Math.round(opponentRating)})</span>
-          )}
+      {/* Compact Match Header - 2 rows above grid */}
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+        {/* Row 1: Names + ELO */}
+        <div className="flex items-start justify-between mb-2">
+          {/* Left: Player */}
+          <div className="flex flex-col">
+            <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
+            <div className="text-xs sm:text-sm text-gray-500 font-mono">Rating {Math.round(user?.rating || 1500)}</div>
+          </div>
+          {/* Right: Opponent */}
+          <div className="flex flex-col items-end">
+            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
+            <div className="text-xs sm:text-sm text-gray-500 font-mono">
+              Rating {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
+            </div>
+          </div>
         </div>
-        <div className={`font-mono font-bold text-lg sm:text-2xl ${
-          opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'
-        }`}>
-          {formatTime(opponentTimeRemaining)}
+        
+        {/* Row 2: Cells completed + Time */}
+        <div className="flex items-center justify-between">
+          {/* Left: Player stats */}
+          <div className="flex items-center gap-2 text-sm sm:text-base font-mono">
+            <span className="text-gray-700">{myState.cells_completed} / 81</span>
+            <span className={`font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+              {formatTime(myTimeRemaining)}
+            </span>
+          </div>
+          {/* Right: Opponent stats */}
+          <div className="flex items-center gap-2 text-sm sm:text-base font-mono">
+            <span className={`font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+              {formatTime(opponentTimeRemaining)}
+            </span>
+            <span className="text-gray-700">{opponentState.cells_completed} / 81</span>
+          </div>
         </div>
       </div>
 
-      {/* Status Strip */}
-      <div className={`px-3 sm:px-4 py-1 sm:py-2.5 text-center text-xs sm:text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200 flex items-center justify-center`}>
-        {statusMessage}
-      </div>
-
-      {/* Sudoku Grid - Centered close to top and bottom */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
+      {/* Sudoku Grid - Tight spacing from header */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
@@ -701,17 +658,37 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Timer Only - Centered, large, raspberry blue, close to grid */}
-      <div className="flex items-center justify-center px-3 sm:px-4 py-1 sm:py-2">
-        <div className={`font-mono font-bold text-lg sm:text-2xl ${
-          myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
-        }`}>
-          {formatTime(myTimeRemaining)}
+      {/* Number Pad (1-9) - Directly under grid */}
+      <div className="px-3 sm:px-4 py-2 sm:py-2 border-t border-gray-200 bg-white" style={{ marginTop: '8px' }}>
+        <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2 max-w-md mx-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+            const count = digitCounts[num] || 0;
+            const depleted = count >= 9;
+            return (
+              <button
+                key={num}
+                onClick={() => handleNumberClick(num)}
+                disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
+                className={`
+                  min-h-[40px] sm:min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
+                  ${depleted
+                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    : gameStatus !== 'playing' || myState.is_locked
+                    ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
+                  }
+                `}
+                style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1.25rem)' }}
+              >
+                {num}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Action Buttons: [Erase] [Emote] [Notes] - Close to grid */}
-      <div className="flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 border-t border-gray-200">
+      {/* Toolbar: [Erase] [Emote] [Notes] - Below number pad */}
+      <div className="flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2 border-t border-gray-200" style={{ marginTop: '8px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
@@ -761,35 +738,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             <span className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 bg-blue-500 text-white rounded-full font-semibold">ON</span>
           )}
         </button>
-      </div>
-
-      {/* Number Pad (1-9 only) - Close to grid */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 bg-white">
-        <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2 max-w-md mx-auto">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
-            const count = digitCounts[num] || 0;
-            const depleted = count >= 9;
-            return (
-              <button
-                key={num}
-                onClick={() => handleNumberClick(num)}
-                disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className={`
-                  min-h-[40px] sm:min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
-                  ${depleted
-                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                    : gameStatus !== 'playing' || myState.is_locked
-                    ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
-                  }
-                `}
-                style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1.25rem)' }}
-              >
-                {num}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Forfeit confirmation modal */}
