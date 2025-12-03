@@ -676,31 +676,33 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Status Strip - Reduced padding to minimize space */}
-      <div className={`px-4 py-2 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200 flex items-center justify-center`}>
+      {/* Status Strip - Balanced padding */}
+      <div className={`px-4 py-2.5 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200 flex items-center justify-center`}>
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Centered, NO expansion, NO spacing, flex-shrink-0 */}
-      <div className="flex justify-center px-2 sm:px-4 flex-shrink-0" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', height: 'auto' }}>
-        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ marginBottom: '0px', paddingBottom: '0px', height: 'auto' }}>
+      {/* Sudoku Grid - Centered with balanced spacing */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
-            <SudokuGrid
-              grid={myGrid}
-              initialGrid={initialGrid}
-              selectedCell={selectedCell}
-              onCellClick={handleCellClick}
-              notes={notes}
-              notesMode={notesMode}
-              lockedOut={myState.is_locked}
-              lastMoveResult={lastMoveResult}
-            />
+            <div className="w-full flex justify-center">
+              <SudokuGrid
+                grid={myGrid}
+                initialGrid={initialGrid}
+                selectedCell={selectedCell}
+                onCellClick={handleCellClick}
+                notes={notes}
+                notesMode={notesMode}
+                lockedOut={myState.is_locked}
+                lastMoveResult={lastMoveResult}
+              />
+            </div>
           )}
         </div>
       </div>
 
-      {/* Your Timer Only - Centered, large, raspberry blue, directly below grid */}
-      <div className="flex items-center justify-center px-4 flex-shrink-0" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', height: 'auto' }}>
+      {/* Your Timer Only - Centered, large, raspberry blue, balanced gap from grid */}
+      <div className="flex items-center justify-center px-4 py-2">
         <div className={`font-mono font-bold text-2xl ${
           myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
@@ -708,8 +710,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Action Buttons: [Erase] [Emote] [Notes] - 8px gap from timer, 44px min height */}
-      <div className="flex items-center justify-center gap-2 px-4 border-t border-gray-200" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Action Buttons: [Erase] [Emote] [Notes] - Balanced spacing, 44px min height */}
+      <div className="flex items-center justify-center gap-2 px-4 py-2 border-t border-gray-200">
         {/* Erase */}
         <button
           onClick={handleErase}
@@ -761,8 +763,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </button>
       </div>
 
-      {/* Number Pad (1-9 only) - 8px gap from action buttons, 44px min height, minimal bottom padding */}
-      <div className="px-2 sm:px-4 border-t border-gray-200 bg-white" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Number Pad (1-9 only) - Balanced spacing, 44px min height */}
+      <div className="px-2 sm:px-4 py-3 border-t border-gray-200 bg-white">
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
