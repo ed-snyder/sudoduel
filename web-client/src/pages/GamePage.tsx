@@ -598,9 +598,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }, 2000);
   };
 
-  // Main game UI - Compact layout with header above grid
+  // Main game UI - Compact layout with header above grid, centered vertically
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className="min-h-screen bg-white flex flex-col justify-center" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Compact Match Header - 2 rows above grid */}
       <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
         {/* Row 1: Names + ELO */}
@@ -638,8 +638,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Tight spacing from header, no flex expansion */}
-      <div className="flex justify-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Sudoku Grid - Centered vertically, tight spacing from header */}
+      <div className="flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
