@@ -156,9 +156,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             setTimeChange(time_change || -15); // -15 seconds
           }
           setMyState(player_state);
-          if (player_state.time_remaining !== undefined) {
-            setMyTimeRemaining(player_state.time_remaining);
-          }
           setLastMoveResult({ correct, row, col });
           
           // Clear time change feedback after 2 seconds
@@ -166,9 +163,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
-          if (player_state.time_remaining !== undefined) {
-            setOpponentTimeRemaining(player_state.time_remaining);
-          }
           // Show opponent move feedback (short, non-sticky)
           setOpponentMoveFeedback({ correct });
           // Clear any existing timeout before setting a new one
@@ -181,14 +175,23 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           }, 1200); // ~1.2s so it feels snappy
         }
 
-        // Update timers if provided
+        // Update timers from timer_update (authoritative source for both players)
+        // This ensures both timers are synchronized correctly
         if (timer_update) {
-          if (mySlot === 1) {
+          if (mySlotRef.current === 1) {
             setMyTimeRemaining(timer_update.player1_time_remaining);
             setOpponentTimeRemaining(timer_update.player2_time_remaining);
-          } else {
+          } else if (mySlotRef.current === 2) {
             setMyTimeRemaining(timer_update.player2_time_remaining);
             setOpponentTimeRemaining(timer_update.player1_time_remaining);
+          }
+        } else {
+          // Fallback: if timer_update not provided, use player_state.time_remaining
+          // (This should rarely happen, but provides a safety net)
+          if (isMyMove && player_state.time_remaining !== undefined) {
+            setMyTimeRemaining(player_state.time_remaining);
+          } else if (!isMyMove && player_state.time_remaining !== undefined) {
+            setOpponentTimeRemaining(player_state.time_remaining);
           }
         }
         
