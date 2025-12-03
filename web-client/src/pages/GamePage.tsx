@@ -682,8 +682,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Sudoku Grid - Centered with balanced spacing */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '4px' }}>
+        <div className={`relative w-full max-w-full mb-1 ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
@@ -701,8 +701,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Timer Only - Centered, large, raspberry blue, balanced gap from grid */}
-      <div className="flex items-center justify-center px-4 py-2">
+      {/* Your Timer Only - Centered, large, raspberry blue, minimal gap from grid */}
+      <div className="flex items-center justify-center px-4 py-2 mt-1">
         <div className={`font-mono font-bold text-2xl ${
           myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
