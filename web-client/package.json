@@ -9,6 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "VITE_API_URL=https://api.sudoduel.com VITE_WS_URL=wss://api.sudoduel.com vite build",
+    "cap:ios": "npm run build:prod && npx cap sync ios",
+    "cap:android": "npm run build:prod && npx cap sync android",
     "lint": "eslint .",
     "preview": "vite preview"
   },
