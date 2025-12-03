@@ -689,26 +689,28 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Centered (UNCHANGED SIZE) */}
-      <div className="flex-1 flex items-center justify-center px-4 py-4">
-        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
+      {/* Sudoku Grid - Maximized size, centered */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '4px', paddingBottom: '8px' }}>
+        <div className={`relative w-full max-w-full h-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
-            <SudokuGrid
-              grid={myGrid}
-              initialGrid={initialGrid}
-              selectedCell={selectedCell}
-              onCellClick={handleCellClick}
-              notes={notes}
-              notesMode={notesMode}
-              lockedOut={myState.is_locked}
-              lastMoveResult={lastMoveResult}
-            />
+            <div className="w-full h-full flex items-center justify-center">
+              <SudokuGrid
+                grid={myGrid}
+                initialGrid={initialGrid}
+                selectedCell={selectedCell}
+                onCellClick={handleCellClick}
+                notes={notes}
+                notesMode={notesMode}
+                lockedOut={myState.is_locked}
+                lastMoveResult={lastMoveResult}
+              />
+            </div>
           )}
         </div>
       </div>
 
-      {/* Your Info Bar (Below grid) */}
-      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
+      {/* Your Info Bar (Below grid) - 8px gap */}
+      <div className="flex items-center justify-between px-4 py-1.5 border-t border-gray-200" style={{ marginTop: '0px' }}>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 font-medium">{myName}</span>
           {myRating !== undefined && (
@@ -722,14 +724,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Action Buttons: [Erase] [Emote] [Notes] */}
-      <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-gray-200">
+      {/* Action Buttons: [Erase] [Emote] [Notes] - 8px gap, 44px min height */}
+      <div className="flex items-center justify-center gap-2 px-4 border-t border-gray-200" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium
+            flex-1 min-h-[44px] px-3 rounded-lg transition-colors text-sm font-medium
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
@@ -744,7 +746,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           onClick={handleEmote}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium
+            flex-1 min-h-[44px] px-3 rounded-lg transition-colors text-sm font-medium
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
@@ -759,7 +761,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           onClick={handleToggleNotes}
           disabled={gameStatus !== 'playing' || myState.is_locked}
           className={`
-            flex-1 py-2 px-4 rounded-lg transition-colors text-sm font-medium relative
+            flex-1 min-h-[44px] px-3 rounded-lg transition-colors text-sm font-medium relative
             ${gameStatus !== 'playing' || myState.is_locked
               ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : notesMode
@@ -775,9 +777,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </button>
       </div>
 
-      {/* Number Pad (1-9 only) */}
-      <div className="px-4 py-3 border-t border-gray-200 bg-white">
-        <div className="grid grid-cols-9 gap-2 max-w-md mx-auto">
+      {/* Number Pad (1-9 only) - 8px gap, 44px min height */}
+      <div className="px-2 sm:px-4 border-t border-gray-200 bg-white" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+        <div className="grid grid-cols-9 gap-1.5 sm:gap-2 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
             const depleted = count >= 9;
@@ -787,7 +789,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className={`
-                  w-full aspect-square rounded-lg transition-colors touch-manipulation text-xl font-bold
+                  min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
                   ${depleted
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : gameStatus !== 'playing' || myState.is_locked
@@ -795,6 +797,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                     : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
                   }
                 `}
+                style={{ fontSize: 'clamp(1rem, 4vw, 1.25rem)' }}
               >
                 {num}
               </button>

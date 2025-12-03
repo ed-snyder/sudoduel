@@ -72,7 +72,13 @@ export default function SudokuGrid({
         grid grid-cols-9 gap-0 border-2 border-gray-700 
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
         transition-colors
+        w-full
       `}
+      style={{
+        aspectRatio: '1 / 1',
+        maxHeight: 'min(100%, calc(100vh - 240px))', // Reserve space for UI elements
+        maxWidth: '100%',
+      }}
     >
       {grid.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
@@ -106,8 +112,13 @@ export default function SudokuGrid({
               key={`${rowIndex}-${colIndex}`}
               onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
               className={`
-                w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative flex items-center justify-center
+                relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
+                w-full
+              `}
+              style={{
+                aspectRatio: '1 / 1',
+              }}
                 ${
                   lockedOut
                     ? 'bg-gray-100'
@@ -131,9 +142,10 @@ export default function SudokuGrid({
               {hasValue ? (
                 <span
                   className={`
-                    text-sm sm:text-lg md:text-xl font-bold
+                    text-base sm:text-lg md:text-xl lg:text-2xl font-bold
                     ${isInitial ? 'text-gray-800' : 'text-blue-500'}
                   `}
+                  style={{ fontSize: 'clamp(0.875rem, 4vw, 1.5rem)' }}
                 >
                   {cell}
                 </span>
