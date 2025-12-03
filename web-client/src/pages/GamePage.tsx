@@ -608,13 +608,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           {/* Left: Player */}
           <div className="flex flex-col">
             <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
-            <div className="text-xs sm:text-sm text-gray-500 font-mono">Rating {Math.round(user?.rating || 1500)}</div>
+            <div className="text-xs sm:text-sm text-gray-500 font-mono">{Math.round(user?.rating || 1500)}</div>
           </div>
           {/* Right: Opponent */}
           <div className="flex flex-col items-end">
             <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
             <div className="text-xs sm:text-sm text-gray-500 font-mono">
-              Rating {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
+              {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
             </div>
           </div>
         </div>
@@ -638,8 +638,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Tight spacing from header */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Sudoku Grid - Tight spacing from header, no flex expansion */}
+      <div className="flex justify-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
