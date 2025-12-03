@@ -115,10 +115,6 @@ export default function SudokuGrid({
                 relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
                 w-full
-              `}
-              style={{
-                aspectRatio: '1 / 1',
-              }}
                 ${
                   lockedOut
                     ? 'bg-gray-100'
@@ -137,6 +133,9 @@ export default function SudokuGrid({
                 }
                 transition-colors duration-150 touch-manipulation
               `}
+              style={{
+                aspectRatio: '1 / 1',
+              }}
               disabled={lockedOut}
             >
               {hasValue ? (
