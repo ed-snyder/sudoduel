@@ -191,8 +191,15 @@ export const GameStateManager = {
       return { success: false, player, gameEnded: false };
     }
 
-    // Validate solution grid access and compare values
+    // Check if cell already has a correct value - prevent overwriting correct placements
+    const currentValue = player.grid[row]?.[col] || 0;
     const solutionValue = game.solutionGrid[row]?.[col];
+    if (currentValue !== 0 && currentValue === solutionValue) {
+      // Cell already has the correct value - treat like a prefilled clue, cannot be changed
+      return { success: false, player, gameEnded: false };
+    }
+
+    // Validate solution grid access and compare values
     const correct = solutionValue !== undefined && Number(solutionValue) === Number(value);
 
     if (correct) {
