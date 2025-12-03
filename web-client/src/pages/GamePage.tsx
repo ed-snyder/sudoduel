@@ -627,10 +627,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           </div>
           {/* Right: Opponent */}
           <div className="flex items-center gap-2">
+            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
             <div className="text-xs sm:text-sm text-gray-500 font-mono">
               {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
             </div>
-            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
           </div>
         </div>
         
@@ -649,7 +649,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {/* Row 3: Timers with feedback in center */}
         <div className="flex items-center justify-between">
           {/* Left: Player timer */}
-          <div className={`text-sm sm:text-base font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+          <div className={`text-lg sm:text-xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
             {formatTime(myTimeRemaining)}
           </div>
           {/* Center: Time feedback */}
@@ -657,7 +657,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             {timeFeedback?.text || ' '}
           </div>
           {/* Right: Opponent timer */}
-          <div className={`text-sm sm:text-base font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+          <div className={`text-lg sm:text-xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
             {formatTime(opponentTimeRemaining)}
           </div>
         </div>
