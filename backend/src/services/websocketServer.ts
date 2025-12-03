@@ -101,6 +101,9 @@ export const setupWebSocketServer = (server: Server) => {
       // Compute opponent profile for this connection
       const opponentRow = players.find(p => p.player_id !== profile.id)!;
       const opponentProfile = await PlayerProfileModel.findById(opponentRow.player_id);
+      
+      // Get opponent rating
+      const opponentRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
 
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
         GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
@@ -123,6 +126,7 @@ export const setupWebSocketServer = (server: Server) => {
           your_slot: playerSlot.slot,
           your_name: profile.display_name,
           opponent_name: opponentProfile?.display_name || 'Opponent',
+          opponent_rating: opponentRating?.rating || 1500,
           player1: {
             score: game.player1.score,
             cells_completed: game.player1.cellsCompleted,
