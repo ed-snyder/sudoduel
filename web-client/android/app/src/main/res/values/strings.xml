@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sudoduel</string>
+    <string name="title_activity_main">Sudoduel</string>
+    <string name="package_name">com.sudoduel.app</string>
+    <string name="custom_url_scheme">com.sudoduel.app</string>
+</resources>
