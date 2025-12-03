@@ -41,9 +41,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   // Connection status removed - no longer displayed in UI
-  const [myName, setMyName] = useState<string>(user?.display_name || 'You');
   const [opponentName, setOpponentName] = useState<string>('Opponent');
-  const [myRating, setMyRating] = useState<number | undefined>(user?.rating);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
 
   // Connect to WebSocket
