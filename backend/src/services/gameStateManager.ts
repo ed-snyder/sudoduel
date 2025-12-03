@@ -1,4 +1,4 @@
-import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../../../shared/src/constants';
+import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
 
 interface PlayerGameState {
   playerId: number;

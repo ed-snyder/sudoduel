@@ -8,7 +8,7 @@ import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
-import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../../../shared/src/constants';
+import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
 
 
 
