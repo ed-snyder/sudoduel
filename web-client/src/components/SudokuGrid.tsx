@@ -76,7 +76,7 @@ export default function SudokuGrid({
       `}
       style={{
         aspectRatio: '1 / 1',
-        maxHeight: 'min(100%, calc(100vh - 200px))', // Adjusted for expanded status bar and timer-only layout
+        maxHeight: 'min(100%, calc(100vh - 180px))', // Reduced reserved space to minimize whitespace
         maxWidth: '100%',
         marginBottom: '0px',
         paddingBottom: '0px',

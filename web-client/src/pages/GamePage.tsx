@@ -660,7 +660,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Main game UI - Chess.com style layout
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px' }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Opponent Info Bar (Top) - Left: Name (ELO), Right: Timer in neon pink */}
       <div className="flex items-center justify-between px-4 py-0.5 border-b border-gray-200" style={{ marginTop: '0px' }}>
         <div className="flex items-center gap-1.5">
@@ -681,28 +681,26 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Slightly reduced if needed, centered, NO bottom padding/margin */}
-      <div className="flex-1 flex items-start justify-center px-2 sm:px-4 min-h-0 overflow-hidden" style={{ paddingTop: '1px', paddingBottom: '0px', marginBottom: '0px' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ marginBottom: '0px', paddingBottom: '0px' }}>
+      {/* Sudoku Grid - Centered, NO flex-1 expansion, NO bottom spacing */}
+      <div className="flex justify-center px-2 sm:px-4" style={{ paddingTop: '1px', paddingBottom: '0px', marginBottom: '0px' }}>
+        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ marginBottom: '0px', paddingBottom: '0px' }}>
           {myGrid.length > 0 && (
-            <div className="w-full flex justify-center" style={{ marginBottom: '0px', paddingBottom: '0px' }}>
-              <SudokuGrid
-                grid={myGrid}
-                initialGrid={initialGrid}
-                selectedCell={selectedCell}
-                onCellClick={handleCellClick}
-                notes={notes}
-                notesMode={notesMode}
-                lockedOut={myState.is_locked}
-                lastMoveResult={lastMoveResult}
-              />
-            </div>
+            <SudokuGrid
+              grid={myGrid}
+              initialGrid={initialGrid}
+              selectedCell={selectedCell}
+              onCellClick={handleCellClick}
+              notes={notes}
+              notesMode={notesMode}
+              lockedOut={myState.is_locked}
+              lastMoveResult={lastMoveResult}
+            />
           )}
         </div>
       </div>
 
       {/* Your Timer Only - Centered, large, raspberry blue, minimal gap from grid */}
-      <div className="flex items-center justify-center px-4" style={{ paddingTop: '4px', paddingBottom: '0px', marginTop: '0px' }}>
+      <div className="flex items-center justify-center px-4" style={{ paddingTop: '2px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' }}>
         <div className={`font-mono font-bold text-2xl ${
           myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
