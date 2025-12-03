@@ -669,8 +669,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Chess.com style layout
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Opponent Info Bar (Top) - Centered layout with neon pink */}
-      <div className="flex items-center justify-between px-4 py-1 border-b border-gray-200">
+      {/* Opponent Info Bar (Top) - Centered layout with neon pink, minimal padding */}
+      <div className="flex items-center justify-between px-4 py-0.5 border-b border-gray-200">
         <div className="flex items-center gap-1.5 flex-1">
           <span className="text-2xl text-fuchsia-500 font-medium">{opponentName}</span>
           {opponentRating !== undefined && (
@@ -685,13 +685,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         <div className="flex-1" /> {/* Spacer for centering */}
       </div>
 
-      {/* Status Strip - Larger height and font, minimal bottom padding */}
-      <div className={`px-4 py-2 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
+      {/* Status Strip - Larger height and font, minimal padding */}
+      <div className={`px-4 py-1 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Maximized size, centered - Minimal top/bottom padding */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Sudoku Grid - Maximized size, centered - Greatly reduced top/bottom padding */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
         <div className={`relative w-full max-w-full h-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full h-full flex items-center justify-center">
@@ -710,8 +710,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Info Bar (Below grid) - Centered layout with raspberry blue, minimal gap */}
-      <div className="flex items-center justify-between px-4 py-1 border-t border-gray-200" style={{ marginTop: '0px' }}>
+      {/* Your Info Bar (Below grid) - Centered layout with raspberry blue, greatly reduced gap */}
+      <div className="flex items-center justify-between px-4 py-0.5 border-t border-gray-200" style={{ marginTop: '0px' }}>
         <div className="flex items-center gap-1.5 flex-1">
           <span className="text-2xl text-blue-500 font-medium">{myName}</span>
           {myRating !== undefined && (
