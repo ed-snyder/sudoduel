@@ -2,6 +2,8 @@
 // Run with: npx tsx backend/scripts/fix-puzzle-seeds.ts
 // (or npx ts-node if you have ts-node installed)
 
+/// <reference types="node" />
+
 import fs from 'fs';
 import path from 'path';
 
@@ -19,8 +21,10 @@ interface ValidationResult {
 const SEEDS_RELATIVE_PATH = '../../database/seeds/puzzles.sql';
 
 function getSeedsPath() {
-  // When executed from backend/, __dirname will be backend/scripts
-  return path.resolve(__dirname, SEEDS_RELATIVE_PATH);
+  // Use process.cwd() as base since script runs from project root or backend/
+  // This works regardless of ESM/CommonJS
+  const scriptDir = path.resolve(process.cwd(), 'backend/scripts');
+  return path.resolve(scriptDir, SEEDS_RELATIVE_PATH);
 }
 
 function stringToGrid(s: string): number[][] {
