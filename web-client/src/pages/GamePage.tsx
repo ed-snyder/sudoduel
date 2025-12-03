@@ -681,9 +681,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Centered, NO expansion, NO spacing */}
-      <div className="flex justify-center px-2 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' }}>
-        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ marginBottom: '0px', paddingBottom: '0px' }}>
+      {/* Sudoku Grid - Centered, NO expansion, NO spacing, flex-shrink-0 */}
+      <div className="flex justify-center px-2 sm:px-4 flex-shrink-0" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', height: 'auto' }}>
+        <div className={`relative ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ marginBottom: '0px', paddingBottom: '0px', height: 'auto' }}>
           {myGrid.length > 0 && (
             <SudokuGrid
               grid={myGrid}
@@ -699,8 +699,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Timer Only - Centered, large, raspberry blue, minimal gap from grid */}
-      <div className="flex items-center justify-center px-4" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' }}>
+      {/* Your Timer Only - Centered, large, raspberry blue, directly below grid */}
+      <div className="flex items-center justify-center px-4 flex-shrink-0" style={{ paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', height: 'auto' }}>
         <div className={`font-mono font-bold text-2xl ${
           myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
