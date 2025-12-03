@@ -669,28 +669,29 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Chess.com style layout
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Opponent Info Bar (Top) */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl text-gray-600 font-medium">{opponentName}</span>
+      {/* Opponent Info Bar (Top) - Centered layout with neon pink */}
+      <div className="flex items-center justify-between px-4 py-1 border-b border-gray-200">
+        <div className="flex items-center gap-1.5 flex-1">
+          <span className="text-2xl text-fuchsia-500 font-medium">{opponentName}</span>
           {opponentRating !== undefined && (
-            <span className="text-2xl text-gray-400 font-mono">({Math.round(opponentRating)})</span>
+            <span className="text-base text-fuchsia-400 font-mono">({Math.round(opponentRating)})</span>
           )}
         </div>
-        <div className={`font-mono font-bold text-2xl ${
-          opponentTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+        <div className={`font-mono font-bold text-2xl flex-1 flex justify-center ${
+          opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'
         }`}>
           {formatTime(opponentTimeRemaining)}
         </div>
+        <div className="flex-1" /> {/* Spacer for centering */}
       </div>
 
-      {/* Status Strip - Larger height and font */}
-      <div className={`px-4 py-3 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
+      {/* Status Strip - Larger height and font, minimal bottom padding */}
+      <div className={`px-4 py-2 text-center text-base font-medium ${statusColor} bg-gray-50 border-b border-gray-200`}>
         {statusMessage}
       </div>
 
-      {/* Sudoku Grid - Maximized size, centered - Reduced top padding */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '2px', paddingBottom: '4px' }}>
+      {/* Sudoku Grid - Maximized size, centered - Minimal top/bottom padding */}
+      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full h-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full h-full flex items-center justify-center">
@@ -709,23 +710,24 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Your Info Bar (Below grid) - Reduced gap */}
+      {/* Your Info Bar (Below grid) - Centered layout with raspberry blue, minimal gap */}
       <div className="flex items-center justify-between px-4 py-1 border-t border-gray-200" style={{ marginTop: '0px' }}>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl text-gray-600 font-medium">{myName}</span>
+        <div className="flex items-center gap-1.5 flex-1">
+          <span className="text-2xl text-blue-500 font-medium">{myName}</span>
           {myRating !== undefined && (
-            <span className="text-2xl text-gray-400 font-mono">({Math.round(myRating)})</span>
+            <span className="text-base text-blue-400 font-mono">({Math.round(myRating)})</span>
           )}
         </div>
-        <div className={`font-mono font-bold text-2xl ${
-          myTimeRemaining < 30 ? 'text-red-500' : 'text-gray-800'
+        <div className={`font-mono font-bold text-2xl flex-1 flex justify-center ${
+          myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'
         }`}>
           {formatTime(myTimeRemaining)}
         </div>
+        <div className="flex-1" /> {/* Spacer for centering */}
       </div>
 
-      {/* Action Buttons: [Erase] [Emote] [Notes] - Reduced gap, 44px min height */}
-      <div className="flex items-center justify-center gap-2 px-4 border-t border-gray-200" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
+      {/* Action Buttons: [Erase] [Emote] [Notes] - Tight gap, 44px min height */}
+      <div className="flex items-center justify-center gap-2 px-4 border-t border-gray-200" style={{ paddingTop: '6px', paddingBottom: '6px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
@@ -777,8 +779,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </button>
       </div>
 
-      {/* Number Pad (1-9 only) - Reduced gap, 44px min height */}
-      <div className="px-2 sm:px-4 border-t border-gray-200 bg-white" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
+      {/* Number Pad (1-9 only) - Tight gap, 44px min height, minimal bottom padding */}
+      <div className="px-2 sm:px-4 border-t border-gray-200 bg-white" style={{ paddingTop: '6px', paddingBottom: '8px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
