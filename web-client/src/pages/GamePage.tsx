@@ -35,6 +35,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Time change feedback removed - status strip handles feedback now // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
+  const [timeFeedback, setTimeFeedback] = useState<{ text: string; color: string } | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
@@ -79,6 +80,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       return () => clearTimeout(timer);
     }
   }, [lastMoveResult]);
+
+  // Clear time feedback after display
+  useEffect(() => {
+    if (timeFeedback) {
+      const timer = setTimeout(() => setTimeFeedback(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [timeFeedback]);
 
   const handleMessage = (message: any) => {
     switch (message.type) {
@@ -141,7 +150,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = value;
               return newGrid;
             });
-            // Time change feedback now shown in status strip
+            // Show time feedback
+            setTimeFeedback({ text: '+4 seconds', color: 'text-blue-500' });
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
             setMyGrid((prev) => {
@@ -149,15 +159,20 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = 0;
               return newGrid;
             });
-            // Time change feedback now shown in status strip
+            // Show time feedback
+            setTimeFeedback({ text: '-10 seconds', color: 'text-blue-500' });
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
-          
-          // Time change feedback now shown in status strip
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
+          // Show opponent time feedback
+          if (correct) {
+            setTimeFeedback({ text: '+4 seconds', color: 'text-fuchsia-500' });
+          } else {
+            setTimeFeedback({ text: '-10 seconds', color: 'text-fuchsia-500' });
+          }
         }
 
         // Update timers from timer_update (authoritative source for both players)
@@ -601,39 +616,49 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid, centered vertically
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
-      {/* Compact Match Header - 2 rows above grid */}
+      {/* Compact Match Header - 3 rows above grid */}
       <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
-        {/* Row 1: Names + ELO */}
-        <div className="flex items-start justify-between mb-2">
+        {/* Row 1: Names + ELO inline */}
+        <div className="flex items-center justify-between mb-2">
           {/* Left: Player */}
-          <div className="flex flex-col">
+          <div className="flex items-center gap-2">
             <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
             <div className="text-xs sm:text-sm text-gray-500 font-mono">{Math.round(user?.rating || 1500)}</div>
           </div>
           {/* Right: Opponent */}
-          <div className="flex flex-col items-end">
-            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
+          <div className="flex items-center gap-2">
             <div className="text-xs sm:text-sm text-gray-500 font-mono">
               {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
             </div>
+            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
           </div>
         </div>
         
-        {/* Row 2: Cells completed + Time */}
-        <div className="flex items-center justify-between">
-          {/* Left: Player stats */}
-          <div className="flex items-center gap-2 text-sm sm:text-base font-mono">
-            <span className="text-gray-700">{myState.cells_completed} / 81</span>
-            <span className={`font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
-              {formatTime(myTimeRemaining)}
-            </span>
+        {/* Row 2: Cells completed (no spaces) */}
+        <div className="flex items-center justify-between mb-2">
+          {/* Left: Player score */}
+          <div className="text-sm sm:text-base font-mono text-gray-700">
+            {myState.cells_completed}/81
           </div>
-          {/* Right: Opponent stats */}
-          <div className="flex items-center gap-2 text-sm sm:text-base font-mono">
-            <span className={`font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
-              {formatTime(opponentTimeRemaining)}
-            </span>
-            <span className="text-gray-700">{opponentState.cells_completed} / 81</span>
+          {/* Right: Opponent score */}
+          <div className="text-sm sm:text-base font-mono text-gray-700">
+            {opponentState.cells_completed}/81
+          </div>
+        </div>
+        
+        {/* Row 3: Timers with feedback in center */}
+        <div className="flex items-center justify-between">
+          {/* Left: Player timer */}
+          <div className={`text-sm sm:text-base font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+            {formatTime(myTimeRemaining)}
+          </div>
+          {/* Center: Time feedback */}
+          <div className={`text-sm sm:text-base font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
+            {timeFeedback?.text || ' '}
+          </div>
+          {/* Right: Opponent timer */}
+          <div className={`text-sm sm:text-base font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+            {formatTime(opponentTimeRemaining)}
           </div>
         </div>
       </div>
