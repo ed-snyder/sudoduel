@@ -96,7 +96,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         } else if (message.data.status === 'WAITING') {
           setGameStatus('waiting');
         }
-        setMyName(message.data.your_name || user?.display_name || 'You');
         setOpponentName(message.data.opponent_name || 'Opponent');
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
@@ -441,12 +440,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Keep local rating in sync when user updates (e.g., after refreshUser)
-  useEffect(() => {
-    if (user?.rating !== undefined) {
-      setMyRating(user.rating);
-    }
-  }, [user]);
+  // Rating no longer displayed in player info bar (removed)
 
   // Compute digit counts for number pad depletion styling (purely visual)
   const digitCounts: Record<number, number> = {};
