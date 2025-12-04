@@ -26,6 +26,7 @@ interface GameState {
   timeoutTimer: NodeJS.Timeout | null;
   timerInterval: NodeJS.Timeout | null; // Interval for per-player timer countdown
   forfeitWinnerId?: number | null; // Optional winner override for forfeits
+  forfeitingPlayerId?: number | null; // Track which player forfeited (for validation)
   // Disconnect tracking
   disconnectedPlayerId: number | null;
   disconnectTime: number | null;  // timestamp when disconnect occurred
@@ -83,6 +84,7 @@ export const GameStateManager = {
       timeoutTimer: null,
       timerInterval: null,
       forfeitWinnerId: null,
+      forfeitingPlayerId: null,
       disconnectedPlayerId: null,
       disconnectTime: null,
       gracePeriodTimer: null,
@@ -296,8 +298,27 @@ export const GameStateManager = {
     let winnerId: number | null = null;
     let resultCode: number = 3;
 
-    // Forfeit override: if a winner was explicitly set by forfeit, use that
-    if (game.forfeitWinnerId != null) {
+    // CRITICAL: Forfeit override - if a forfeit occurred, the forfeiting player CANNOT win
+    // This check must happen FIRST and override all other win conditions
+    if (game.forfeitingPlayerId != null) {
+      // Ensure the forfeiting player is NEVER the winner
+      const forfeitingId = game.forfeitingPlayerId;
+      if (forfeitingId === p1.playerId) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else if (forfeitingId === p2.playerId) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else {
+        // Fallback: use forfeitWinnerId if set
+        if (game.forfeitWinnerId != null) {
+          winnerId = game.forfeitWinnerId;
+          resultCode = winnerId === p1.playerId ? 1 : 2;
+        }
+      }
+      console.log(`[GameState] Forfeit detected: player ${forfeitingId} forfeited, winner is ${winnerId}`);
+    } else if (game.forfeitWinnerId != null) {
+      // Legacy check: if forfeitWinnerId is set but forfeitingPlayerId is not, use forfeitWinnerId
       winnerId = game.forfeitWinnerId;
       resultCode = winnerId === p1.playerId ? 1 : 2;
     } else {
@@ -319,6 +340,19 @@ export const GameStateManager = {
       } else {
         // Equal scores = draw
         resultCode = 3;
+      }
+    }
+
+    // CRITICAL SAFETY CHECK: Ensure forfeiting player is NEVER the winner
+    if (game.forfeitingPlayerId != null && winnerId === game.forfeitingPlayerId) {
+      console.error(`[GameState] ERROR: Forfeiting player ${game.forfeitingPlayerId} was set as winner! Fixing...`);
+      // Force the opponent to win
+      if (game.forfeitingPlayerId === p1.playerId) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else {
+        winnerId = p1.playerId;
+        resultCode = 1;
       }
     }
 
@@ -356,12 +390,15 @@ export const GameStateManager = {
     const forfeiter = p1.playerId === forfeitingPlayerId ? p1 : p2;
     const winner = forfeiter === p1 ? p2 : p1;
 
-    // Set winner override for getFinalResults
+    // Track both the forfeiting player and the winner
+    game.forfeitingPlayerId = forfeitingPlayerId;
     game.forfeitWinnerId = winner.playerId;
 
     // Mark forfeiting player as effectively out of the game
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
+    
+    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits, player ${winner.playerId} wins`);
   },
 
   /**
