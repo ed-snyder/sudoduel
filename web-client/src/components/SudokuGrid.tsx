@@ -146,16 +146,16 @@ export default function SudokuGrid({
                     text-base sm:text-lg md:text-xl lg:text-2xl font-bold
                     ${isInitial ? 'text-gray-800' : 'text-blue-500'}
                   `}
-                  style={{ fontSize: 'clamp(0.875rem, 4vw, 1.5rem)' }}
+                  style={{ fontSize: 'clamp(1.125rem, 5vw, 2rem)' }}
                 >
                   {cell}
                 </span>
               ) : showNotes ? (
-                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
+                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-1">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <span
                       key={num}
-                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-500 flex items-center justify-center ${
+                      className={`text-[9px] sm:text-[11px] md:text-[13px] text-gray-500 flex items-center justify-center font-medium ${
                         cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
