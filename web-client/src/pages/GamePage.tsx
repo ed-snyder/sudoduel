@@ -46,6 +46,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [showEmotePicker, setShowEmotePicker] = useState(false);
   const [myEmote, setMyEmote] = useState<string | null>(null);
   const [opponentEmote, setOpponentEmote] = useState<string | null>(null);
+  const [myEmoteFadingOut, setMyEmoteFadingOut] = useState(false);
+  const [opponentEmoteFadingOut, setOpponentEmoteFadingOut] = useState(false);
   const emotePickerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const myEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -353,11 +355,18 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           clearTimeout(opponentEmoteTimeoutRef.current);
         }
         
+        // Reset fade-out state
+        setOpponentEmoteFadingOut(false);
+        
         setOpponentEmote(message.data.emote);
         
-        // Hide after 2 seconds
+        // Start fade-out after 2 seconds, then hide after animation completes
         opponentEmoteTimeoutRef.current = setTimeout(() => {
-          setOpponentEmote(null);
+          setOpponentEmoteFadingOut(true);
+          setTimeout(() => {
+            setOpponentEmote(null);
+            setOpponentEmoteFadingOut(false);
+          }, 200); // Match fade-out animation duration
         }, EMOTE_DISPLAY_DURATION);
         break;
     }
@@ -697,6 +706,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       clearTimeout(emotePickerTimeoutRef.current);
     }
 
+    // Reset fade-out state
+    setMyEmoteFadingOut(false);
+    
     // Show my emote locally
     setMyEmote(emote);
     
@@ -705,9 +717,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       clearTimeout(myEmoteTimeoutRef.current);
     }
     
-    // Hide emote after 2 seconds
+    // Start fade-out after 2 seconds, then hide after animation completes
     myEmoteTimeoutRef.current = setTimeout(() => {
-      setMyEmote(null);
+      setMyEmoteFadingOut(true);
+      setTimeout(() => {
+        setMyEmote(null);
+        setMyEmoteFadingOut(false);
+      }, 200); // Match fade-out animation duration
     }, EMOTE_DISPLAY_DURATION);
 
     // Send to opponent via WebSocket
@@ -809,8 +825,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               </div>
               {myEmote && (
                 <div 
-                  className="text-2xl sm:text-3xl animate-fade-in"
-                  key={myEmote + Date.now()}
+                  className={`text-4xl sm:text-5xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  key={myEmote}
                 >
                   {myEmote}
                 </div>
@@ -820,8 +836,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             <div className="flex items-center gap-2">
               {opponentEmote && (
                 <div 
-                  className="text-2xl sm:text-3xl animate-fade-in"
-                  key={opponentEmote + Date.now()}
+                  className={`text-4xl sm:text-5xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  key={opponentEmote}
                 >
                   {opponentEmote}
                 </div>
