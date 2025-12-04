@@ -2,11 +2,23 @@
 // API & WebSocket Configuration
 // ===========================================
 
+// Detect if running in Capacitor (mobile app)
+const isCapacitor = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!(window as any).Capacitor;
+};
+
 const getApiUrl = (): string => {
-  // Environment variable (production)
+  // Environment variable (production or build-time config)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
+  
+  // If running in Capacitor (mobile app), use production API
+  if (isCapacitor()) {
+    return 'https://api.sudoduel.com';
+  }
+  
   // Local development
   const url = 'http://localhost:3001';
   if (typeof window !== 'undefined') {
@@ -16,10 +28,16 @@ const getApiUrl = (): string => {
 };
 
 const getWsUrl = (): string => {
-  // Environment variable (production)
+  // Environment variable (production or build-time config)
   if (import.meta.env.VITE_WS_URL) {
     return import.meta.env.VITE_WS_URL;
   }
+  
+  // If running in Capacitor (mobile app), use production WebSocket
+  if (isCapacitor()) {
+    return 'wss://api.sudoduel.com';
+  }
+  
   // Local development
   return 'ws://localhost:3001';
 };
