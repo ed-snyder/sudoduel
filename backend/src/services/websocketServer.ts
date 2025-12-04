@@ -19,6 +19,7 @@ interface AuthenticatedWebSocket extends WebSocket {
 }
 
 const clients = new Map<number, Set<AuthenticatedWebSocket>>();
+const gracePeriodIntervals = new Map<number, NodeJS.Timeout>();
 
 export const setupWebSocketServer = (server: Server) => {
   const wss = new WebSocketServer({ server, path: '/ws/game' });
@@ -110,6 +111,13 @@ export const setupWebSocketServer = (server: Server) => {
         const reconnected = GameStateManager.handleReconnect(matchId, profile.id);
         
         if (reconnected) {
+          // Clear grace period update interval
+          const existingInterval = gracePeriodIntervals.get(matchId);
+          if (existingInterval) {
+            clearInterval(existingInterval);
+            gracePeriodIntervals.delete(matchId);
+          }
+          
           // Notify both players game is resuming
           broadcastToMatch(matchId, {
             type: 'OPPONENT_RECONNECTED',
@@ -198,6 +206,7 @@ export const setupWebSocketServer = (server: Server) => {
             const currentGame = GameStateManager.getGame(matchId);
             if (!currentGame || !currentGame.disconnectTime) {
               clearInterval(graceUpdateInterval);
+              gracePeriodIntervals.delete(matchId);
               return;
             }
             
@@ -213,8 +222,10 @@ export const setupWebSocketServer = (server: Server) => {
               });
             } else {
               clearInterval(graceUpdateInterval);
+              gracePeriodIntervals.delete(matchId);
             }
           }, 1000);
+          gracePeriodIntervals.set(matchId, graceUpdateInterval);
         }
       });
 
