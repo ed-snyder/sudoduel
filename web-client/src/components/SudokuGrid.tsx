@@ -289,10 +289,10 @@ export default function SudokuGrid({
             style={{
               left: position.usePercent ? `${position.left}%` : `${position.left}px`,
               top: position.usePercent ? `${position.top}%` : `${position.top}px`,
-              transform: 'translateX(-50%)',
               pointerEvents: 'none',
               zIndex: 1000,
               textAlign: 'center',
+              transformOrigin: 'center center',
             }}
           >
             <span

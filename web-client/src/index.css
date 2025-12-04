@@ -59,15 +59,15 @@ html, body, #root {
 @keyframes float-up {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
   50% {
     opacity: 1;
-    transform: translateY(-20px) scale(1.2);
+    transform: translate(-50%, -20px) scale(1.2);
   }
   100% {
     opacity: 0;
-    transform: translateY(-40px) scale(0.8);
+    transform: translate(-50%, -40px) scale(0.8);
   }
 }
 
@@ -75,4 +75,5 @@ html, body, #root {
   animation: float-up 0.8s ease-out forwards;
   pointer-events: none;
   z-index: 1000;
+  transform-origin: center center;
 }
