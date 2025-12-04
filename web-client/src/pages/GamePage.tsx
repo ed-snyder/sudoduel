@@ -664,20 +664,20 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
         {/* Timer boxes - Just above the border line */}
         <div className="px-3 sm:px-4 pb-2 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-1">
             {/* Left: Player timer */}
-            <div className={`px-1.5 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
-              <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+            <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
+              <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
                 {formatTime(myTimeRemaining)}
               </div>
             </div>
             {/* Center: Time feedback */}
-            <div className={`text-xl sm:text-2xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
+            <div className={`text-lg sm:text-xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
               {timeFeedback?.text || ' '}
             </div>
             {/* Right: Opponent timer */}
-            <div className={`px-1.5 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
-              <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+            <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+              <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
                 {formatTime(opponentTimeRemaining)}
               </div>
             </div>
@@ -685,8 +685,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Centered vertically, tight spacing from header */}
-      <div className="flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Sudoku Grid - Use flex-1 to fill space and balance layout */}
+      <div className="flex-1 flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
@@ -705,8 +705,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Number Pad (1-9) - Below grid with more spacing */}
-      <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 bg-white" style={{ marginTop: '16px' }}>
+      {/* Number Pad (1-9) - Below grid with balanced spacing */}
+      <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 bg-white" style={{ marginTop: '12px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -735,7 +735,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Toolbar: [Erase] [Emote] [Notes] - Below number pad */}
-      <div className="flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2 border-t border-gray-200" style={{ marginTop: '8px' }}>
+      <div className="flex-shrink-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border-t border-gray-200" style={{ marginTop: '8px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
