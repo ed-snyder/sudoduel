@@ -152,10 +152,21 @@ export const setupWebSocketServer = (server: Server) => {
       });
 
       ws.on('close', () => {
+        const game = GameStateManager.getGame(matchId);
+        const wasInProgress = game?.status === 'IN_PROGRESS';
+        const remainingClients = clients.get(matchId)?.size || 0;
+        
+        console.log(`[WS] DISCONNECT userId=${ws.userId} playerId=${profile.id} matchId=${matchId} gameStatus=${game?.status || 'N/A'} remainingClients=${remainingClients}`);
+        
         clients.get(matchId)?.delete(ws);
         
         if (clients.get(matchId)?.size === 0) {
           clients.delete(matchId);
+          console.log(`[WS] No clients remaining for match ${matchId}, cleaned up`);
+        } else if (wasInProgress) {
+          // Notify remaining player that opponent disconnected
+          const remainingClientsAfter = clients.get(matchId)?.size || 0;
+          console.log(`[WS] Player disconnected during active game, ${remainingClientsAfter} client(s) still connected`);
         }
       });
 
