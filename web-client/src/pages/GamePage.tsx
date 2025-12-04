@@ -617,9 +617,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Header Section - Push down and reduce spacing by half */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0" style={{ marginTop: '24px', paddingBottom: '0px' }}>
         {/* Settings button - top right, below safe area */}
-        <div className="flex justify-end px-3 sm:px-4 pt-2">
+        <div className="flex justify-end px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           <button
             onClick={() => setShowForfeitModal(true)}
             className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -632,9 +632,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
 
         {/* Names and Scores - Compact header, reduced spacing */}
-        <div className="px-3 sm:px-4 pt-1 pb-0.5">
+        <div className="px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           {/* Row 1: Names + ELO inline */}
-          <div className="flex items-center justify-between" style={{ marginBottom: '2px' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
             <div className="flex items-center gap-2">
               <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
@@ -650,7 +650,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           </div>
           
           {/* Row 2: Cells completed (no spaces) */}
-          <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center justify-between" style={{ marginBottom: '4px' }}>
             {/* Left: Player score */}
             <div className="text-sm sm:text-base font-mono text-gray-700">
               {myState.cells_completed}/81
@@ -663,8 +663,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
-        <div className="px-3 sm:px-4 pb-1 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-0.5">
+        <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
             <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
               <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
@@ -685,7 +685,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Use flex-1 to fill space and balance layout */}
+      {/* Sudoku Grid - Use flex-1 to fill remaining space, grid position unchanged */}
       <div className="flex-1 flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
@@ -706,7 +706,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Number Pad (1-9) - Below grid, moved up (75% less spacing) */}
-      <div className="flex-shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 border-t border-gray-200 bg-white" style={{ marginTop: '3px' }}>
+      <div className="flex-shrink-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ marginTop: '0px', paddingTop: '4px', paddingBottom: '4px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -735,7 +735,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Toolbar: [Erase] [Emote] [Notes] - Below number pad, moved up (75% less spacing) */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 py-0.5 sm:py-1 border-t border-gray-200" style={{ marginTop: '2px' }}>
+      <div className="flex-shrink-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ marginTop: '0px', paddingTop: '4px', paddingBottom: '6px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
