@@ -708,8 +708,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       {/* Spacer to maintain layout flow for other elements */}
       <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
 
-      {/* Number Pad (1-9) - Absolutely positioned, moved up (top y-coordinate at 1.5x current, meaning higher up) */}
-      <div className="absolute left-0 right-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ top: 'calc(50vh - 100px)', paddingTop: '2px', paddingBottom: '2px' }}>
+      {/* Number Pad (1-9) - Positioned below grid with small white space */}
+      <div className="absolute left-0 right-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ top: 'calc(50vh + 200px)', paddingTop: '2px', paddingBottom: '2px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -737,8 +737,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Toolbar: [Erase] [Emote] [Notes] - Absolutely positioned, moved up with number pad */}
-      <div className="absolute left-0 right-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ top: 'calc(50vh - 40px)', paddingTop: '2px', paddingBottom: '4px' }}>
+      {/* Toolbar: [Erase] [Emote] [Notes] - Positioned below number pad */}
+      <div className="absolute left-0 right-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ top: 'calc(50vh + 260px)', paddingTop: '2px', paddingBottom: '4px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
