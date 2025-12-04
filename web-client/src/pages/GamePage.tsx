@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useGameSounds } from '../hooks/useGameSounds';
 import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { createGameSocket } from '../config';
@@ -23,6 +24,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
+  const { playCorrectSound, playIncorrectSound, resetStreak, initAudio } = useGameSounds();
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -115,6 +117,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         break;
 
       case 'GAME_START':
+        initAudio();
+        resetStreak();
         const grid = message.data.initial_grid;
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
@@ -142,6 +146,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           // Update MY grid and state
           if (correct) {
             // Correct move: update grid
+            playCorrectSound();
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = value;
@@ -149,6 +154,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             });
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
+            playIncorrectSound();
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = 0;
