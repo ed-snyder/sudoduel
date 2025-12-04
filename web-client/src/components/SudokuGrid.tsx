@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SudokuGridProps {
   grid: number[][];
@@ -54,6 +54,8 @@ export default function SudokuGrid({
   lastMoveResult = null,
 }: SudokuGridProps) {
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
+  const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const gridRef = useRef<HTMLDivElement>(null);
   const isInitialCell = (row: number, col: number) => {
     return initialGrid[row][col] !== 0;
   };
@@ -138,8 +140,36 @@ export default function SudokuGrid({
     return () => clearTimeout(timer);
   }, [lastMoveResult]);
 
+  // Helper function to get cell position
+  const getCellPosition = (row: number, col: number) => {
+    const cellKey = `${row}-${col}`;
+    const cellElement = cellRefs.current.get(cellKey);
+    const gridElement = gridRef.current;
+    
+    if (!cellElement || !gridElement) {
+      // Fallback to percentage-based positioning
+      const cellWidthPercent = 100 / 9;
+      const cellHeightPercent = 100 / 9;
+      return {
+        left: (col * cellWidthPercent) + (cellWidthPercent / 2),
+        top: row * cellHeightPercent,
+        usePercent: true,
+      };
+    }
+    
+    const cellRect = cellElement.getBoundingClientRect();
+    const gridRect = gridElement.getBoundingClientRect();
+    
+    // Calculate position relative to grid
+    const left = cellRect.left - gridRect.left + (cellRect.width / 2);
+    const top = cellRect.top - gridRect.top;
+    
+    return { left, top, usePercent: false };
+  };
+
   return (
     <div
+      ref={gridRef}
       className={`
         relative grid grid-cols-9 gap-0 border-2 border-gray-700 
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
@@ -183,7 +213,14 @@ export default function SudokuGrid({
 
           return (
             <button
-              key={`${rowIndex}-${colIndex}`}
+              key={cellKey}
+              ref={(el) => {
+                if (el) {
+                  cellRefs.current.set(cellKey, el);
+                } else {
+                  cellRefs.current.delete(cellKey);
+                }
+              }}
               onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
               className={`
                 relative flex items-center justify-center
@@ -243,21 +280,15 @@ export default function SudokuGrid({
       
       {/* Floating feedback elements */}
       {floatingFeedbacks.map((feedback) => {
-        // Calculate position: each cell is 1/9th of the grid width/height
-        const cellWidthPercent = 100 / 9;
-        const cellHeightPercent = 100 / 9;
-        // Center horizontally: start of cell + half of cell width
-        const leftPercent = (feedback.col * cellWidthPercent) + (cellWidthPercent / 2);
-        // Position at top of cell (will float upward from here)
-        const topPercent = (feedback.row * cellHeightPercent);
+        const position = getCellPosition(feedback.row, feedback.col);
         
         return (
           <div
             key={feedback.id}
             className="floating-feedback absolute"
             style={{
-              left: `${leftPercent}%`,
-              top: `${topPercent}%`,
+              left: position.usePercent ? `${position.left}%` : `${position.left}px`,
+              top: position.usePercent ? `${position.top}%` : `${position.top}px`,
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
               zIndex: 1000,
