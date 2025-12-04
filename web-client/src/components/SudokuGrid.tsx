@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 interface SudokuGridProps {
   grid: number[][];
   initialGrid: number[][];
@@ -9,6 +11,38 @@ interface SudokuGridProps {
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
 }
 
+interface FloatingFeedback {
+  id: string;
+  row: number;
+  col: number;
+  text: string;
+  correct: boolean;
+}
+
+// Play error sound using Web Audio API
+const playErrorSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+    oscillator.type = 'square';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.15);
+  } catch (error) {
+    // Silently fail if Web Audio API is not available
+    console.warn('Could not play error sound:', error);
+  }
+};
+
 export default function SudokuGrid({
   grid,
   initialGrid,
@@ -19,6 +53,7 @@ export default function SudokuGrid({
   lockedOut = false,
   lastMoveResult = null,
 }: SudokuGridProps) {
+  const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const isInitialCell = (row: number, col: number) => {
     return initialGrid[row][col] !== 0;
   };
@@ -66,10 +101,47 @@ export default function SudokuGrid({
     );
   };
 
+  // Handle floating feedback when lastMoveResult changes
+  useEffect(() => {
+    if (!lastMoveResult) return;
+
+    const { row, col, correct } = lastMoveResult;
+    const feedbackId = `${row}-${col}-${Date.now()}`;
+    
+    if (correct) {
+      // Correct answer: show "+4s!" (as per requirements, though actual bonus is 5 seconds)
+      setFloatingFeedbacks((prev) => [
+        ...prev,
+        { id: feedbackId, row, col, text: '+4s!', correct: true },
+      ]);
+    } else {
+      // Incorrect answer: show "-30s!" and play sound/vibration
+      setFloatingFeedbacks((prev) => [
+        ...prev,
+        { id: feedbackId, row, col, text: '-30s!', correct: false },
+      ]);
+      
+      // Play error sound
+      playErrorSound();
+      
+      // Trigger vibration if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
+    }
+
+    // Remove feedback after animation completes (~1 second)
+    const timer = setTimeout(() => {
+      setFloatingFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [lastMoveResult]);
+
   return (
     <div
       className={`
-        grid grid-cols-9 gap-0 border-2 border-gray-700 
+        relative grid grid-cols-9 gap-0 border-2 border-gray-700 
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
         transition-colors
         w-full
@@ -168,6 +240,46 @@ export default function SudokuGrid({
           );
         })
       )}
+      
+      {/* Floating feedback elements */}
+      {floatingFeedbacks.map((feedback) => {
+        // Calculate position: each cell is 1/9th of the grid width/height
+        const cellWidthPercent = 100 / 9;
+        const cellHeightPercent = 100 / 9;
+        const leftPercent = (feedback.col * cellWidthPercent) + (cellWidthPercent / 2);
+        const topPercent = (feedback.row * cellHeightPercent);
+        
+        return (
+          <div
+            key={feedback.id}
+            className="floating-feedback absolute"
+            style={{
+              left: `${leftPercent}%`,
+              top: `${topPercent}%`,
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none',
+              zIndex: 1000,
+            }}
+          >
+            <span
+              className={`
+                text-lg sm:text-xl md:text-2xl font-bold
+                ${feedback.correct 
+                  ? 'text-emerald-500' 
+                  : 'text-red-500'
+                }
+              `}
+              style={{
+                textShadow: feedback.correct
+                  ? '0 0 8px rgba(16, 185, 129, 0.6)'
+                  : '0 0 8px rgba(239, 68, 68, 0.6)',
+              }}
+            >
+              {feedback.text}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

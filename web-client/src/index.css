@@ -54,3 +54,25 @@ html, body, #root {
     background-color: inherit;
   }
 }
+
+/* Floating feedback animation */
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.8);
+  }
+}
+
+.floating-feedback {
+  animation: float-up 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 1000;
+}
