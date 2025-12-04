@@ -111,10 +111,10 @@ export default function SudokuGrid({
     const feedbackId = `${row}-${col}-${Date.now()}`;
     
     if (correct) {
-      // Correct answer: show "+4s!" (as per requirements, though actual bonus is 5 seconds)
+      // Correct answer: show "+5s!" (bonus is 5 seconds)
       setFloatingFeedbacks((prev) => [
         ...prev,
-        { id: feedbackId, row, col, text: '+4s!', correct: true },
+        { id: feedbackId, row, col, text: '+5s!', correct: true },
       ]);
     } else {
       // Incorrect answer: show "-30s!" and play sound/vibration
@@ -150,10 +150,12 @@ export default function SudokuGrid({
       // Fallback to percentage-based positioning
       const cellWidthPercent = 100 / 9;
       const cellHeightPercent = 100 / 9;
+      // Position slightly above the cell
       return {
         left: (col * cellWidthPercent) + (cellWidthPercent / 2),
         top: row * cellHeightPercent,
         usePercent: true,
+        offsetTop: -10, // Offset in pixels for percentage-based positioning
       };
     }
     
@@ -162,7 +164,8 @@ export default function SudokuGrid({
     
     // Calculate position relative to grid
     const left = cellRect.left - gridRect.left + (cellRect.width / 2);
-    const top = cellRect.top - gridRect.top;
+    // Position slightly above the cell (about 10px above the top)
+    const top = cellRect.top - gridRect.top - 10;
     
     return { left, top, usePercent: false };
   };
@@ -288,7 +291,9 @@ export default function SudokuGrid({
             className="floating-feedback absolute"
             style={{
               left: position.usePercent ? `${position.left}%` : `${position.left}px`,
-              top: position.usePercent ? `${position.top}%` : `${position.top}px`,
+              top: position.usePercent 
+                ? `calc(${position.top}% + ${(position as any).offsetTop || 0}px)` 
+                : `${position.top}px`,
               pointerEvents: 'none',
               zIndex: 1000,
               textAlign: 'center',
