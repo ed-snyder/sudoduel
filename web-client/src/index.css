@@ -77,3 +77,18 @@ html, body, #root {
   z-index: 1000;
   transform-origin: center center;
 }
+
+/* Opponent scored cell highlight */
+@keyframes fade-in-tint {
+  0% {
+    background-color: rgba(217, 70, 239, 0);
+  }
+  100% {
+    background-color: rgba(217, 70, 239, 0.12);
+  }
+}
+
+.opponent-scored {
+  background-color: rgba(217, 70, 239, 0.12);
+  animation: fade-in-tint 0.4s ease-out forwards;
+}

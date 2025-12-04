@@ -41,6 +41,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   // Connection status removed - no longer displayed in UI
   const [opponentName, setOpponentName] = useState<string>('Opponent');
+  const [opponentScoredCells, setOpponentScoredCells] = useState<Set<string>>(new Set());
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
 
   // Connect to WebSocket
@@ -153,9 +154,34 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
+          
+          // Remove from opponent scored cells if player scores it (reclaimed)
+          if (correct) {
+            const cellKey = `${row}-${col}`;
+            setOpponentScoredCells((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(cellKey);
+              return newSet;
+            });
+          }
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
+          
+          // Track opponent's scored cells
+          if (correct) {
+            const cellKey = `${row}-${col}`;
+            setOpponentScoredCells((prev) => {
+              // Only add if it's a new cell (not already in the set)
+              // This prevents re-animating cells that were already highlighted
+              if (!prev.has(cellKey)) {
+                const newSet = new Set(prev);
+                newSet.add(cellKey);
+                return newSet;
+              }
+              return prev;
+            });
+          }
         }
 
         // Update timers from timer_update (authoritative source for both players)
@@ -679,6 +705,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                 notesMode={notesMode}
                 lockedOut={myState.is_locked}
                 lastMoveResult={lastMoveResult}
+                opponentScoredCells={opponentScoredCells}
               />
             </div>
           )}

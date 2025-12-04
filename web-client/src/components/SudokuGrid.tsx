@@ -9,6 +9,7 @@ interface SudokuGridProps {
   notesMode?: boolean;
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
+  opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
 }
 
 interface FloatingFeedback {
@@ -52,6 +53,7 @@ export default function SudokuGrid({
   notesMode: _notesMode = false, // Reserved for future notes mode feature
   lockedOut = false,
   lastMoveResult = null,
+  opponentScoredCells = new Set(),
 }: SudokuGridProps) {
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -213,6 +215,10 @@ export default function SudokuGrid({
           const cellNotes = notes.get(cellKey) || [];
           const hasValue = cell !== 0;
           const showNotes = !hasValue && cellNotes.length > 0;
+          
+          // Check if opponent has scored this cell but player hasn't
+          // Only show pink tint if player hasn't scored it yet and it's not an initial clue
+          const opponentScored = opponentScoredCells.has(cellKey) && !hasValue && !isInitial;
 
           return (
             <button
@@ -238,6 +244,8 @@ export default function SudokuGrid({
                     ? 'bg-blue-300'
                     : related
                     ? 'bg-blue-100'
+                    : opponentScored
+                    ? 'opponent-scored'
                     : 'bg-white'
                 }
                 ${
