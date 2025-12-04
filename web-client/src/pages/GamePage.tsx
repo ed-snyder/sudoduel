@@ -151,7 +151,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               return newGrid;
             });
             // Show time feedback
-            setTimeFeedback({ text: '+4 seconds', color: 'text-blue-500' });
+            setTimeFeedback({ text: '+4 seconds!', color: 'text-blue-500' });
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
             setMyGrid((prev) => {
@@ -160,7 +160,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               return newGrid;
             });
             // Show time feedback
-            setTimeFeedback({ text: '-10 seconds', color: 'text-blue-500' });
+            setTimeFeedback({ text: '-10 seconds!', color: 'text-blue-500' });
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
@@ -169,9 +169,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           setOpponentState(player_state);
           // Show opponent time feedback
           if (correct) {
-            setTimeFeedback({ text: '+4 seconds', color: 'text-fuchsia-500' });
+            setTimeFeedback({ text: '+4 seconds!', color: 'text-fuchsia-500' });
           } else {
-            setTimeFeedback({ text: '-10 seconds', color: 'text-fuchsia-500' });
+            setTimeFeedback({ text: '-10 seconds!', color: 'text-fuchsia-500' });
           }
         }
 
@@ -617,7 +617,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Settings button - top right, below safe area */}
-      <div className="flex justify-end px-3 sm:px-4 pt-2">
+      <div className="flex justify-end px-3 sm:px-4 pt-1">
         <button
           onClick={() => setShowForfeitModal(true)}
           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -630,9 +630,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Compact Match Header - 3 rows above grid */}
-      <div className="px-3 sm:px-4 pt-0 pb-1 border-b border-gray-200">
+      <div className="px-3 sm:px-4 pt-0 pb-0 border-b border-gray-200">
         {/* Row 1: Names + ELO inline */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           {/* Left: Player */}
           <div className="flex items-center gap-2">
             <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
@@ -648,7 +648,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
         
         {/* Row 2: Cells completed (no spaces) */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           {/* Left: Player score */}
           <div className="text-sm sm:text-base font-mono text-gray-700">
             {myState.cells_completed}/81
@@ -662,16 +662,20 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {/* Row 3: Timers with feedback in center */}
         <div className="flex items-center justify-between mt-1">
           {/* Left: Player timer */}
-          <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
-            {formatTime(myTimeRemaining)}
+          <div className={`px-3 py-1.5 rounded-lg border-[3px] ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
+            <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+              {formatTime(myTimeRemaining)}
+            </div>
           </div>
           {/* Center: Time feedback */}
-          <div className={`text-base sm:text-lg font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
+          <div className={`text-2xl sm:text-3xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
             {timeFeedback?.text || ' '}
           </div>
           {/* Right: Opponent timer */}
-          <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
-            {formatTime(opponentTimeRemaining)}
+          <div className={`px-3 py-1.5 rounded-lg border-[3px] ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+            <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+              {formatTime(opponentTimeRemaining)}
+            </div>
           </div>
         </div>
       </div>
