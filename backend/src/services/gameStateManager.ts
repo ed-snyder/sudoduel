@@ -26,6 +26,11 @@ interface GameState {
   timeoutTimer: NodeJS.Timeout | null;
   timerInterval: NodeJS.Timeout | null; // Interval for per-player timer countdown
   forfeitWinnerId?: number | null; // Optional winner override for forfeits
+  // Disconnect tracking
+  disconnectedPlayerId: number | null;
+  disconnectTime: number | null;  // timestamp when disconnect occurred
+  gracePeriodTimer: NodeJS.Timeout | null;
+  pausedPlayerId: number | null;  // player whose timer is paused
 }
 
 const gameStates = new Map<number, GameState>();
@@ -78,6 +83,10 @@ export const GameStateManager = {
       timeoutTimer: null,
       timerInterval: null,
       forfeitWinnerId: null,
+      disconnectedPlayerId: null,
+      disconnectTime: null,
+      gracePeriodTimer: null,
+      pausedPlayerId: null,
     };
 
     gameStates.set(matchId, gameState);
@@ -108,14 +117,15 @@ export const GameStateManager = {
       }
 
       // Decrement each non-locked, non-solved player's timer
-      if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
+      // Only tick timers for non-paused players
+      if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0 && game.player1.playerId !== game.pausedPlayerId) {
         game.player1.timeRemaining--;
         if (game.player1.timeRemaining <= 0) {
           // Player 1 timed out – lock them out
           game.player1.isLocked = true;
         }
       }
-      if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0) {
+      if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0 && game.player2.playerId !== game.pausedPlayerId) {
         game.player2.timeRemaining--;
         if (game.player2.timeRemaining <= 0) {
           // Player 2 timed out – lock them out
@@ -416,13 +426,18 @@ export const GameStateManager = {
 
   removeGame(matchId: number): void {
     const game = gameStates.get(matchId);
-    if (game?.timeoutTimer) {
-      clearTimeout(game.timeoutTimer);
+    if (game) {
+      if (game.timeoutTimer) {
+        clearTimeout(game.timeoutTimer);
+      }
+      if (game.timerInterval) {
+        clearInterval(game.timerInterval);
+      }
+      if (game.gracePeriodTimer) {
+        clearTimeout(game.gracePeriodTimer);
+      }
+      gameStates.delete(matchId);
     }
-    if (game?.timerInterval) {
-      clearInterval(game.timerInterval);
-    }
-    gameStates.delete(matchId);
   },
 
   // Get current timer values for both players
@@ -494,5 +509,72 @@ export const GameStateManager = {
     }
 
     return { success: true, player };
+  },
+
+  // Call when a player disconnects
+  handleDisconnect(matchId: number, disconnectedPlayerId: number, onGraceExpired: (matchId: number) => void): void {
+    const game = gameStates.get(matchId);
+    if (!game || game.status !== 'IN_PROGRESS') return;
+
+    // Don't handle disconnect if already disconnected (avoid double handling)
+    if (game.disconnectedPlayerId !== null) return;
+
+    game.disconnectedPlayerId = disconnectedPlayerId;
+    game.disconnectTime = Date.now();
+
+    // Pause the OTHER player's timer (the one still connected)
+    const connectedPlayer = game.player1.playerId === disconnectedPlayerId 
+      ? game.player2 
+      : game.player1;
+    game.pausedPlayerId = connectedPlayer.playerId;
+
+    // Start grace period timer (30 seconds)
+    game.gracePeriodTimer = setTimeout(() => {
+      this.handleGraceExpired(matchId, onGraceExpired);
+    }, 30000);
+
+    console.log(`[GameState] Player ${disconnectedPlayerId} disconnected in match ${matchId}, grace period started`);
+  },
+
+  // Call when disconnected player reconnects
+  handleReconnect(matchId: number, reconnectedPlayerId: number): boolean {
+    const game = gameStates.get(matchId);
+    if (!game || game.disconnectedPlayerId !== reconnectedPlayerId) return false;
+
+    // Clear grace period
+    if (game.gracePeriodTimer) {
+      clearTimeout(game.gracePeriodTimer);
+      game.gracePeriodTimer = null;
+    }
+
+    // Resume connected player's timer
+    game.pausedPlayerId = null;
+    game.disconnectedPlayerId = null;
+    game.disconnectTime = null;
+
+    console.log(`[GameState] Player ${reconnectedPlayerId} reconnected in match ${matchId}, game resumed`);
+    return true;
+  },
+
+  // Called when 30s grace period expires without reconnection
+  handleGraceExpired(matchId: number, onGraceExpired: (matchId: number) => void): void {
+    const game = gameStates.get(matchId);
+    if (!game || !game.disconnectedPlayerId) return;
+
+    console.log(`[GameState] Grace period expired for match ${matchId}, forfeiting player ${game.disconnectedPlayerId}`);
+
+    // Auto-forfeit the disconnected player
+    this.forfeit(matchId, game.disconnectedPlayerId);
+    
+    // Clear disconnect state
+    game.pausedPlayerId = null;
+    game.disconnectTime = null;
+    if (game.gracePeriodTimer) {
+      clearTimeout(game.gracePeriodTimer);
+      game.gracePeriodTimer = null;
+    }
+
+    // Trigger endGame via callback
+    onGraceExpired(matchId);
   },
 };

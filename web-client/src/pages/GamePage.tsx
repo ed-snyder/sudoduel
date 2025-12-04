@@ -42,6 +42,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Connection status removed - no longer displayed in UI
   const [opponentName, setOpponentName] = useState<string>('Opponent');
   const [opponentScoredCells, setOpponentScoredCells] = useState<Set<string>>(new Set());
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [graceTimeRemaining, setGraceTimeRemaining] = useState(0);
+  const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
 
   // Connect to WebSocket
@@ -299,11 +302,36 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'GAME_END':
         setGameStatus('ended');
         setGameResult(message.data);
+        setOpponentDisconnected(false);
+        setGraceTimeRemaining(0);
+        setMyTimerPaused(false);
         // Refresh user profile/rating so Lobby shows updated rating without full reload
         refreshUser().catch((err) => {
           console.error('Failed to refresh user after GAME_END:', err);
         });
         break;
+
+      case 'OPPONENT_DISCONNECTED':
+        setOpponentDisconnected(true);
+        setGraceTimeRemaining(message.data.grace_period_seconds);
+        setMyTimerPaused(message.data.your_timer_paused);
+        break;
+
+      case 'OPPONENT_RECONNECTED':
+        setOpponentDisconnected(false);
+        setGraceTimeRemaining(0);
+        setMyTimerPaused(false);
+        break;
+
+      case 'GRACE_PERIOD_UPDATE':
+        setGraceTimeRemaining(message.data.seconds_remaining);
+        break;
+    }
+  };
+
+  const handleClaimWin = () => {
+    if (wsRef.current && opponentDisconnected) {
+      wsRef.current.send(JSON.stringify({ type: 'CLAIM_DISCONNECT_WIN' }));
     }
   };
 
@@ -626,6 +654,36 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid
   return (
     <div className="min-h-screen bg-white flex flex-col relative" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Disconnect Banner */}
+      {opponentDisconnected && (
+        <div className="absolute inset-x-0 z-50 mx-4" style={{ top: isCapacitor ? '64px' : '64px' }}>
+          <div className="bg-amber-500 text-white rounded-lg p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold">Opponent disconnected</p>
+                <p className="text-sm opacity-90">
+                  Waiting {graceTimeRemaining}s for reconnection...
+                </p>
+                <p className="text-xs opacity-75 mt-1">Your timer is paused</p>
+              </div>
+              <button
+                onClick={handleClaimWin}
+                className="bg-white text-amber-600 px-4 py-2 rounded-lg font-semibold hover:bg-amber-50 transition-colors"
+              >
+                Claim Win
+              </button>
+            </div>
+            {/* Progress bar showing grace period */}
+            <div className="mt-3 h-1 bg-amber-400 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-white transition-all duration-1000"
+                style={{ width: `${(graceTimeRemaining / 30) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Section - Push down significantly more */}
       <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
         {/* Settings button - top right, below safe area */}
@@ -676,9 +734,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
-            <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
+            <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
               <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
                 {formatTime(myTimeRemaining)}
+                {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
               </div>
             </div>
             {/* Right: Opponent timer */}

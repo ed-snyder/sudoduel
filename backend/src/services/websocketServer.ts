@@ -105,6 +105,21 @@ export const setupWebSocketServer = (server: Server) => {
       // Get opponent rating
       const opponentRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
 
+      // Check if this is a reconnection
+      if (game?.disconnectedPlayerId === profile.id) {
+        const reconnected = GameStateManager.handleReconnect(matchId, profile.id);
+        
+        if (reconnected) {
+          // Notify both players game is resuming
+          broadcastToMatch(matchId, {
+            type: 'OPPONENT_RECONNECTED',
+            data: {
+              timers_resumed: true,
+            },
+          });
+        }
+      }
+
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
         GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
         await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
@@ -151,7 +166,7 @@ export const setupWebSocketServer = (server: Server) => {
         }
       });
 
-      ws.on('close', () => {
+      ws.on('close', async () => {
         const game = GameStateManager.getGame(matchId);
         const wasInProgress = game?.status === 'IN_PROGRESS';
         const remainingClients = clients.get(matchId)?.size || 0;
@@ -164,9 +179,42 @@ export const setupWebSocketServer = (server: Server) => {
           clients.delete(matchId);
           console.log(`[WS] No clients remaining for match ${matchId}, cleaned up`);
         } else if (wasInProgress) {
-          // Notify remaining player that opponent disconnected
-          const remainingClientsAfter = clients.get(matchId)?.size || 0;
-          console.log(`[WS] Player disconnected during active game, ${remainingClientsAfter} client(s) still connected`);
+          // Start disconnect handling
+          GameStateManager.handleDisconnect(matchId, profile.id, async (matchId) => {
+            await endGame(matchId);
+          });
+          
+          // Notify remaining player
+          broadcastToMatch(matchId, {
+            type: 'OPPONENT_DISCONNECTED',
+            data: {
+              grace_period_seconds: 30,
+              your_timer_paused: true,
+            },
+          });
+          
+          // Start sending grace period updates every second
+          const graceUpdateInterval = setInterval(() => {
+            const currentGame = GameStateManager.getGame(matchId);
+            if (!currentGame || !currentGame.disconnectTime) {
+              clearInterval(graceUpdateInterval);
+              return;
+            }
+            
+            const elapsed = Date.now() - currentGame.disconnectTime;
+            const remaining = Math.max(0, 30000 - elapsed);
+            
+            if (remaining > 0) {
+              broadcastToMatch(matchId, {
+                type: 'GRACE_PERIOD_UPDATE',
+                data: {
+                  seconds_remaining: Math.ceil(remaining / 1000),
+                },
+              });
+            } else {
+              clearInterval(graceUpdateInterval);
+            }
+          }, 1000);
         }
       });
 
@@ -321,6 +369,26 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       break;
     case 'PING':
       ws.send(JSON.stringify({ type: 'PONG' }));
+      break;
+    case 'CLAIM_DISCONNECT_WIN':
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
+
+        const game = GameStateManager.getGame(matchId);
+        
+        // Only allow if opponent is actually disconnected
+        if (game?.disconnectedPlayerId && game.disconnectedPlayerId !== userProfile.id) {
+          console.log(`[WS] CLAIM_DISCONNECT_WIN from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
+          GameStateManager.forfeit(matchId, game.disconnectedPlayerId);
+          await endGame(matchId);
+        }
+      } catch (error) {
+        console.error(`❌ Error handling CLAIM_DISCONNECT_WIN:`, error);
+      }
       break;
   }
 }
