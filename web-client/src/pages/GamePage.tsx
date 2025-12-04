@@ -7,6 +7,10 @@ import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 
+const EMOTES = ['🖕', '🍆🤏', '🤣🫵', '🥱'];
+const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
+const EMOTE_PICKER_DURATION = 3000; // 3 seconds
+
 interface GamePageProps {
   matchId: number;
   onGameEnd: () => void;
@@ -39,6 +43,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
+  const [myEmote, setMyEmote] = useState<string | null>(null);
+  const [opponentEmote, setOpponentEmote] = useState<string | null>(null);
+  const emotePickerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const myEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const opponentEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   // Connection status removed - no longer displayed in UI
@@ -74,6 +84,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
     return () => {
       ws.close();
+      // Clean up emote timeouts
+      if (emotePickerTimeoutRef.current) clearTimeout(emotePickerTimeoutRef.current);
+      if (myEmoteTimeoutRef.current) clearTimeout(myEmoteTimeoutRef.current);
+      if (opponentEmoteTimeoutRef.current) clearTimeout(opponentEmoteTimeoutRef.current);
     };
   }, [matchId, token]);
 
@@ -331,6 +345,20 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       case 'GRACE_PERIOD_UPDATE':
         setGraceTimeRemaining(message.data.seconds_remaining);
+        break;
+
+      case 'EMOTE':
+        // Clear any existing opponent emote timeout
+        if (opponentEmoteTimeoutRef.current) {
+          clearTimeout(opponentEmoteTimeoutRef.current);
+        }
+        
+        setOpponentEmote(message.data.emote);
+        
+        // Hide after 2 seconds
+        opponentEmoteTimeoutRef.current = setTimeout(() => {
+          setOpponentEmote(null);
+        }, EMOTE_DISPLAY_DURATION);
         break;
     }
   };
@@ -645,16 +673,48 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     );
   }
 
-  // Handle emote button (placeholder)
+  // Handle emote button
   const handleEmote = () => {
-    // Show toast notification
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-    toast.textContent = 'Coming soon';
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.remove();
-    }, 2000);
+    // Toggle emote picker
+    if (showEmotePicker) {
+      setShowEmotePicker(false);
+      if (emotePickerTimeoutRef.current) {
+        clearTimeout(emotePickerTimeoutRef.current);
+      }
+    } else {
+      setShowEmotePicker(true);
+      // Auto-hide after 3 seconds
+      emotePickerTimeoutRef.current = setTimeout(() => {
+        setShowEmotePicker(false);
+      }, EMOTE_PICKER_DURATION);
+    }
+  };
+
+  const handleSelectEmote = (emote: string) => {
+    // Hide picker
+    setShowEmotePicker(false);
+    if (emotePickerTimeoutRef.current) {
+      clearTimeout(emotePickerTimeoutRef.current);
+    }
+
+    // Show my emote locally
+    setMyEmote(emote);
+    
+    // Clear any existing timeout
+    if (myEmoteTimeoutRef.current) {
+      clearTimeout(myEmoteTimeoutRef.current);
+    }
+    
+    // Hide emote after 2 seconds
+    myEmoteTimeoutRef.current = setTimeout(() => {
+      setMyEmote(null);
+    }, EMOTE_DISPLAY_DURATION);
+
+    // Send to opponent via WebSocket
+    wsRef.current?.send(JSON.stringify({
+      type: 'EMOTE',
+      data: { emote },
+    }));
   };
 
   // Main game UI - Compact layout with header above grid
@@ -739,17 +799,37 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {/* Timer boxes - Just above the border line, reduced spacing */}
         <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
-            {/* Left: Player timer */}
-            <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
-              <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
-                {formatTime(myTimeRemaining)}
-                {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
+            {/* Left: Player timer + emote */}
+            <div className="flex items-center gap-2">
+              <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+                  {formatTime(myTimeRemaining)}
+                  {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
+                </div>
               </div>
+              {myEmote && (
+                <div 
+                  className="text-2xl sm:text-3xl animate-fade-in"
+                  key={myEmote + Date.now()}
+                >
+                  {myEmote}
+                </div>
+              )}
             </div>
-            {/* Right: Opponent timer */}
-            <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
-              <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
-                {formatTime(opponentTimeRemaining)}
+            {/* Right: Opponent emote + timer */}
+            <div className="flex items-center gap-2">
+              {opponentEmote && (
+                <div 
+                  className="text-2xl sm:text-3xl animate-fade-in"
+                  key={opponentEmote + Date.now()}
+                >
+                  {opponentEmote}
+                </div>
+              )}
+              <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+                  {formatTime(opponentTimeRemaining)}
+                </div>
               </div>
             </div>
           </div>
@@ -861,6 +941,21 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           )}
         </button>
       </div>
+
+      {/* Emote Picker */}
+      {showEmotePicker && (
+        <div className="absolute left-0 right-0 flex items-center justify-center gap-4 px-3 sm:px-4 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 340px)' }}>
+          {EMOTES.map((emote) => (
+            <button
+              key={emote}
+              onClick={() => handleSelectEmote(emote)}
+              className="text-3xl sm:text-4xl p-2 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
+            >
+              {emote}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Forfeit confirmation modal */}
       <ForfeitModal

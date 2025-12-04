@@ -401,6 +401,44 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         console.error(`❌ Error handling CLAIM_DISCONNECT_WIN:`, error);
       }
       break;
+    case 'EMOTE':
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
+
+        const match = await MatchModel.findById(matchId);
+        if (!match) {
+          return;
+        }
+
+        const players = await MatchModel.getPlayers(matchId);
+        const playerSlot = players.find(p => p.player_id === userProfile.id);
+        if (!playerSlot) {
+          return;
+        }
+
+        // Broadcast emote to opponent only
+        const emoteData = {
+          type: 'EMOTE',
+          data: {
+            emote: data.emote,
+            from_slot: playerSlot.slot,
+          },
+        };
+        
+        // Send to all other clients in the match (not sender)
+        clients.get(matchId)?.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(emoteData));
+          }
+        });
+      } catch (error) {
+        console.error(`❌ Error handling EMOTE:`, error);
+      }
+      break;
   }
 }
 
