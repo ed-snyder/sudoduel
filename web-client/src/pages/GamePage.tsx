@@ -505,8 +505,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     // Determine if I won based on winner_slot
     const didWin = winnerSlot !== null && winnerSlot === mySlot;
     const ratingChange = myResult.rating_change || 0;
-    const myScore = myResult.score || 0;
-    const opponentScore = opponentResult.score || 0;
+    // Use cells_completed (includes pre-completed squares) instead of score
+    const myScore = myResult.cellsCompleted || myResult.cells_completed || myResult.score || 0;
+    const opponentScore = opponentResult.cellsCompleted || opponentResult.cells_completed || opponentResult.score || 0;
 
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -534,12 +535,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           <div className="flex justify-center gap-8 mb-6">
             <div>
               <div className="text-sm text-gray-500">You</div>
-              <div className="text-3xl font-bold text-gray-800 font-mono">{myScore}</div>
+              <div className="text-3xl font-bold text-gray-800 font-mono">{myScore}/81</div>
             </div>
             <div className="text-2xl text-gray-300 self-center">—</div>
             <div>
               <div className="text-sm text-gray-500">Opponent</div>
-              <div className="text-3xl font-bold text-gray-800 font-mono">{opponentScore}</div>
+              <div className="text-3xl font-bold text-gray-800 font-mono">{opponentScore}/81</div>
             </div>
           </div>
 
@@ -550,7 +551,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             }`}>
               <p className="text-blue-500 font-bold mb-2 text-sm sm:text-base">You</p>
               <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                <p>Score: <span className="font-mono font-bold">{myScore}</span></p>
+                <p>Score: <span className="font-mono font-bold">{myScore}/81</span></p>
                 <p>Mistakes: <span className="font-mono">{myResult.mistakes || 0}</span></p>
                 <p>Time: <span className="font-mono">{formatTime(myResult.timeRemaining || 0)}</span></p>
               </div>
@@ -560,7 +561,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             }`}>
               <p className="text-gray-600 font-bold mb-2 text-sm sm:text-base">Opponent</p>
               <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                <p>Score: <span className="font-mono font-bold">{opponentScore}</span></p>
+                <p>Score: <span className="font-mono font-bold">{opponentScore}/81</span></p>
                 <p>Mistakes: <span className="font-mono">{opponentResult.mistakes || 0}</span></p>
                 <p>Time: <span className="font-mono">{formatTime(opponentResult.timeRemaining || 0)}</span></p>
               </div>
