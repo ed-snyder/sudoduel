@@ -616,8 +616,21 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid, centered vertically
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Settings button - top right, below safe area */}
+      <div className="flex justify-end px-3 sm:px-4 pt-2">
+        <button
+          onClick={() => setShowForfeitModal(true)}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Settings"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
       {/* Compact Match Header - 3 rows above grid */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+      <div className="px-3 sm:px-4 pt-0 pb-1 border-b border-gray-200">
         {/* Row 1: Names + ELO inline */}
         <div className="flex items-center justify-between mb-2">
           {/* Left: Player */}
@@ -647,17 +660,17 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
         
         {/* Row 3: Timers with feedback in center */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-1">
           {/* Left: Player timer */}
-          <div className={`text-lg sm:text-xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+          <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
             {formatTime(myTimeRemaining)}
           </div>
           {/* Center: Time feedback */}
-          <div className={`text-sm sm:text-base font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
+          <div className={`text-base sm:text-lg font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
             {timeFeedback?.text || ' '}
           </div>
           {/* Right: Opponent timer */}
-          <div className={`text-lg sm:text-xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+          <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
             {formatTime(opponentTimeRemaining)}
           </div>
         </div>
@@ -683,9 +696,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Number Pad (1-9) - Directly under grid */}
-      <div className="px-3 sm:px-4 py-2 sm:py-2 border-t border-gray-200 bg-white" style={{ marginTop: '8px' }}>
-        <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2 max-w-md mx-auto">
+      {/* Number Pad (1-9) - Below grid with more spacing */}
+      <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 bg-white" style={{ marginTop: '16px' }}>
+        <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
             const depleted = count >= 9;
@@ -695,7 +708,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className={`
-                  min-h-[40px] sm:min-h-[44px] rounded-lg transition-colors touch-manipulation font-bold
+                  min-h-[48px] sm:min-h-[56px] rounded-lg transition-colors touch-manipulation font-bold
                   ${depleted
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : gameStatus !== 'playing' || myState.is_locked
@@ -703,7 +716,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                     : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
                   }
                 `}
-                style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1.25rem)' }}
+                style={{ fontSize: 'clamp(1.125rem, 4.5vw, 1.5rem)' }}
               >
                 {num}
               </button>
