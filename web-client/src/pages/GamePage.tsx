@@ -616,65 +616,70 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
-      {/* Settings button - top right, below safe area */}
-      <div className="flex justify-end px-3 sm:px-4 pt-1">
-        <button
-          onClick={() => setShowForfeitModal(true)}
-          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Settings"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-          </svg>
-        </button>
-      </div>
+      {/* Header Section - Only these elements move up */}
+      <div className="flex-shrink-0">
+        {/* Settings button - top right, below safe area */}
+        <div className="flex justify-end px-3 sm:px-4 pt-0.5">
+          <button
+            onClick={() => setShowForfeitModal(true)}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Settings"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
 
-      {/* Compact Match Header - 3 rows above grid */}
-      <div className="px-3 sm:px-4 pt-1 pb-0 border-b border-gray-200">
-        {/* Row 1: Names + ELO inline */}
-        <div className="flex items-center justify-between mb-0.5">
-          {/* Left: Player */}
-          <div className="flex items-center gap-2">
-            <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
-            <div className="text-xs sm:text-sm text-gray-500 font-mono">{Math.round(user?.rating || 1500)}</div>
+        {/* Names and Scores - Compact header */}
+        <div className="px-3 sm:px-4 pt-0 pb-1">
+          {/* Row 1: Names + ELO inline */}
+          <div className="flex items-center justify-between mb-0.5">
+            {/* Left: Player */}
+            <div className="flex items-center gap-2">
+              <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
+              <div className="text-xs sm:text-sm text-gray-500 font-mono">{Math.round(user?.rating || 1500)}</div>
+            </div>
+            {/* Right: Opponent */}
+            <div className="flex items-center gap-2">
+              <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
+              <div className="text-xs sm:text-sm text-gray-500 font-mono">
+                {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
+              </div>
+            </div>
           </div>
-          {/* Right: Opponent */}
-          <div className="flex items-center gap-2">
-            <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
-            <div className="text-xs sm:text-sm text-gray-500 font-mono">
-              {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
+          
+          {/* Row 2: Cells completed (no spaces) */}
+          <div className="flex items-center justify-between mb-1">
+            {/* Left: Player score */}
+            <div className="text-sm sm:text-base font-mono text-gray-700">
+              {myState.cells_completed}/81
+            </div>
+            {/* Right: Opponent score */}
+            <div className="text-sm sm:text-base font-mono text-gray-700">
+              {opponentState.cells_completed}/81
             </div>
           </div>
         </div>
-        
-        {/* Row 2: Cells completed (no spaces) */}
-        <div className="flex items-center justify-between mb-0.5">
-          {/* Left: Player score */}
-          <div className="text-sm sm:text-base font-mono text-gray-700">
-            {myState.cells_completed}/81
-          </div>
-          {/* Right: Opponent score */}
-          <div className="text-sm sm:text-base font-mono text-gray-700">
-            {opponentState.cells_completed}/81
-          </div>
-        </div>
-        
-        {/* Row 3: Timers with feedback in center */}
-        <div className="flex items-center justify-between mt-0.5">
-          {/* Left: Player timer */}
-          <div className={`px-1.5 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
-            <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
-              {formatTime(myTimeRemaining)}
+
+        {/* Timer boxes - Just above the border line */}
+        <div className="px-3 sm:px-4 pb-2 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            {/* Left: Player timer */}
+            <div className={`px-1.5 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
+              <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+                {formatTime(myTimeRemaining)}
+              </div>
             </div>
-          </div>
-          {/* Center: Time feedback */}
-          <div className={`text-xl sm:text-2xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
-            {timeFeedback?.text || ' '}
-          </div>
-          {/* Right: Opponent timer */}
-          <div className={`px-1.5 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
-            <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
-              {formatTime(opponentTimeRemaining)}
+            {/* Center: Time feedback */}
+            <div className={`text-xl sm:text-2xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
+              {timeFeedback?.text || ' '}
+            </div>
+            {/* Right: Opponent timer */}
+            <div className={`px-1.5 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+              <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+                {formatTime(opponentTimeRemaining)}
+              </div>
             </div>
           </div>
         </div>
