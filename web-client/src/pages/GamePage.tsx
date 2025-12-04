@@ -613,11 +613,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }, 2000);
   };
 
-  // Main game UI - Compact layout with header above grid, centered vertically
+  // Main game UI - Compact layout with header above grid
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Settings button - top right, below safe area */}
-      <div className="flex justify-end px-3 sm:px-4 pt-0.5">
+      <div className="flex justify-end px-3 sm:px-4 pt-1">
         <button
           onClick={() => setShowForfeitModal(true)}
           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -630,7 +630,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
 
       {/* Compact Match Header - 3 rows above grid */}
-      <div className="px-3 sm:px-4 pt-0 pb-0 border-b border-gray-200">
+      <div className="px-3 sm:px-4 pt-1 pb-0 border-b border-gray-200">
         {/* Row 1: Names + ELO inline */}
         <div className="flex items-center justify-between mb-0.5">
           {/* Left: Player */}
@@ -662,7 +662,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         {/* Row 3: Timers with feedback in center */}
         <div className="flex items-center justify-between mt-0.5">
           {/* Left: Player timer */}
-          <div className={`px-2 py-1 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
+          <div className={`px-1.5 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
             <div className={`text-2xl sm:text-3xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
               {formatTime(myTimeRemaining)}
             </div>
@@ -672,7 +672,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             {timeFeedback?.text || ' '}
           </div>
           {/* Right: Opponent timer */}
-          <div className={`px-2 py-1 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+          <div className={`px-1.5 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
             <div className={`text-2xl sm:text-3xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
               {formatTime(opponentTimeRemaining)}
             </div>
