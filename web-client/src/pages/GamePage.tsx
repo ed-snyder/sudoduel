@@ -4,6 +4,7 @@ import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
+import { useMobileDetect } from '../hooks/useMobileDetect';
 
 interface GamePageProps {
   matchId: number;
@@ -20,6 +21,7 @@ interface PlayerState {
 
 export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
+  const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
@@ -632,7 +634,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
 
         {/* Names and Scores - Compact header, reduced spacing */}
-        <div className="px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
+        <div className="px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px', marginTop: isCapacitor ? '4px' : '0px' }}>
           {/* Row 1: Names + ELO inline */}
           <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
@@ -663,7 +665,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
-        <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px' }}>
+        <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
             <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
