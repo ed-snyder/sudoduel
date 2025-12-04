@@ -246,7 +246,9 @@ export default function SudokuGrid({
         // Calculate position: each cell is 1/9th of the grid width/height
         const cellWidthPercent = 100 / 9;
         const cellHeightPercent = 100 / 9;
+        // Center horizontally: start of cell + half of cell width
         const leftPercent = (feedback.col * cellWidthPercent) + (cellWidthPercent / 2);
+        // Position at top of cell (will float upward from here)
         const topPercent = (feedback.row * cellHeightPercent);
         
         return (
@@ -259,11 +261,12 @@ export default function SudokuGrid({
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
               zIndex: 1000,
+              textAlign: 'center',
             }}
           >
             <span
               className={`
-                text-lg sm:text-xl md:text-2xl font-bold
+                text-lg sm:text-xl md:text-2xl font-bold whitespace-nowrap block
                 ${feedback.correct 
                   ? 'text-emerald-500' 
                   : 'text-red-500'
