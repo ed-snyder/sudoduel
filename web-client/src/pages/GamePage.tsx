@@ -34,10 +34,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
   const [myTimeRemaining, setMyTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(STARTING_TIME_SECONDS);
-  // Time change feedback removed - status strip handles feedback now // Track time change for feedback (+3 or -15)
   const [gameResult, setGameResult] = useState<any>(null);
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
-  const [timeFeedback, setTimeFeedback] = useState<{ text: string; color: string } | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
@@ -83,13 +81,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }
   }, [lastMoveResult]);
 
-  // Clear time feedback after display
-  useEffect(() => {
-    if (timeFeedback) {
-      const timer = setTimeout(() => setTimeFeedback(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [timeFeedback]);
 
   const handleMessage = (message: any) => {
     switch (message.type) {
@@ -152,8 +143,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = value;
               return newGrid;
             });
-            // Show time feedback
-            setTimeFeedback({ text: '+5 seconds!', color: 'text-blue-500' });
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
             setMyGrid((prev) => {
@@ -161,20 +150,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               newGrid[row][col] = 0;
               return newGrid;
             });
-            // Show time feedback
-            setTimeFeedback({ text: '-30 seconds!', color: 'text-blue-500' });
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
         } else {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
-          // Show opponent time feedback
-          if (correct) {
-            setTimeFeedback({ text: '+5 seconds!', color: 'text-fuchsia-500' });
-          } else {
-            setTimeFeedback({ text: '-30 seconds!', color: 'text-fuchsia-500' });
-          }
         }
 
         // Update timers from timer_update (authoritative source for both players)
@@ -673,10 +654,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
                 {formatTime(myTimeRemaining)}
               </div>
-            </div>
-            {/* Center: Time feedback */}
-            <div className={`text-lg sm:text-xl font-mono font-bold ${timeFeedback?.color || 'text-transparent'}`}>
-              {timeFeedback?.text || ' '}
             </div>
             {/* Right: Opponent timer */}
             <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
