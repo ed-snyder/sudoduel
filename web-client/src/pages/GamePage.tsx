@@ -153,7 +153,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               return newGrid;
             });
             // Show time feedback
-            setTimeFeedback({ text: '+4 seconds!', color: 'text-blue-500' });
+            setTimeFeedback({ text: '+5 seconds!', color: 'text-blue-500' });
           } else {
             // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
             setMyGrid((prev) => {
@@ -162,7 +162,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               return newGrid;
             });
             // Show time feedback
-            setTimeFeedback({ text: '-10 seconds!', color: 'text-blue-500' });
+            setTimeFeedback({ text: '-30 seconds!', color: 'text-blue-500' });
           }
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
@@ -171,9 +171,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           setOpponentState(player_state);
           // Show opponent time feedback
           if (correct) {
-            setTimeFeedback({ text: '+4 seconds!', color: 'text-fuchsia-500' });
+            setTimeFeedback({ text: '+5 seconds!', color: 'text-fuchsia-500' });
           } else {
-            setTimeFeedback({ text: '-10 seconds!', color: 'text-fuchsia-500' });
+            setTimeFeedback({ text: '-30 seconds!', color: 'text-fuchsia-500' });
           }
         }
 

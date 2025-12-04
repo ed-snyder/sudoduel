@@ -2,6 +2,6 @@
 // This file exists as a fallback if shared package is not available during build
 
 export const STARTING_TIME_SECONDS = 300;
-export const TIME_BONUS_CORRECT = 4;
-export const TIME_PENALTY_INCORRECT = 12;
+export const TIME_BONUS_CORRECT = 5;
+export const TIME_PENALTY_INCORRECT = 30;
 
