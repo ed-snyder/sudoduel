@@ -155,7 +155,7 @@ export default function SudokuGrid({
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <span
                       key={num}
-                      className={`text-[9px] sm:text-[11px] md:text-[13px] text-gray-500 flex items-center justify-center font-medium ${
+                      className={`w-full h-full text-[9px] sm:text-[11px] md:text-[13px] text-gray-500 flex items-center justify-center font-medium ${
                         cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
