@@ -151,11 +151,11 @@ export default function SudokuGrid({
                   {cell}
                 </span>
               ) : showNotes ? (
-                <div className="grid grid-cols-3 gap-0 w-full h-full p-0.5">
+                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <span
                       key={num}
-                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-500 ${
+                      className={`text-[6px] sm:text-[8px] md:text-[10px] text-gray-500 flex items-center justify-center ${
                         cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
