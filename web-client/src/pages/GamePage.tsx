@@ -615,7 +615,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className="min-h-screen bg-white flex flex-col relative" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
       {/* Header Section - Push down significantly more */}
       <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
         {/* Settings button - top right, below safe area */}
@@ -685,9 +685,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Use flex-1 to fill remaining space, reduced bottom padding to allow controls to move up */}
-      <div className="flex-1 flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '0px' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
+      {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
+      <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ pointerEvents: 'auto' }}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
@@ -704,6 +704,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           )}
         </div>
       </div>
+      
+      {/* Spacer to maintain layout flow for other elements */}
+      <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
 
       {/* Number Pad (1-9) - Pulled up significantly with negative margin */}
       <div className="flex-shrink-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ marginTop: '-16px', paddingTop: '2px', paddingBottom: '2px' }}>
