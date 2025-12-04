@@ -616,8 +616,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
-      {/* Header Section - Push down and reduce spacing by half */}
-      <div className="flex-shrink-0" style={{ marginTop: '24px', paddingBottom: '0px' }}>
+      {/* Header Section - Push down significantly more */}
+      <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
         {/* Settings button - top right, below safe area */}
         <div className="flex justify-end px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           <button
@@ -685,8 +685,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Sudoku Grid - Use flex-1 to fill remaining space, grid position unchanged */}
-      <div className="flex-1 flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+      {/* Sudoku Grid - Use flex-1 to fill remaining space, reduced bottom padding to allow controls to move up */}
+      <div className="flex-1 flex justify-center items-center px-2 sm:px-4" style={{ paddingTop: '8px', paddingBottom: '0px' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
@@ -705,8 +705,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Number Pad (1-9) - Below grid, moved up (75% less spacing) */}
-      <div className="flex-shrink-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ marginTop: '0px', paddingTop: '4px', paddingBottom: '4px' }}>
+      {/* Number Pad (1-9) - Pulled up significantly with negative margin */}
+      <div className="flex-shrink-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ marginTop: '-16px', paddingTop: '2px', paddingBottom: '2px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -734,8 +734,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
       </div>
 
-      {/* Toolbar: [Erase] [Emote] [Notes] - Below number pad, moved up (75% less spacing) */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ marginTop: '0px', paddingTop: '4px', paddingBottom: '6px' }}>
+      {/* Toolbar: [Erase] [Emote] [Notes] - Pulled up significantly with negative margin */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ marginTop: '-8px', paddingTop: '2px', paddingBottom: '4px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
