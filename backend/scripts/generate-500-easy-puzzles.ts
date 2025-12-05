@@ -1,5 +1,5 @@
 // Generate 500 easy Sudoku puzzles using transformations
-// Easy puzzles have 35-45 clues (out of 81)
+// Easy puzzles have exactly 40 clues (out of 81)
 
 // Multiple base easy puzzles with valid solutions
 const BASE_PUZZLES = [
@@ -161,6 +161,53 @@ function countClues(initial: string): number {
   return initial.split('').filter(c => c !== '0').length;
 }
 
+// Adjust puzzle to have exactly 40 clues
+function adjustToExactClues(initial: string, solution: string, targetClues: number = 40): string {
+  let grid = initial.split('');
+  const solutionArr = solution.split('');
+  let currentClues = grid.filter(c => c !== '0').length;
+  
+  if (currentClues === targetClues) return initial;
+  
+  if (currentClues < targetClues) {
+    // Need to ADD clues - fill in some empty cells from solution
+    const emptyCells: number[] = [];
+    for (let i = 0; i < 81; i++) {
+      if (grid[i] === '0') emptyCells.push(i);
+    }
+    // Shuffle empty cells
+    for (let i = emptyCells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
+    }
+    // Add clues until we reach target
+    for (const idx of emptyCells) {
+      if (currentClues >= targetClues) break;
+      grid[idx] = solutionArr[idx];
+      currentClues++;
+    }
+  } else {
+    // Need to REMOVE clues - clear some filled cells
+    const filledCells: number[] = [];
+    for (let i = 0; i < 81; i++) {
+      if (grid[i] !== '0') filledCells.push(i);
+    }
+    // Shuffle filled cells
+    for (let i = filledCells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filledCells[i], filledCells[j]] = [filledCells[j], filledCells[i]];
+    }
+    // Remove clues until we reach target
+    for (const idx of filledCells) {
+      if (currentClues <= targetClues) break;
+      grid[idx] = '0';
+      currentClues--;
+    }
+  }
+  
+  return grid.join('');
+}
+
 // Generate 500 unique puzzles
 const puzzles: Array<{ initial: string; solution: string; clues: number }> = [];
 const seen = new Set<string>();
@@ -172,12 +219,14 @@ while (puzzles.length < 500 && attempts < 50000) {
   attempts++;
   const base = BASE_PUZZLES[Math.floor(Math.random() * BASE_PUZZLES.length)];
   const transformed = transformPuzzle(base.initial, base.solution);
-  const clues = countClues(transformed.initial);
   
-  // Ensure 35-45 clues for easy difficulty
-  if (clues >= 35 && clues <= 45 && !seen.has(transformed.initial)) {
-    seen.add(transformed.initial);
-    puzzles.push({ ...transformed, clues });
+  // Adjust to exactly 40 clues
+  const adjustedInitial = adjustToExactClues(transformed.initial, transformed.solution, 40);
+  const clues = countClues(adjustedInitial);
+  
+  if (clues === 40 && !seen.has(adjustedInitial)) {
+    seen.add(adjustedInitial);
+    puzzles.push({ initial: adjustedInitial, solution: transformed.solution, clues });
     
     if (puzzles.length % 50 === 0) {
       console.log(`Generated ${puzzles.length}/500 puzzles...`);
@@ -194,7 +243,7 @@ console.log(`\n✅ Generated ${puzzles.length} unique easy puzzles!\n`);
 
 // Generate SQL file
 const sqlLines: string[] = [];
-sqlLines.push('-- 500 Easy Sudoku Puzzles (35-45 clues each)');
+sqlLines.push('-- 500 Easy Sudoku Puzzles (exactly 40 clues each)');
 sqlLines.push('-- Generated using transformations on base valid sudoku');
 sqlLines.push('');
 sqlLines.push('DELETE FROM puzzles WHERE ladder_id = 1;');
