@@ -385,11 +385,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }
   };
 
-  const handleClaimWin = () => {
-    if (wsRef.current && opponentDisconnected) {
-      wsRef.current.send(JSON.stringify({ type: 'CLAIM_DISCONNECT_WIN' }));
-    }
-  };
 
   const handleCellClick = (row: number, col: number) => {
     if (gameStatus !== 'playing' || myState?.is_locked) {
@@ -801,20 +796,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       {opponentDisconnected && (
         <div className="absolute inset-x-0 z-50 mx-4" style={{ top: isCapacitor ? '64px' : '64px' }}>
           <div className="bg-amber-500 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">Opponent disconnected</p>
-                <p className="text-sm opacity-90">
-                  Waiting {graceTimeRemaining}s for reconnection...
-                </p>
-                <p className="text-xs opacity-75 mt-1">Your timer is paused</p>
-              </div>
-              <button
-                onClick={handleClaimWin}
-                className="bg-white text-amber-600 px-4 py-2 rounded-lg font-semibold hover:bg-amber-50 transition-colors"
-              >
-                Claim Win
-              </button>
+            <div>
+              <p className="font-semibold">Opponent disconnected</p>
+              <p className="text-sm opacity-90">
+                Waiting {graceTimeRemaining}s for reconnection...
+              </p>
+              <p className="text-xs opacity-75 mt-1">Your timer is paused</p>
             </div>
             {/* Progress bar showing grace period */}
             <div className="mt-3 h-1 bg-amber-400 rounded-full overflow-hidden">

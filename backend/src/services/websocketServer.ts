@@ -390,26 +390,8 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
     case 'PING':
       ws.send(JSON.stringify({ type: 'PONG' }));
       break;
-    case 'CLAIM_DISCONNECT_WIN':
-      try {
-        const userProfile = await PlayerProfileModel.findByUserId(userId);
-        if (!userProfile) {
-          console.error(`❌ Player profile not found for user ${userId}`);
-          return;
-        }
-
-        const game = GameStateManager.getGame(matchId);
-        
-        // Only allow if opponent is actually disconnected
-        if (game?.disconnectedPlayerId && game.disconnectedPlayerId !== userProfile.id) {
-          console.log(`[WS] CLAIM_DISCONNECT_WIN from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
-          GameStateManager.forfeit(matchId, game.disconnectedPlayerId);
-          await endGame(matchId);
-        }
-      } catch (error) {
-        console.error(`❌ Error handling CLAIM_DISCONNECT_WIN:`, error);
-      }
-      break;
+    // CLAIM_DISCONNECT_WIN removed - players must wait for grace period to expire
+    // Disconnected players will automatically forfeit after 30 seconds
     case 'EMOTE':
       try {
         const userProfile = await PlayerProfileModel.findByUserId(userId);

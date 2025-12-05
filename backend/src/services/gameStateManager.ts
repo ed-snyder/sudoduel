@@ -298,10 +298,11 @@ export const GameStateManager = {
     let winnerId: number | null = null;
     let resultCode: number = 3;
 
-    // CRITICAL: Forfeit override - if a forfeit occurred, the forfeiting player CANNOT win
-    // This check must happen FIRST and override all other win conditions
+    // CRITICAL: Forfeit override - ABSOLUTE PRIORITY
+    // If a forfeit occurred (including disconnect forfeit), the forfeiting player ALWAYS loses
+    // This check must happen FIRST and override ALL other win conditions
     if (game.forfeitingPlayerId != null) {
-      // Ensure the forfeiting player is NEVER the winner
+      // The forfeiting player ALWAYS loses, opponent ALWAYS wins
       const forfeitingId = game.forfeitingPlayerId;
       if (forfeitingId === p1.playerId) {
         winnerId = p2.playerId;
@@ -316,44 +317,76 @@ export const GameStateManager = {
           resultCode = winnerId === p1.playerId ? 1 : 2;
         }
       }
-      console.log(`[GameState] Forfeit detected: player ${forfeitingId} forfeited, winner is ${winnerId}`);
-    } else if (game.forfeitWinnerId != null) {
-      // Legacy check: if forfeitWinnerId is set but forfeitingPlayerId is not, use forfeitWinnerId
+      console.log(`[GameState] FORFEIT RESULT: player ${forfeitingId} forfeited, player ${winnerId} wins (resultCode=${resultCode})`);
+      // Return immediately - forfeit overrides everything
+      return {
+        player1: {
+          playerId: p1.playerId,
+          score: p1.score,
+          cellsCompleted: p1.cellsCompleted,
+          mistakes: p1.mistakes,
+          timeRemaining: p1.timeRemaining,
+          isWinner: winnerId === p1.playerId,
+        },
+        player2: {
+          playerId: p2.playerId,
+          score: p2.score,
+          cellsCompleted: p2.cellsCompleted,
+          mistakes: p2.mistakes,
+          timeRemaining: p2.timeRemaining,
+          isWinner: winnerId === p2.playerId,
+        },
+        winnerId,
+        resultCode,
+      };
+    }
+    
+    // Legacy check: if forfeitWinnerId is set but forfeitingPlayerId is not, treat as forfeit
+    if (game.forfeitWinnerId != null) {
       winnerId = game.forfeitWinnerId;
       resultCode = winnerId === p1.playerId ? 1 : 2;
-    } else {
-      // Win condition 1: Puzzle solved
-      if (p1.isSolved && !p2.isSolved) {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      } else if (p2.isSolved && !p1.isSolved) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } 
-      // Win condition 2-4: Score comparison (higher score wins, draw if equal)
-      else if (p1.score > p2.score) {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      } else if (p2.score > p1.score) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } else {
-        // Equal scores = draw
-        resultCode = 3;
-      }
+      console.log(`[GameState] Legacy forfeit: winner is ${winnerId} (resultCode=${resultCode})`);
+      return {
+        player1: {
+          playerId: p1.playerId,
+          score: p1.score,
+          cellsCompleted: p1.cellsCompleted,
+          mistakes: p1.mistakes,
+          timeRemaining: p1.timeRemaining,
+          isWinner: winnerId === p1.playerId,
+        },
+        player2: {
+          playerId: p2.playerId,
+          score: p2.score,
+          cellsCompleted: p2.cellsCompleted,
+          mistakes: p2.mistakes,
+          timeRemaining: p2.timeRemaining,
+          isWinner: winnerId === p2.playerId,
+        },
+        winnerId,
+        resultCode,
+      };
     }
 
-    // CRITICAL SAFETY CHECK: Ensure forfeiting player is NEVER the winner
-    if (game.forfeitingPlayerId != null && winnerId === game.forfeitingPlayerId) {
-      console.error(`[GameState] ERROR: Forfeiting player ${game.forfeitingPlayerId} was set as winner! Fixing...`);
-      // Force the opponent to win
-      if (game.forfeitingPlayerId === p1.playerId) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } else {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      }
+    // Normal win conditions (only if no forfeit occurred)
+    // Win condition 1: Puzzle solved
+    if (p1.isSolved && !p2.isSolved) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.isSolved && !p1.isSolved) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    } 
+    // Win condition 2-4: Score comparison (higher score wins, draw if equal)
+    else if (p1.score > p2.score) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.score > p1.score) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    } else {
+      // Equal scores = draw
+      resultCode = 3;
     }
 
     return {
