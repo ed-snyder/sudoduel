@@ -714,46 +714,56 @@ async function endGame(matchId: number) {
     });
     console.log(`✅ [6/6b] Player 2 stats saved`);
 
-    // Update win streaks and peak rating
+    // Update win streaks and peak rating (if columns exist)
     console.log(`💾 [7/7] Updating win streaks and peak ratings...`);
-    const { query } = await import('../config/database');
-    
-    // Update player 1 win streak and peak rating
-    if (results.player1.isWinner) {
-      await query(`
-        UPDATE player_profiles 
-        SET current_win_streak = current_win_streak + 1,
-            best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
-            peak_rating = GREATEST(peak_rating, $1)
-        WHERE id = $2
-      `, [newRatings.player1.rating, results.player1.playerId]);
-    } else {
-      await query(`
-        UPDATE player_profiles 
-        SET current_win_streak = 0,
-            peak_rating = GREATEST(peak_rating, $1)
-        WHERE id = $2
-      `, [newRatings.player1.rating, results.player1.playerId]);
+    try {
+      const { query } = await import('../config/database');
+      
+      // Update player 1 win streak and peak rating
+      if (results.player1.isWinner) {
+        await query(`
+          UPDATE player_profiles 
+          SET current_win_streak = current_win_streak + 1,
+              best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+              peak_rating = GREATEST(peak_rating, $1)
+          WHERE id = $2
+        `, [newRatings.player1.rating, results.player1.playerId]);
+      } else {
+        await query(`
+          UPDATE player_profiles 
+          SET current_win_streak = 0,
+              peak_rating = GREATEST(peak_rating, $1)
+          WHERE id = $2
+        `, [newRatings.player1.rating, results.player1.playerId]);
+      }
+      
+      // Update player 2 win streak and peak rating
+      if (results.player2.isWinner) {
+        await query(`
+          UPDATE player_profiles 
+          SET current_win_streak = current_win_streak + 1,
+              best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+              peak_rating = GREATEST(peak_rating, $1)
+          WHERE id = $2
+        `, [newRatings.player2.rating, results.player2.playerId]);
+      } else {
+        await query(`
+          UPDATE player_profiles 
+          SET current_win_streak = 0,
+              peak_rating = GREATEST(peak_rating, $1)
+          WHERE id = $2
+        `, [newRatings.player2.rating, results.player2.playerId]);
+      }
+      console.log(`✅ [7/7] Win streaks and peak ratings updated`);
+    } catch (error: any) {
+      // If columns don't exist (migration not run), skip this step
+      if (error.message && error.message.includes('column') && (error.message.includes('current_win_streak') || error.message.includes('peak_rating'))) {
+        console.warn(`[endGame] Win streak columns not found, skipping (migration may not be run)`);
+      } else {
+        // Log other errors but don't fail the game end
+        console.error(`[endGame] Error updating win streaks:`, error);
+      }
     }
-    
-    // Update player 2 win streak and peak rating
-    if (results.player2.isWinner) {
-      await query(`
-        UPDATE player_profiles 
-        SET current_win_streak = current_win_streak + 1,
-            best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
-            peak_rating = GREATEST(peak_rating, $1)
-        WHERE id = $2
-      `, [newRatings.player2.rating, results.player2.playerId]);
-    } else {
-      await query(`
-        UPDATE player_profiles 
-        SET current_win_streak = 0,
-            peak_rating = GREATEST(peak_rating, $1)
-        WHERE id = $2
-      `, [newRatings.player2.rating, results.player2.playerId]);
-    }
-    console.log(`✅ [7/7] Win streaks and peak ratings updated`);
 
     // Clear matchmaking cache for this match so players can join new games
     MatchmakingService.clearMatch(matchId);

@@ -110,38 +110,77 @@ export const MatchModel = {
       longestCellStreak?: number; // longest in-game cell streak
     }
   ): Promise<void> {
-    await query(
-      `UPDATE match_players
-       SET cells_completed = $1,
-           lives_used = $2,
-           lives_remaining = $3,
-           mistakes = $4,
-           time_spent_seconds = $5,
-           final_state = $6,
-           is_winner = $7,
-           rating_after = $8,
-           rd_after = $9,
-           volatility_after = $10,
-           time_at_finish = $11,
-           longest_cell_streak = $12
-       WHERE match_id = $13 AND player_id = $14`,
-      [
-        stats.cellsCompleted,
-        stats.livesUsed,
-        stats.livesRemaining,
-        stats.mistakes,
-        stats.timeSpentSeconds,
-        stats.finalState,
-        stats.isWinner,
-        stats.ratingAfter,
-        stats.rdAfter,
-        stats.volatilityAfter,
-        stats.timeAtFinish ?? null,
-        stats.longestCellStreak ?? 0,
-        matchId,
-        playerId,
-      ]
-    );
+    // First, try to update with new columns (if migration has been run)
+    try {
+      await query(
+        `UPDATE match_players
+         SET cells_completed = $1,
+             lives_used = $2,
+             lives_remaining = $3,
+             mistakes = $4,
+             time_spent_seconds = $5,
+             final_state = $6,
+             is_winner = $7,
+             rating_after = $8,
+             rd_after = $9,
+             volatility_after = $10,
+             time_at_finish = $11,
+             longest_cell_streak = $12
+         WHERE match_id = $13 AND player_id = $14`,
+        [
+          stats.cellsCompleted,
+          stats.livesUsed,
+          stats.livesRemaining,
+          stats.mistakes,
+          stats.timeSpentSeconds,
+          stats.finalState,
+          stats.isWinner,
+          stats.ratingAfter,
+          stats.rdAfter,
+          stats.volatilityAfter,
+          stats.timeAtFinish ?? null,
+          stats.longestCellStreak ?? 0,
+          matchId,
+          playerId,
+        ]
+      );
+    } catch (error: any) {
+      // If columns don't exist (migration not run), fall back to basic update
+      if (error.message && error.message.includes('column') && (error.message.includes('time_at_finish') || error.message.includes('longest_cell_streak'))) {
+        console.warn(`[MatchModel] New columns not found, using fallback update (migration may not be run)`);
+        await query(
+          `UPDATE match_players
+           SET cells_completed = $1,
+               lives_used = $2,
+               lives_remaining = $3,
+               mistakes = $4,
+               time_spent_seconds = $5,
+               final_state = $6,
+               is_winner = $7,
+               rating_after = $8,
+               rd_after = $9,
+               volatility_after = $10
+           WHERE match_id = $11 AND player_id = $12`,
+          [
+            stats.cellsCompleted,
+            stats.livesUsed,
+            stats.livesRemaining,
+            stats.mistakes,
+            stats.timeSpentSeconds,
+            stats.finalState,
+            stats.isWinner,
+            stats.ratingAfter,
+            stats.rdAfter,
+            stats.volatilityAfter,
+            matchId,
+            playerId,
+          ]
+        );
+      } else {
+        // Re-throw if it's a different error
+        throw error;
+      }
+    }
   },
 
   // Get match by ID
