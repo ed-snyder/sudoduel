@@ -20,56 +20,42 @@ export function ProgressBar({ progress, color, className, cellsCompleted = 0 }: 
     : 0;
 
   // Determine glow tier based on progress - gold opacity scales with cells completed (2x size)
+  // Keep only the halo/glow effect, remove border
   const glowStyle = useMemo(() => {
     if (clampedProgress >= 100) {
       const opacity = goldOpacity;
       return {
         boxShadow: `0 0 80px rgba(255, 215, 0, ${opacity}), 0 0 140px rgba(255, 215, 0, ${opacity * 0.9}), 0 0 200px rgba(255, 215, 0, ${opacity * 0.7}), 0 0 260px rgba(255, 215, 0, ${opacity * 0.5})`,
-        borderColor: `rgba(255, 215, 0, ${opacity})`, // Pure gold
-        borderWidth: '6px',
       };
     } else if (clampedProgress >= 90) {
       const opacity = goldOpacity * 0.95;
       return {
         boxShadow: `0 0 70px rgba(255, 200, 0, ${opacity}), 0 0 120px rgba(255, 200, 0, ${opacity * 0.8}), 0 0 170px rgba(255, 200, 0, ${opacity * 0.6})`,
-        borderColor: `rgba(255, 200, 0, ${opacity})`, // Bright gold
-        borderWidth: '6px',
       };
     } else if (clampedProgress >= 75) {
       const opacity = goldOpacity * 0.85;
       return {
         boxShadow: `0 0 56px rgba(255, 193, 7, ${opacity}), 0 0 100px rgba(255, 193, 7, ${opacity * 0.7})`,
-        borderColor: `rgba(255, 193, 7, ${opacity})`, // Amber gold
-        borderWidth: '4px',
       };
     } else if (clampedProgress >= 50) {
       const opacity = goldOpacity * 0.7;
       return {
         boxShadow: `0 0 30px rgba(255, 193, 7, ${opacity})`,
-        borderColor: `rgba(255, 193, 7, ${opacity})`,
-        borderWidth: '4px',
       };
     } else if (clampedProgress >= 30) {
       // Start showing gold earlier at 30% progress
       const opacity = goldOpacity * 0.5;
       return {
         boxShadow: `0 0 20px rgba(255, 193, 7, ${opacity})`,
-        borderColor: `rgba(255, 193, 7, ${opacity * 0.6})`,
-        borderWidth: '2px',
       };
     } else if (clampedProgress >= 20) {
       // Even earlier at 20% progress
       const opacity = goldOpacity * 0.3;
       return {
         boxShadow: `0 0 12px rgba(255, 193, 7, ${opacity})`,
-        borderColor: `rgba(255, 193, 7, ${opacity * 0.4})`,
-        borderWidth: '2px',
       };
     }
-    return {
-      borderColor: 'transparent',
-      borderWidth: '1px',
-    };
+    return {};
   }, [clampedProgress, goldOpacity]);
 
   // Brighter solid colors - no gradient
