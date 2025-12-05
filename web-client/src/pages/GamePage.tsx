@@ -119,7 +119,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Rating counter animation on game end
   useEffect(() => {
-    if (gameStatus === 'ended' && gameResult && displayedRating !== null && gameResult.player1 && gameResult.player2) {
+    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2) {
       try {
         const myPlayerId = user?.id;
         const myResult = myPlayerId && gameResult.player1?.playerId === myPlayerId
@@ -135,6 +135,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         const ratingBefore = myResult.rating_before || 1500;
         const ratingAfter = myResult.rating_after || 1500;
         const diff = ratingAfter - ratingBefore;
+        
+        // Initialize displayedRating only once
+        if (displayedRating === null) {
+          setDisplayedRating(ratingBefore);
+        }
         
         if (diff !== 0) {
           const steps = Math.min(Math.abs(diff), 30); // Cap at 30 steps
@@ -161,7 +166,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         console.error('Error in rating counter animation:', error);
       }
     }
-  }, [gameStatus, gameResult, displayedRating, user?.id, mySlot]);
+  }, [gameStatus, gameResult, user?.id, mySlot]); // Removed displayedRating from dependencies to prevent infinite loop
 
   // Clear last move result after animation
   useEffect(() => {
@@ -500,9 +505,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             setTimeout(() => setShowScreenShake(false), 400);
           }
           
-          // Initialize rating counter animation
-          const ratingBefore = myResultForEnd?.rating_before || 1500;
-          setDisplayedRating(ratingBefore);
+          // Initialize rating counter animation (will be handled by useEffect)
+          // Don't set displayedRating here to avoid conflicts with useEffect
         } else {
           setShowDefeatOverlay(true);
           playDefeatSound();
