@@ -1129,32 +1129,24 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             {/* Left: Player progress bar */}
             <div className="flex items-center flex-1 min-w-0 relative">
               <div className="flex-1 min-w-0">
-                <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" />
+                <ProgressBar 
+                  progress={myProgress} 
+                  color="blue" 
+                  className="w-full max-w-[120px]"
+                  pulse={myState.score - opponentState.score > 5}
+                />
               </div>
             </div>
             {/* Right: Opponent progress bar */}
             <div className="flex items-center flex-1 min-w-0 justify-end relative">
               <div className="flex-1 min-w-0 flex justify-end">
-                <ProgressBar progress={opponentProgress} color="pink" className="w-full max-w-[120px]" />
+                <ProgressBar 
+                  progress={opponentProgress} 
+                  color="pink" 
+                  className="w-full max-w-[120px]"
+                  pulse={opponentState.score - myState.score > 5}
+                />
               </div>
-            </div>
-          </div>
-          
-          {/* Pressure indicators: Score comparison */}
-          <div className="flex items-center justify-between text-xs sm:text-sm mt-1">
-            <div className={`font-mono font-bold transition-all ${
-              myState.score < opponentState.score - 5 ? 'text-red-400 animate-pulse' : 
-              Math.abs(myState.score - opponentState.score) <= 3 ? 'text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 
-              'text-blue-500'
-            }`}>
-              {myState.score}/81
-            </div>
-            <div className={`font-mono font-bold transition-all ${
-              opponentState.score - myState.score >= 5 ? 'text-red-400 animate-pulse' : 
-              Math.abs(opponentState.score - myState.score) <= 3 ? 'text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 
-              'text-fuchsia-500'
-            }`}>
-              {opponentState.score}/81
             </div>
           </div>
           
@@ -1164,14 +1156,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           {/* Streak flash overlay */}
           {showStreakFlash && <div className="absolute inset-0 streak-flash pointer-events-none z-30" />}
         </div>
-        
-        {/* Streak counter */}
-        {currentStreak >= 3 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 text-orange-400 font-bold animate-pulse z-20">
-            <span className="text-lg">{currentStreak}</span>
-            <span className="text-xl">🔥</span>
-          </div>
-        )}
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
         <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
