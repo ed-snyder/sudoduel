@@ -807,7 +807,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             <div className="mt-3 h-1 bg-amber-400 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-white transition-all duration-1000"
-                style={{ width: `${(graceTimeRemaining / 30) * 100}%` }}
+                style={{ width: `${(graceTimeRemaining / 15) * 100}%` }}
               />
             </div>
           </div>

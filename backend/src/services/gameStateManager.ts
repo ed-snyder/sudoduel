@@ -598,10 +598,10 @@ export const GameStateManager = {
       : game.player1;
     game.pausedPlayerId = connectedPlayer.playerId;
 
-    // Start grace period timer (30 seconds)
+    // Start grace period timer (15 seconds)
     game.gracePeriodTimer = setTimeout(() => {
       this.handleGraceExpired(matchId, onGraceExpired);
-    }, 30000);
+    }, 15000);
 
     console.log(`[GameState] Player ${disconnectedPlayerId} disconnected in match ${matchId}, grace period started`);
   },
@@ -626,7 +626,7 @@ export const GameStateManager = {
     return true;
   },
 
-  // Called when 30s grace period expires without reconnection
+  // Called when 15s grace period expires without reconnection
   handleGraceExpired(matchId: number, onGraceExpired: (matchId: number) => void): void {
     const game = gameStates.get(matchId);
     if (!game || !game.disconnectedPlayerId) return;

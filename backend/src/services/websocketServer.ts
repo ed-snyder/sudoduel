@@ -205,7 +205,7 @@ export const setupWebSocketServer = (server: Server) => {
           broadcastToMatch(matchId, {
             type: 'OPPONENT_DISCONNECTED',
             data: {
-              grace_period_seconds: 30,
+              grace_period_seconds: 15,
               your_timer_paused: true,
             },
           });
@@ -220,7 +220,7 @@ export const setupWebSocketServer = (server: Server) => {
             }
             
             const elapsed = Date.now() - currentGame.disconnectTime;
-            const remaining = Math.max(0, 30000 - elapsed);
+            const remaining = Math.max(0, 15000 - elapsed);
             
             if (remaining > 0) {
               broadcastToMatch(matchId, {
@@ -391,7 +391,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       ws.send(JSON.stringify({ type: 'PONG' }));
       break;
     // CLAIM_DISCONNECT_WIN removed - players must wait for grace period to expire
-    // Disconnected players will automatically forfeit after 30 seconds
+    // Disconnected players will automatically forfeit after 15 seconds
     case 'EMOTE':
       try {
         const userProfile = await PlayerProfileModel.findByUserId(userId);
