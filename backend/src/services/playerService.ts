@@ -187,40 +187,52 @@ export const PlayerService = {
     const ratingChange90d = await this.getRatingChange(profile.id, ninetyDaysAgo);
     const ratingChangeAllTime = await this.getRatingChange(profile.id, new Date(0));
 
-    // Speed Stats: CPM (Cells per Minute)
-    const cpmResult = await query(
-      `SELECT 
-        SUM(mp.cells_completed) as total_cells,
-        SUM(COALESCE(mp.time_at_finish, 0)) as total_time_remaining
-      FROM match_players mp
-      JOIN matches m ON mp.match_id = m.id
-      WHERE mp.player_id = $1 AND m.status = 'COMPLETED'`,
-      [profile.id]
-    );
+    // Speed Stats: CPM (Cells per Minute) - handle missing columns gracefully
+    let cpm = 0;
+    let avgTimeAtWin = 0;
+    let fastestWin = 0;
     
-    const totalCells = parseInt(cpmResult.rows[0]?.total_cells || '0', 10);
-    const totalTimeRemaining = parseInt(cpmResult.rows[0]?.total_time_remaining || '0', 10);
-    // Calculate total time played: STARTING_TIME (210) * games - total_time_remaining
-    const STARTING_TIME = 210;
-    const totalTimePlayedSeconds = (totalMatches * STARTING_TIME) - totalTimeRemaining;
-    const cpm = totalTimePlayedSeconds > 0 ? (totalCells / (totalTimePlayedSeconds / 60)) : 0;
+    try {
+      const cpmResult = await query(
+        `SELECT 
+          SUM(mp.cells_completed) as total_cells,
+          SUM(COALESCE(mp.time_at_finish, 0)) as total_time_remaining
+        FROM match_players mp
+        JOIN matches m ON mp.match_id = m.id
+        WHERE mp.player_id = $1 AND m.status = 'COMPLETED'`,
+        [profile.id]
+      );
+      
+      const totalCells = parseInt(cpmResult.rows[0]?.total_cells || '0', 10);
+      const totalTimeRemaining = parseInt(cpmResult.rows[0]?.total_time_remaining || '0', 10);
+      // Calculate total time played: STARTING_TIME (210) * games - total_time_remaining
+      const STARTING_TIME = 210;
+      const totalTimePlayedSeconds = (totalMatches * STARTING_TIME) - totalTimeRemaining;
+      cpm = totalTimePlayedSeconds > 0 ? (totalCells / (totalTimePlayedSeconds / 60)) : 0;
 
-    // Speed Stats: Avg Time at Win & Fastest Win
-    const winTimeResult = await query(
-      `SELECT 
-        AVG(mp.time_at_finish) as avg_time_remaining,
-        MAX(mp.time_at_finish) as fastest_win_time_remaining
-      FROM match_players mp
-      JOIN matches m ON mp.match_id = m.id
-      WHERE mp.player_id = $1 
-        AND m.status = 'COMPLETED' 
-        AND mp.is_winner = true
-        AND mp.time_at_finish IS NOT NULL`,
-      [profile.id]
-    );
-    
-    const avgTimeAtWin = Math.round(parseFloat(winTimeResult.rows[0]?.avg_time_remaining || '0'));
-    const fastestWin = parseInt(winTimeResult.rows[0]?.fastest_win_time_remaining || '0', 10);
+      // Speed Stats: Avg Time at Win & Fastest Win
+      const winTimeResult = await query(
+        `SELECT 
+          AVG(mp.time_at_finish) as avg_time_remaining,
+          MAX(mp.time_at_finish) as fastest_win_time_remaining
+        FROM match_players mp
+        JOIN matches m ON mp.match_id = m.id
+        WHERE mp.player_id = $1 
+          AND m.status = 'COMPLETED' 
+          AND mp.is_winner = true
+          AND mp.time_at_finish IS NOT NULL`,
+        [profile.id]
+      );
+      
+      avgTimeAtWin = Math.round(parseFloat(winTimeResult.rows[0]?.avg_time_remaining || '0'));
+      fastestWin = parseInt(winTimeResult.rows[0]?.fastest_win_time_remaining || '0', 10);
+    } catch (error: any) {
+      if (error.message && error.message.includes('column') && error.message.includes('time_at_finish')) {
+        console.warn(`[PlayerService] time_at_finish column not found, using defaults (migration may not be run)`);
+      } else {
+        console.error(`[PlayerService] Error calculating speed stats:`, error);
+      }
+    }
 
     // Competition Stats: Upset Rate
     const upsetResult = await query(
@@ -240,28 +252,41 @@ export const PlayerService = {
     const underdogGames = parseInt(upsetResult.rows[0]?.total_underdog_games || '0', 10);
     const upsetRate = underdogGames > 0 ? (upsetWins / underdogGames) * 100 : 0;
 
-    // Get peak rating and win streaks from player_profiles
-    const profileStatsResult = await query(
-      `SELECT peak_rating, current_win_streak, best_win_streak
-       FROM player_profiles
-       WHERE id = $1`,
-      [profile.id]
-    );
-    const profileStats = profileStatsResult.rows[0];
-    const peakRating = parseFloat(profileStats?.peak_rating || '1500');
-    const currentWinStreak = parseInt(profileStats?.current_win_streak || '0', 10);
-    const bestWinStreak = parseInt(profileStats?.best_win_streak || '0', 10);
-
-    // Streak Stats: Avg Cell Streak
-    const cellStreakResult = await query(
-      `SELECT AVG(longest_cell_streak) as avg_streak
-      FROM match_players mp
-      JOIN matches m ON mp.match_id = m.id
-      WHERE mp.player_id = $1 AND m.status = 'COMPLETED' AND mp.longest_cell_streak > 0`,
-      [profile.id]
-    );
+    // Get peak rating and win streaks from player_profiles - handle missing columns gracefully
+    let peakRating = rating?.rating || 1500;
+    let currentWinStreak = 0;
+    let bestWinStreak = 0;
+    let avgCellStreak = 0;
     
-    const avgCellStreak = Math.round(parseFloat(cellStreakResult.rows[0]?.avg_streak || '0') * 10) / 10;
+    try {
+      const profileStatsResult = await query(
+        `SELECT peak_rating, current_win_streak, best_win_streak
+         FROM player_profiles
+         WHERE id = $1`,
+        [profile.id]
+      );
+      const profileStats = profileStatsResult.rows[0];
+      peakRating = parseFloat(profileStats?.peak_rating || String(rating?.rating || 1500));
+      currentWinStreak = parseInt(profileStats?.current_win_streak || '0', 10);
+      bestWinStreak = parseInt(profileStats?.best_win_streak || '0', 10);
+
+      // Streak Stats: Avg Cell Streak
+      const cellStreakResult = await query(
+        `SELECT AVG(longest_cell_streak) as avg_streak
+        FROM match_players mp
+        JOIN matches m ON mp.match_id = m.id
+        WHERE mp.player_id = $1 AND m.status = 'COMPLETED' AND mp.longest_cell_streak > 0`,
+        [profile.id]
+      );
+      
+      avgCellStreak = Math.round(parseFloat(cellStreakResult.rows[0]?.avg_streak || '0') * 10) / 10;
+    } catch (error: any) {
+      if (error.message && error.message.includes('column')) {
+        console.warn(`[PlayerService] Stats columns not found, using defaults (migration may not be run)`);
+      } else {
+        console.error(`[PlayerService] Error fetching profile stats:`, error);
+      }
+    }
 
     return {
       current_rating: rating?.rating || 1500,
