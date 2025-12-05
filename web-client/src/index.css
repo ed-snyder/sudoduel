@@ -125,16 +125,3 @@ html, body, #root {
   animation: fade-out 0.2s ease-out forwards;
 }
 
-/* Gold pulse animation for 100% progress - stronger glow, faster animation, more gold (2x size) */
-@keyframes gold-pulse {
-  0%, 100% { 
-    box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 140px rgba(255, 215, 0, 0.9), 0 0 200px rgba(255, 215, 0, 0.7), 0 0 260px rgba(255, 215, 0, 0.5);
-  }
-  50% { 
-    box-shadow: 0 0 100px rgba(255, 215, 0, 1), 0 0 180px rgba(255, 215, 0, 1), 0 0 260px rgba(255, 215, 0, 0.9), 0 0 340px rgba(255, 215, 0, 0.7);
-  }
-}
-
-.progress-complete {
-  animation: gold-pulse 0.8s ease-in-out infinite;
-}
