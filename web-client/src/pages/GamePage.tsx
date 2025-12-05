@@ -680,15 +680,22 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         break;
 
       case 'REMATCH_ACCEPTED':
+        console.log('[REMATCH] REMATCH_ACCEPTED received, new_match_id:', message.data.new_match_id);
+        console.log('[REMATCH] Current rematchState:', rematchState);
         // Navigate to new match
         if (message.data.new_match_id) {
+          console.log('[REMATCH] Navigating to new match...');
           if (onRematch) {
             // Use callback if provided (preferred)
+            console.log('[REMATCH] Using onRematch callback');
             onRematch(message.data.new_match_id);
           } else {
             // Fallback to window.location for compatibility
+            console.log('[REMATCH] Using window.location fallback');
             window.location.href = `/game/${message.data.new_match_id}`;
           }
+        } else {
+          console.error('[REMATCH] No new_match_id in REMATCH_ACCEPTED message');
         }
         break;
 

@@ -492,11 +492,41 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
             player2Rating?.volatility || 0.06
           );
 
-          // Broadcast rematch accepted to both players
-          broadcastToMatch(matchId, {
+          // Send rematch accepted directly to both players
+          console.log(`🔄 Rematch accepted! Sending REMATCH_ACCEPTED to match ${matchId} with new_match_id ${newMatch.id}`);
+          console.log(`   Player 1: ${userProfile.id}, Player 2: ${opponentSlot.player_id}`);
+          
+          const rematchMessage = {
             type: 'REMATCH_ACCEPTED',
             data: { new_match_id: newMatch.id },
-          });
+          };
+          const rematchMessageStr = JSON.stringify(rematchMessage);
+          
+          // Send to all clients connected to the old match
+          const matchClients = clients.get(matchId);
+          if (matchClients) {
+            console.log(`   Sending to ${matchClients.size} connected clients`);
+            let sentCount = 0;
+            matchClients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                try {
+                  client.send(rematchMessageStr);
+                  sentCount++;
+                  console.log(`   ✅ Sent REMATCH_ACCEPTED to client (userId: ${(client as any).userId})`);
+                } catch (error) {
+                  console.error(`   ❌ Error sending to client:`, error);
+                }
+              } else {
+                console.log(`   ⚠️ Client not OPEN (readyState: ${client.readyState})`);
+              }
+            });
+            console.log(`   📤 Successfully sent to ${sentCount} client(s)`);
+          } else {
+            console.log(`   ⚠️ No clients found for match ${matchId}`);
+          }
+          
+          // Also try to send via broadcast as fallback
+          broadcastToMatch(matchId, rematchMessage);
 
           rematchRequests.delete(matchId);
         } else {
