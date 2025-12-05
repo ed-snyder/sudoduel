@@ -876,13 +876,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             {/* Left: Player progress bar */}
             <div className="flex items-center flex-1 min-w-0 relative">
               <div className="flex-1 min-w-0">
-                <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" cellsCompleted={myState.cells_completed} />
+                <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" />
               </div>
             </div>
             {/* Right: Opponent progress bar */}
             <div className="flex items-center flex-1 min-w-0 justify-end relative">
               <div className="flex-1 min-w-0 flex justify-end">
-                <ProgressBar progress={opponentProgress} color="pink" className="w-full max-w-[120px]" cellsCompleted={opponentState.cells_completed} />
+                <ProgressBar progress={opponentProgress} color="pink" className="w-full max-w-[120px]" />
               </div>
             </div>
           </div>

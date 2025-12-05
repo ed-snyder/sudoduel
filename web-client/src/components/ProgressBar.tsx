@@ -3,10 +3,9 @@ interface ProgressBarProps {
   progress: number; // 0-100
   color: 'blue' | 'pink';
   className?: string;
-  cellsCompleted?: number; // Number of cells completed (0-81)
 }
 
-export function ProgressBar({ progress, color, className, cellsCompleted = 0 }: ProgressBarProps) {
+export function ProgressBar({ progress, color, className }: ProgressBarProps) {
   // Clamp progress between 0-100
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
