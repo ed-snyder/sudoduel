@@ -18,7 +18,8 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  // Don't exit process - let the application handle errors gracefully
+  // Railway will restart the container if needed
 });
 
 // Helper function to run queries
