@@ -826,17 +826,17 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               {/* Player emote - absolutely positioned to the right of timer */}
               {myEmote && (
                 <div 
-                  className={`absolute text-2xl sm:text-3xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-3xl sm:text-4xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
                   style={{ 
                     zIndex: 10,
                     left: '100%',
-                    marginLeft: '8px',
+                    marginLeft: '10px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
-                    display: 'inline-block',
+                    display: 'block',
                     letterSpacing: '-0.1em'
                   }}
                 >
@@ -849,17 +849,17 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               {/* Opponent emote - absolutely positioned to the left of timer */}
               {opponentEmote && (
                 <div 
-                  className={`absolute text-2xl sm:text-3xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-3xl sm:text-4xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
                   style={{ 
                     zIndex: 10,
                     right: '100%',
-                    marginRight: '8px',
+                    marginRight: '10px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
-                    display: 'inline-block',
+                    display: 'block',
                     letterSpacing: '-0.1em'
                   }}
                 >
