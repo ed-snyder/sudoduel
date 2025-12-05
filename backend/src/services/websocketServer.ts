@@ -21,6 +21,7 @@ interface AuthenticatedWebSocket extends WebSocket {
 
 const clients = new Map<number, Set<AuthenticatedWebSocket>>();
 const gracePeriodIntervals = new Map<number, NodeJS.Timeout>();
+const rematchRequests = new Map<number, { requestedBy: number; expiresAt: number }>();
 
 export const setupWebSocketServer = (server: Server) => {
   const wss = new WebSocketServer({ server, path: '/ws/game' });
@@ -428,6 +429,123 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         });
       } catch (error) {
         console.error(`❌ Error handling EMOTE:`, error);
+      }
+      break;
+    case 'REMATCH_REQUEST':
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          console.error(`❌ Player profile not found for user ${userId}`);
+          return;
+        }
+
+        const match = await MatchModel.findById(matchId);
+        if (!match) {
+          return;
+        }
+
+        const players = await MatchModel.getPlayers(matchId);
+        const playerSlot = players.find(p => p.player_id === userProfile.id);
+        if (!playerSlot) {
+          return;
+        }
+
+        const existing = rematchRequests.get(matchId);
+        
+        // Check if opponent already requested rematch
+        if (existing && existing.requestedBy !== userProfile.id) {
+          // Both players requested - create new match!
+          const opponentSlot = players.find(p => p.player_id !== userProfile.id);
+          if (!opponentSlot) {
+            return;
+          }
+
+          // Get a random puzzle for the rematch
+          const puzzle = await PuzzleModel.getRandomPuzzle(1);
+          if (!puzzle) {
+            console.error('❌ No puzzle available for rematch');
+            return;
+          }
+
+          // Create new match
+          const newMatch = await MatchModel.create(1, puzzle.id);
+          
+          // Add both players to new match (keep same slots)
+          const player1Rating = await PlayerRatingModel.findByPlayerAndLadder(userProfile.id, 1);
+          const player2Rating = await PlayerRatingModel.findByPlayerAndLadder(opponentSlot.player_id, 1);
+          
+          await MatchModel.addPlayer(
+            newMatch.id,
+            userProfile.id,
+            playerSlot.slot,
+            player1Rating?.rating || 1500,
+            player1Rating?.rd || 350,
+            player1Rating?.volatility || 0.06
+          );
+          
+          await MatchModel.addPlayer(
+            newMatch.id,
+            opponentSlot.player_id,
+            opponentSlot.slot,
+            player2Rating?.rating || 1500,
+            player2Rating?.rd || 350,
+            player2Rating?.volatility || 0.06
+          );
+
+          // Broadcast rematch accepted to both players
+          broadcastToMatch(matchId, {
+            type: 'REMATCH_ACCEPTED',
+            data: { new_match_id: newMatch.id },
+          });
+
+          rematchRequests.delete(matchId);
+        } else {
+          // Store request with 10-second expiry
+          rematchRequests.set(matchId, {
+            requestedBy: userProfile.id,
+            expiresAt: Date.now() + 10000,
+          });
+
+          // Broadcast rematch pending
+          broadcastToMatch(matchId, {
+            type: 'REMATCH_PENDING',
+            data: {
+              requested_by: playerSlot.slot,
+              expires_at: Date.now() + 10000,
+            },
+          });
+
+          // Auto-expire after 10 seconds
+          setTimeout(() => {
+            const current = rematchRequests.get(matchId);
+            if (current && current.requestedBy === userProfile.id) {
+              rematchRequests.delete(matchId);
+              broadcastToMatch(matchId, {
+                type: 'REMATCH_DECLINED',
+              });
+            }
+          }, 10000);
+        }
+      } catch (error) {
+        console.error(`❌ Error handling REMATCH_REQUEST:`, error);
+      }
+      break;
+    case 'REMATCH_CANCEL':
+      try {
+        const userProfile = await PlayerProfileModel.findByUserId(userId);
+        if (!userProfile) {
+          return;
+        }
+
+        const existing = rematchRequests.get(matchId);
+        if (existing && existing.requestedBy === userProfile.id) {
+          rematchRequests.delete(matchId);
+          broadcastToMatch(matchId, {
+            type: 'REMATCH_DECLINED',
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Error handling REMATCH_CANCEL:`, error);
       }
       break;
   }

@@ -156,11 +156,101 @@ export function useGameSounds() {
 
   const getStreak = useCallback(() => streakRef.current, []);
 
+  // Victory jingle (ascending synth arpeggio)
+  const playVictorySound = useCallback(() => {
+    initAudio();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Ascending arpeggio: C5 → E5 → G5 → C6
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    const noteLength = 0.12;
+    
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * noteLength);
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * noteLength);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * noteLength + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * noteLength + noteLength);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(ctx.currentTime + i * noteLength);
+      osc.stop(ctx.currentTime + i * noteLength + noteLength);
+    });
+    
+    // Final chord sustain
+    const finalTime = ctx.currentTime + notes.length * noteLength;
+    [523.25, 659.25, 783.99, 1046.50].forEach(freq => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, finalTime);
+      gain.gain.setValueAtTime(0.15, finalTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, finalTime + 0.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(finalTime);
+      osc.stop(finalTime + 0.8);
+    });
+  }, [initAudio]);
+
+  // Soft defeat sound
+  const playDefeatSound = useCallback(() => {
+    initAudio();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Descending minor notes, soft and quick
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+    
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  }, [initAudio]);
+
+  // Distant tick for opponent moves (optional)
+  const playDistantTick = useCallback(() => {
+    initAudio();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime); // Very quiet
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  }, [initAudio]);
+
   return {
     playCorrectSound,
     playIncorrectSound,
     resetStreak,
     getStreak,
     initAudio,
+    playVictorySound,
+    playDefeatSound,
+    playDistantTick,
   };
 }

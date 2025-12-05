@@ -17,7 +17,9 @@ export function useHaptics() {
   const success = () => vibrate(10);
   const error = () => vibrate([50, 30, 50]);
   const tap = () => vibrate(5);
+  const victory = () => vibrate([30, 20, 30, 20, 100]); // Staccato then strong
+  const bigWin = () => vibrate([50, 50, 100]); // For +30 rating gains
 
-  return { vibrate, success, error, tap };
+  return { vibrate, success, error, tap, victory, bigWin };
 }
 

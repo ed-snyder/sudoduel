@@ -10,6 +10,7 @@ interface SudokuGridProps {
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
   opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
+  currentStreak?: number; // Current streak count for glow intensification
 }
 
 interface FloatingFeedback {
@@ -54,7 +55,16 @@ function SudokuGrid({
   lockedOut = false,
   lastMoveResult = null,
   opponentScoredCells = new Set(),
+  currentStreak = 0,
 }: SudokuGridProps) {
+  
+  // Get streak glow class based on streak count
+  const getStreakGlow = (streak: number): string => {
+    if (streak < 3) return '';
+    if (streak < 5) return 'shadow-[0_0_8px_rgba(0,255,255,0.4)]';
+    if (streak < 8) return 'shadow-[0_0_12px_rgba(0,255,255,0.6)]';
+    return 'shadow-[0_0_20px_rgba(255,0,255,0.8)]'; // Max streak = magenta
+  };
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
@@ -253,6 +263,7 @@ function SudokuGrid({
                     ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     : 'cursor-default'
                 }
+                ${getStreakGlow(currentStreak)}
                 transition-colors duration-150 touch-manipulation
               `}
               style={{

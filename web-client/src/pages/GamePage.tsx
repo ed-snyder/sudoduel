@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
+import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
@@ -29,7 +30,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
-  const { playCorrectSound, playIncorrectSound, resetStreak, initAudio } = useGameSounds();
+  const { playCorrectSound, playIncorrectSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
+  const { victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -61,6 +63,25 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   const [graceTimeRemaining, setGraceTimeRemaining] = useState(0);
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
+  
+  // Streak system
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [showStreakFlash, setShowStreakFlash] = useState(false);
+  
+  // Rematch system
+  const [rematchState, setRematchState] = useState<'idle' | 'requested' | 'waiting'>('idle');
+  const [rematchCountdown, setRematchCountdown] = useState(10);
+  // Rematch series tracking - reserved for future use
+  // const [rematchSeries, setRematchSeries] = useState({ wins: 0, losses: 0 });
+  
+  // Pressure indicators
+  const [showCatchUpFlash, setShowCatchUpFlash] = useState(false);
+  const prevScoreDiffRef = useRef<number>(0);
+  const [showVictoryEffects, setShowVictoryEffects] = useState(false);
+  const [showDefeatOverlay, setShowDefeatOverlay] = useState(false);
+  const [displayedRating, setDisplayedRating] = useState<number | null>(null);
+  const [showScreenShake, setShowScreenShake] = useState(false);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -95,6 +116,46 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   }, [matchId, token]);
 
   // Timer is now managed by server - no client-side countdown needed
+
+  // Rating counter animation on game end
+  useEffect(() => {
+    if (gameStatus === 'ended' && gameResult && displayedRating !== null) {
+      const myPlayerId = user?.id;
+      const myResult = myPlayerId && gameResult.player1?.playerId === myPlayerId
+        ? gameResult.player1
+        : myPlayerId && gameResult.player2?.playerId === myPlayerId
+        ? gameResult.player2
+        : mySlot === 1
+        ? gameResult.player1
+        : gameResult.player2;
+      
+      const ratingBefore = myResult?.rating_before || 1500;
+      const ratingAfter = myResult?.rating_after || 1500;
+      const diff = ratingAfter - ratingBefore;
+      
+      if (diff !== 0) {
+        const steps = Math.min(Math.abs(diff), 30); // Cap at 30 steps
+        const duration = 1000; // 1 second total
+        const stepTime = duration / steps;
+        const increment = diff > 0 ? Math.ceil(diff / steps) : Math.floor(diff / steps);
+        
+        let current = ratingBefore;
+        const interval = setInterval(() => {
+          current += increment;
+          if ((diff > 0 && current >= ratingAfter) || (diff < 0 && current <= ratingAfter)) {
+            setDisplayedRating(ratingAfter);
+            clearInterval(interval);
+          } else {
+            setDisplayedRating(current);
+          }
+        }, stepTime);
+        
+        return () => clearInterval(interval);
+      } else {
+        setDisplayedRating(ratingAfter);
+      }
+    }
+  }, [gameStatus, gameResult, displayedRating, user?.id, mySlot]);
 
   // Clear last move result after animation
   useEffect(() => {
@@ -136,6 +197,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'GAME_START':
         initAudio();
         resetStreak();
+        setCurrentStreak(0);
+        setLongestStreak(0);
+        prevScoreDiffRef.current = 0;
         const grid = message.data.initial_grid;
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
@@ -160,11 +224,27 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         const isMyMove = myPlayerId != null ? isMyMoveById : isMyMoveBySlot;
 
         if (isMyMove) {
+          // Track score difference for pressure indicators
+          const oldScoreDiff = prevScoreDiffRef.current;
+          
           // Update MY grid and state
           if (correct) {
             // Correct move: grid already shows the number (optimistic was right)
             // DON'T call setMyGrid again - just play sound, clear related notes, update state
             playCorrectSound();
+            
+            // Update streak
+            const newStreak = currentStreak + 1;
+            setCurrentStreak(newStreak);
+            if (newStreak > longestStreak) {
+              setLongestStreak(newStreak);
+            }
+            
+            // Streak flash at 5+
+            if (newStreak >= 5) {
+              setShowStreakFlash(true);
+              setTimeout(() => setShowStreakFlash(false), 300);
+            }
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -181,14 +261,35 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           } else {
             // Incorrect move: REVERT the optimistic update
             playIncorrectSound();
+            
+            // Break streak with shatter effect
+            if (currentStreak >= 3) {
+              // Streak broken - could add visual shatter effect here
+            }
+            setCurrentStreak(0);
+            
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = 0;
               return newGrid;
             });
           }
+          
           setMyState(player_state);
           setLastMoveResult({ correct, row, col });
+          
+          // Update pressure indicators
+          const newScoreDiff = player_state.score - opponentState.score;
+          const wasBehind = oldScoreDiff < 0;
+          const nowAheadOrTied = newScoreDiff >= 0;
+          
+          if (wasBehind && nowAheadOrTied && correct) {
+            // Caught up! Show flash
+            setShowCatchUpFlash(true);
+            setTimeout(() => setShowCatchUpFlash(false), 300);
+          }
+          
+          prevScoreDiffRef.current = newScoreDiff;
           
           // Remove from opponent scored cells if player scores it (reclaimed)
           if (correct) {
@@ -216,6 +317,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               }
               return prev;
             });
+            
+            // Optional: play distant tick for opponent moves
+            // playDistantTick(); // Uncomment if enabled in settings
           }
         }
 
@@ -337,6 +441,41 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         setOpponentDisconnected(false);
         setGraceTimeRemaining(0);
         setMyTimerPaused(false);
+        
+        // Determine if we won for effects
+        const myPlayerIdForEnd = user?.id;
+        const myResultForEnd = myPlayerIdForEnd && message.data.player1?.playerId === myPlayerIdForEnd
+          ? message.data.player1
+          : myPlayerIdForEnd && message.data.player2?.playerId === myPlayerIdForEnd
+          ? message.data.player2
+          : mySlotRef.current === 1
+          ? message.data.player1
+          : message.data.player2;
+        const winnerSlotForEnd = message.data.winner_slot;
+        const didWinForEnd = winnerSlotForEnd !== null && winnerSlotForEnd === mySlotRef.current;
+        const ratingChangeForEnd = myResultForEnd?.rating_change || 0;
+        
+        // Trigger victory/defeat effects
+        if (didWinForEnd) {
+          setShowVictoryEffects(true);
+          playVictorySound();
+          hapticVictory();
+          
+          // Screen shake for big wins
+          if (ratingChangeForEnd >= 30) {
+            setShowScreenShake(true);
+            hapticBigWin();
+            setTimeout(() => setShowScreenShake(false), 400);
+          }
+          
+          // Initialize rating counter animation
+          const ratingBefore = myResultForEnd?.rating_before || 1500;
+          setDisplayedRating(ratingBefore);
+        } else {
+          setShowDefeatOverlay(true);
+          playDefeatSound();
+        }
+        
         // Refresh user profile/rating so Lobby shows updated rating without full reload
         refreshUser().catch((err) => {
           console.error('Failed to refresh user after GAME_END:', err);
@@ -378,6 +517,23 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             setOpponentEmoteFadingOut(false);
           }, 200); // Match fade-out animation duration
         }, EMOTE_DISPLAY_DURATION);
+        break;
+
+      case 'REMATCH_PENDING':
+        if (message.data.requested_by !== mySlotRef.current) {
+          setRematchState('waiting');
+        }
+        break;
+
+      case 'REMATCH_ACCEPTED':
+        // Navigate to new match
+        if (message.data.new_match_id) {
+          window.location.href = `/game/${message.data.new_match_id}`;
+        }
+        break;
+
+      case 'REMATCH_DECLINED':
+        setRematchState('idle');
         break;
     }
   };
@@ -638,6 +794,30 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     );
   }
 
+  // Rematch handlers
+  const handleRematchRequest = useCallback(() => {
+    if (wsRef.current && rematchState === 'idle') {
+      setRematchState('requested');
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
+      
+      // Start countdown
+      let countdown = 10;
+      setRematchCountdown(countdown);
+      const interval = setInterval(() => {
+        countdown--;
+        setRematchCountdown(countdown);
+        if (countdown <= 0) {
+          clearInterval(interval);
+          setRematchState('idle');
+        }
+      }, 1000);
+      
+      // Store interval ref for cleanup
+      const cleanup = () => clearInterval(interval);
+      return cleanup;
+    }
+  }, [rematchState]);
+
   // Game ended
   if (gameStatus === 'ended' && gameResult) {
     const myPlayerId = user?.id;
@@ -663,17 +843,29 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     // Determine if I won based on winner_slot
     const didWin = winnerSlot !== null && winnerSlot === mySlot;
     const ratingChange = myResult.rating_change || 0;
+    const ratingBefore = myResult.rating_before || 1500;
+    const ratingAfter = myResult.rating_after || 1500;
     // Use cells_completed (includes pre-completed squares) instead of score
     const myScore = myResult.cellsCompleted || myResult.cells_completed || myResult.score || 0;
     const opponentScore = opponentResult.cellsCompleted || opponentResult.cells_completed || opponentResult.score || 0;
+    
+    // Close loss detection
+    const cellDifference = opponentScore - myScore;
+    const wasClose = !didWin && !isDraw && cellDifference <= 5;
+
+    // Use displayed rating if available, otherwise use ratingAfter
+    const currentDisplayedRating = displayedRating !== null ? displayedRating : ratingAfter;
 
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl p-6 sm:p-8 text-center max-w-md w-full shadow-lg border border-gray-200">
+      <div className={`min-h-screen bg-white flex items-center justify-center p-4 relative ${showScreenShake ? 'screen-shake' : ''}`}>
+        {/* Defeat overlay */}
+        {showDefeatOverlay && <div className="absolute inset-0 defeat-overlay z-40 pointer-events-none" />}
+        
+        <div className="bg-white rounded-xl p-6 sm:p-8 text-center max-w-md w-full shadow-lg border border-gray-200 relative z-50">
           {/* Result Header */}
           <div className="mb-6">
             <h1 className={`text-4xl sm:text-5xl font-bold mb-2 ${
-              isDraw ? 'text-gray-600' : didWin ? 'text-green-500' : 'text-gray-800'
+              isDraw ? 'text-gray-600' : didWin ? 'text-green-500 victory-text' : 'text-gray-800'
             }`}>
               {isDraw ? '🤝 Draw!' : didWin ? '🏆 VICTORY!' : 'DEFEAT'}
             </h1>
@@ -687,6 +879,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               {reason === 'TIMEOUT_SCORE' && !didWin && '⏱️ Lower score at timeout'}
               {reason === 'DRAW' && 'Equal scores'}
             </p>
+            
+            {/* Close loss message */}
+            {wasClose && (
+              <p className="text-cyan-400 text-sm mt-2">
+                Almost! {cellDifference} more cell{cellDifference !== 1 ? 's' : ''} would have won.
+              </p>
+            )}
           </div>
 
           {/* Score comparison */}
@@ -726,7 +925,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             </div>
           </div>
 
-          {/* Rating change - Prominent */}
+          {/* Rating change - Prominent with animation */}
           <div className={`bg-gray-50 rounded-lg p-4 sm:p-5 mb-6 border ${
             ratingChange > 0 
               ? 'border-green-500' 
@@ -737,11 +936,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             <p className="text-gray-600 mb-2 text-sm sm:text-base font-medium">Rating Change</p>
             <div className="flex items-center justify-center gap-2 sm:gap-3">
               <span className="text-xl sm:text-2xl font-bold text-gray-800 font-mono">
-                {Math.round(myResult.rating_before || 1500)}
+                {Math.round(ratingBefore)}
               </span>
               <span className="text-gray-400 text-lg sm:text-xl">→</span>
-              <span className="text-2xl sm:text-3xl font-bold text-gray-800 font-mono">
-                {Math.round(myResult.rating_after || 1500)}
+              <span className={`text-2xl sm:text-3xl font-bold font-mono ${
+                ratingChange > 0 ? 'text-green-500' : ratingChange < 0 ? 'text-red-500' : 'text-gray-800'
+              }`}>
+                {Math.round(currentDisplayedRating)}
               </span>
               <span className={`text-xl sm:text-2xl font-bold font-mono ${
                 ratingChange > 0 ? 'text-green-500' : ratingChange < 0 ? 'text-red-500' : 'text-gray-400'
@@ -750,6 +951,42 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               </span>
             </div>
           </div>
+
+          {/* Longest streak stat */}
+          {longestStreak > 0 && (
+            <div className="mb-4">
+              <p className="text-gray-500 text-sm">
+                Longest streak: <span className="text-cyan-400 font-mono font-bold">{longestStreak}</span>
+              </p>
+            </div>
+          )}
+
+          {/* Rematch series - reserved for future use */}
+          {/* {rematchSeries.wins + rematchSeries.losses > 0 && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Series: <span className="text-green-400">{rematchSeries.wins}</span>
+                {' - '}
+                <span className="text-red-400">{rematchSeries.losses}</span>
+              </p>
+            </div>
+          )} */}
+
+          {/* Rematch button */}
+          <button
+            onClick={handleRematchRequest}
+            disabled={rematchState !== 'idle'}
+            className={`
+              w-full py-3 rounded-lg font-semibold transition-colors mb-3 text-base sm:text-lg
+              ${rematchState === 'idle' 
+                ? 'bg-cyan-500 hover:bg-cyan-600 text-white' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+            `}
+          >
+            {rematchState === 'idle' && 'Rematch'}
+            {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
+            {rematchState === 'waiting' && 'Opponent wants rematch! Tap to accept'}
+          </button>
 
           <button
             onClick={onGameEnd}
@@ -886,7 +1123,39 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               </div>
             </div>
           </div>
+          
+          {/* Pressure indicators: Score comparison */}
+          <div className="flex items-center justify-between text-xs sm:text-sm mt-1">
+            <div className={`font-mono font-bold transition-all ${
+              myState.score < opponentState.score - 5 ? 'text-red-400 animate-pulse' : 
+              Math.abs(myState.score - opponentState.score) <= 3 ? 'text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 
+              'text-blue-500'
+            }`}>
+              {myState.score}/81
+            </div>
+            <div className={`font-mono font-bold transition-all ${
+              opponentState.score - myState.score >= 5 ? 'text-red-400 animate-pulse' : 
+              Math.abs(opponentState.score - myState.score) <= 3 ? 'text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 
+              'text-fuchsia-500'
+            }`}>
+              {opponentState.score}/81
+            </div>
+          </div>
+          
+          {/* Catch-up flash overlay */}
+          {showCatchUpFlash && <div className="absolute inset-0 catch-up-flash pointer-events-none z-30" />}
+          
+          {/* Streak flash overlay */}
+          {showStreakFlash && <div className="absolute inset-0 streak-flash pointer-events-none z-30" />}
         </div>
+        
+        {/* Streak counter */}
+        {currentStreak >= 3 && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 text-orange-400 font-bold animate-pulse z-20">
+            <span className="text-lg">{currentStreak}</span>
+            <span className="text-xl">🔥</span>
+          </div>
+        )}
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
         <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
@@ -954,13 +1223,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ pointerEvents: 'auto' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''}`} style={{ pointerEvents: 'auto' }}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
                 grid={myGrid}
                 initialGrid={initialGrid}
                 selectedCell={selectedCell}
+                currentStreak={currentStreak}
                 onCellClick={handleCellClick}
                 notes={notes}
                 notesMode={notesMode}
