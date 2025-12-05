@@ -816,41 +816,55 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
-            <div className="relative">
+            <div className="relative flex items-center">
+              {/* Player emote - positioned to the left of timer */}
+              {myEmote && (
+                <div 
+                  className={`text-5xl sm:text-6xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  key={myEmote}
+                  style={{ 
+                    zIndex: 10, 
+                    marginRight: '8px',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    letterSpacing: '-0.1em'
+                  }}
+                >
+                  {myEmote}
+                </div>
+              )}
               <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
                 <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
                   {formatTime(myTimeRemaining)}
                   {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
                 </div>
               </div>
-              {/* Player emote - absolutely positioned */}
-              {myEmote && (
-                <div 
-                  className={`absolute left-full ml-2 top-1/2 -translate-y-1/2 text-5xl sm:text-6xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  key={myEmote}
-                  style={{ zIndex: 10 }}
-                >
-                  {myEmote}
-                </div>
-              )}
             </div>
             {/* Right: Opponent timer */}
-            <div className="relative">
-              {/* Opponent emote - absolutely positioned */}
-              {opponentEmote && (
-                <div 
-                  className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 text-5xl sm:text-6xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  key={opponentEmote}
-                  style={{ zIndex: 10 }}
-                >
-                  {opponentEmote}
-                </div>
-              )}
+            <div className="relative flex items-center">
               <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
                 <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
                   {formatTime(opponentTimeRemaining)}
                 </div>
               </div>
+              {/* Opponent emote - positioned to the right of timer */}
+              {opponentEmote && (
+                <div 
+                  className={`text-5xl sm:text-6xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  key={opponentEmote}
+                  style={{ 
+                    zIndex: 10, 
+                    marginLeft: '8px',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    letterSpacing: '-0.1em'
+                  }}
+                >
+                  {opponentEmote}
+                </div>
+              )}
             </div>
           </div>
         </div>
