@@ -119,40 +119,46 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Rating counter animation on game end
   useEffect(() => {
-    if (gameStatus === 'ended' && gameResult && displayedRating !== null) {
-      const myPlayerId = user?.id;
-      const myResult = myPlayerId && gameResult.player1?.playerId === myPlayerId
-        ? gameResult.player1
-        : myPlayerId && gameResult.player2?.playerId === myPlayerId
-        ? gameResult.player2
-        : mySlot === 1
-        ? gameResult.player1
-        : gameResult.player2;
-      
-      const ratingBefore = myResult?.rating_before || 1500;
-      const ratingAfter = myResult?.rating_after || 1500;
-      const diff = ratingAfter - ratingBefore;
-      
-      if (diff !== 0) {
-        const steps = Math.min(Math.abs(diff), 30); // Cap at 30 steps
-        const duration = 1000; // 1 second total
-        const stepTime = duration / steps;
-        const increment = diff > 0 ? Math.ceil(diff / steps) : Math.floor(diff / steps);
+    if (gameStatus === 'ended' && gameResult && displayedRating !== null && gameResult.player1 && gameResult.player2) {
+      try {
+        const myPlayerId = user?.id;
+        const myResult = myPlayerId && gameResult.player1?.playerId === myPlayerId
+          ? gameResult.player1
+          : myPlayerId && gameResult.player2?.playerId === myPlayerId
+          ? gameResult.player2
+          : mySlot === 1
+          ? gameResult.player1
+          : gameResult.player2;
         
-        let current = ratingBefore;
-        const interval = setInterval(() => {
-          current += increment;
-          if ((diff > 0 && current >= ratingAfter) || (diff < 0 && current <= ratingAfter)) {
-            setDisplayedRating(ratingAfter);
-            clearInterval(interval);
-          } else {
-            setDisplayedRating(current);
-          }
-        }, stepTime);
+        if (!myResult) return;
         
-        return () => clearInterval(interval);
-      } else {
-        setDisplayedRating(ratingAfter);
+        const ratingBefore = myResult.rating_before || 1500;
+        const ratingAfter = myResult.rating_after || 1500;
+        const diff = ratingAfter - ratingBefore;
+        
+        if (diff !== 0) {
+          const steps = Math.min(Math.abs(diff), 30); // Cap at 30 steps
+          const duration = 1000; // 1 second total
+          const stepTime = duration / steps;
+          const increment = diff > 0 ? Math.ceil(diff / steps) : Math.floor(diff / steps);
+          
+          let current = ratingBefore;
+          const interval = setInterval(() => {
+            current += increment;
+            if ((diff > 0 && current >= ratingAfter) || (diff < 0 && current <= ratingAfter)) {
+              setDisplayedRating(ratingAfter);
+              clearInterval(interval);
+            } else {
+              setDisplayedRating(current);
+            }
+          }, stepTime);
+          
+          return () => clearInterval(interval);
+        } else {
+          setDisplayedRating(ratingAfter);
+        }
+      } catch (error) {
+        console.error('Error in rating counter animation:', error);
       }
     }
   }, [gameStatus, gameResult, displayedRating, user?.id, mySlot]);
@@ -165,6 +171,29 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     }
   }, [lastMoveResult]);
 
+  // Rematch handlers - defined early to avoid hook ordering issues
+  const handleRematchRequest = useCallback(() => {
+    if (wsRef.current && rematchState === 'idle') {
+      setRematchState('requested');
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
+      
+      // Start countdown
+      let countdown = 10;
+      setRematchCountdown(countdown);
+      const interval = setInterval(() => {
+        countdown--;
+        setRematchCountdown(countdown);
+        if (countdown <= 0) {
+          clearInterval(interval);
+          setRematchState('idle');
+        }
+      }, 1000);
+      
+      // Store interval ref for cleanup
+      const cleanup = () => clearInterval(interval);
+      return cleanup;
+    }
+  }, [rematchState]);
 
   const handleMessage = (message: any) => {
     switch (message.type) {
@@ -796,30 +825,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       </div>
     );
   }
-
-  // Rematch handlers
-  const handleRematchRequest = useCallback(() => {
-    if (wsRef.current && rematchState === 'idle') {
-      setRematchState('requested');
-      wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
-      
-      // Start countdown
-      let countdown = 10;
-      setRematchCountdown(countdown);
-      const interval = setInterval(() => {
-        countdown--;
-        setRematchCountdown(countdown);
-        if (countdown <= 0) {
-          clearInterval(interval);
-          setRematchState('idle');
-        }
-      }, 1000);
-      
-      // Store interval ref for cleanup
-      const cleanup = () => clearInterval(interval);
-      return cleanup;
-    }
-  }, [rematchState]);
 
   // Game ended
   if (gameStatus === 'ended' && gameResult) {
