@@ -106,6 +106,8 @@ export const MatchModel = {
       ratingAfter: number;
       rdAfter: number;
       volatilityAfter: number;
+      timeAtFinish?: number; // seconds remaining when game ended
+      longestCellStreak?: number; // longest in-game cell streak
     }
   ): Promise<void> {
     await query(
@@ -119,8 +121,10 @@ export const MatchModel = {
            is_winner = $7,
            rating_after = $8,
            rd_after = $9,
-           volatility_after = $10
-       WHERE match_id = $11 AND player_id = $12`,
+           volatility_after = $10,
+           time_at_finish = $11,
+           longest_cell_streak = $12
+       WHERE match_id = $13 AND player_id = $14`,
       [
         stats.cellsCompleted,
         stats.livesUsed,
@@ -132,6 +136,8 @@ export const MatchModel = {
         stats.ratingAfter,
         stats.rdAfter,
         stats.volatilityAfter,
+        stats.timeAtFinish ?? null,
+        stats.longestCellStreak ?? 0,
         matchId,
         playerId,
       ]

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { playerAPI } from '../services/api';
 
 interface PlayerStats {
+  // Existing stats
   current_rating: number;
   games_played: number;
   total_matches: number;
@@ -14,6 +15,20 @@ interface PlayerStats {
   rating_change_30d: number | null;
   rating_change_90d: number | null;
   rating_change_all_time: number | null;
+  
+  // New speed stats
+  cpm: number;                    // Cells per minute
+  avgTimeAtWin: number;           // Seconds remaining on wins
+  fastestWin: number;             // Seconds remaining on fastest win
+  
+  // New competition stats
+  upsetRate: number;              // Win % vs higher-rated opponents (0-100)
+  peakRating: number;             // Highest rating achieved
+  
+  // New streak stats
+  currentWinStreak: number;       // Current consecutive wins
+  bestWinStreak: number;          // Best ever consecutive wins
+  avgCellStreak: number;          // Average longest in-game streak
 }
 
 interface StatsModalProps {
@@ -55,6 +70,13 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
     if (change > 0) return 'text-green-600';
     if (change < 0) return 'text-red-600';
     return 'text-gray-600';
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (seconds === 0) return '—';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (!isOpen) return null;
@@ -125,6 +147,74 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                 </div>
               </div>
 
+              {/* Speed Stats */}
+              <div>
+                <h3 className="text-sm font-medium text-cyan-500 uppercase tracking-wide mb-3">Speed</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <StatCard 
+                    label="CPM" 
+                    value={stats.cpm.toFixed(1)} 
+                    sublabel="cells/min"
+                  />
+                  <StatCard 
+                    label="Avg Win Time" 
+                    value={formatTime(stats.avgTimeAtWin)} 
+                    sublabel="remaining"
+                  />
+                  <StatCard 
+                    label="Fastest Win" 
+                    value={formatTime(stats.fastestWin)} 
+                    sublabel="remaining"
+                  />
+                </div>
+              </div>
+
+              {/* Competition Stats */}
+              <div>
+                <h3 className="text-sm font-medium text-pink-500 uppercase tracking-wide mb-3">Competition</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <StatCard 
+                    label="Upset Rate" 
+                    value={`${stats.upsetRate.toFixed(0)}%`} 
+                    sublabel="vs higher rated"
+                  />
+                  <StatCard 
+                    label="Peak Rating" 
+                    value={Math.round(stats.peakRating).toString()} 
+                    sublabel="all-time high"
+                    highlight
+                  />
+                  <StatCard 
+                    label="Win Rate" 
+                    value={`${stats.win_rate.toFixed(0)}%`} 
+                    sublabel={`${stats.total_matches} games`}
+                  />
+                </div>
+              </div>
+
+              {/* Streak Stats */}
+              <div>
+                <h3 className="text-sm font-medium text-orange-500 uppercase tracking-wide mb-3">Streaks</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <StatCard 
+                    label="Win Streak" 
+                    value={stats.currentWinStreak.toString()} 
+                    sublabel="current"
+                    fire={stats.currentWinStreak >= 3}
+                  />
+                  <StatCard 
+                    label="Best Streak" 
+                    value={stats.bestWinStreak.toString()} 
+                    sublabel="all-time"
+                  />
+                  <StatCard 
+                    label="Avg Cell Streak" 
+                    value={stats.avgCellStreak.toFixed(1)} 
+                    sublabel="in-game"
+                  />
+                </div>
+              </div>
+
               {/* Rating Changes */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Rating Changes</h3>
@@ -159,6 +249,37 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ 
+  label, 
+  value, 
+  sublabel, 
+  highlight = false,
+  fire = false 
+}: { 
+  label: string; 
+  value: string; 
+  sublabel: string;
+  highlight?: boolean;
+  fire?: boolean;
+}) {
+  return (
+    <div className={`
+      bg-gray-800 rounded-lg p-3 text-center border
+      ${highlight ? 'border-cyan-500 shadow-[0_0_10px_rgba(0,255,255,0.3)]' : 'border-gray-700'}
+    `}>
+      <div className="text-gray-400 text-xs mb-1">{label}</div>
+      <div className={`
+        text-xl font-bold font-mono
+        ${highlight ? 'text-cyan-400' : 'text-white'}
+      `}>
+        {value}
+        {fire && <span className="ml-1">🔥</span>}
+      </div>
+      <div className="text-gray-500 text-xs">{sublabel}</div>
     </div>
   );
 }

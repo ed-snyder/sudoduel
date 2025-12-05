@@ -298,47 +298,177 @@ html, body, #root {
   animation: progress-bar-pulse-pink 3s ease-in-out infinite;
 }
 
-/* Grid glow for mass streak - Blue for player (perimeter only) */
+/* ========================================
+   STREAK SYSTEM - PERIMETER GLOW ONLY
+   ======================================== */
+
+/* Soft glow for 5-7 streak - Player (Blue) */
 @keyframes grid-glow-blue {
   0%, 100% { 
-    border-color: rgba(59, 130, 246, 0.3);
-    box-shadow: 
-      0 0 10px rgba(59, 130, 246, 0.4),
-      inset 0 0 10px rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
   }
   50% { 
     border-color: rgba(59, 130, 246, 0.6);
-    box-shadow: 
-      0 0 20px rgba(59, 130, 246, 0.6),
-      inset 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
   }
 }
 
 .grid-glow-blue {
   animation: grid-glow-blue 2s ease-in-out infinite;
-  border: 2px solid rgba(59, 130, 246, 0.3);
-  border-radius: 4px;
+  border: 2px solid rgba(59, 130, 246, 0.4) !important;
 }
 
-/* Grid glow for mass streak - Pink for opponent (perimeter only) */
+/* Soft glow for 5-7 streak - Opponent (Pink) */
 @keyframes grid-glow-pink {
   0%, 100% { 
-    border-color: rgba(236, 72, 153, 0.3);
-    box-shadow: 
-      0 0 10px rgba(236, 72, 153, 0.4),
-      inset 0 0 10px rgba(236, 72, 153, 0.2);
+    border-color: rgba(236, 72, 153, 0.4);
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);
   }
   50% { 
     border-color: rgba(236, 72, 153, 0.6);
-    box-shadow: 
-      0 0 20px rgba(236, 72, 153, 0.6),
-      inset 0 0 20px rgba(236, 72, 153, 0.3);
+    box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
   }
 }
 
 .grid-glow-pink {
   animation: grid-glow-pink 2s ease-in-out infinite;
-  border: 2px solid rgba(236, 72, 153, 0.3);
-  border-radius: 4px;
+  border: 2px solid rgba(236, 72, 153, 0.4) !important;
+}
+
+/* ========================================
+   SUPER STREAK (8+) - VERY BRIGHT GLOW
+   ======================================== */
+
+/* Super Streak - Player (Very Bright Blue) */
+@keyframes grid-glow-super-blue {
+  0%, 100% { 
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 0.7),
+      0 0 40px rgba(59, 130, 246, 0.5),
+      0 0 60px rgba(59, 130, 246, 0.3),
+      inset 0 0 15px rgba(59, 130, 246, 0.2);
+  }
+  50% { 
+    border-color: rgba(96, 165, 250, 1);
+    box-shadow: 
+      0 0 30px rgba(59, 130, 246, 0.9),
+      0 0 60px rgba(59, 130, 246, 0.6),
+      0 0 90px rgba(59, 130, 246, 0.4),
+      inset 0 0 25px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.grid-glow-super-blue {
+  animation: grid-glow-super-blue 1.5s ease-in-out infinite;
+  border: 3px solid rgba(59, 130, 246, 0.8) !important;
+}
+
+/* Super Streak - Opponent (Very Bright Pink) */
+@keyframes grid-glow-super-pink {
+  0%, 100% { 
+    border-color: rgba(236, 72, 153, 0.8);
+    box-shadow: 
+      0 0 20px rgba(236, 72, 153, 0.7),
+      0 0 40px rgba(236, 72, 153, 0.5),
+      0 0 60px rgba(236, 72, 153, 0.3),
+      inset 0 0 15px rgba(236, 72, 153, 0.2);
+  }
+  50% { 
+    border-color: rgba(244, 114, 182, 1);
+    box-shadow: 
+      0 0 30px rgba(236, 72, 153, 0.9),
+      0 0 60px rgba(236, 72, 153, 0.6),
+      0 0 90px rgba(236, 72, 153, 0.4),
+      inset 0 0 25px rgba(236, 72, 153, 0.3);
+  }
+}
+
+.grid-glow-super-pink {
+  animation: grid-glow-super-pink 1.5s ease-in-out infinite;
+  border: 3px solid rgba(236, 72, 153, 0.8) !important;
+}
+
+/* Super Streak - Both Players (Very Bright Purple) */
+@keyframes grid-glow-super-purple {
+  0%, 100% { 
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 
+      0 0 20px rgba(168, 85, 247, 0.7),
+      0 0 40px rgba(168, 85, 247, 0.5),
+      0 0 60px rgba(168, 85, 247, 0.3),
+      inset 0 0 15px rgba(168, 85, 247, 0.2);
+  }
+  50% { 
+    border-color: rgba(192, 132, 252, 1);
+    box-shadow: 
+      0 0 30px rgba(168, 85, 247, 0.9),
+      0 0 60px rgba(168, 85, 247, 0.6),
+      0 0 90px rgba(168, 85, 247, 0.4),
+      inset 0 0 25px rgba(168, 85, 247, 0.3);
+  }
+}
+
+.grid-glow-super-purple {
+  animation: grid-glow-super-purple 1.5s ease-in-out infinite;
+  border: 3px solid rgba(168, 85, 247, 0.8) !important;
+}
+
+/* ========================================
+   STREAK LOSS FLASH
+   ======================================== */
+
+/* Player loses super streak → Flash PINK then fade to default */
+@keyframes grid-glow-flash-pink {
+  0% { 
+    box-shadow: 0 0 40px rgba(236, 72, 153, 0.9), 0 0 80px rgba(236, 72, 153, 0.6);
+    border-color: rgba(236, 72, 153, 0.9);
+  }
+  100% { 
+    box-shadow: none;
+    border-color: rgba(55, 65, 81, 1);
+  }
+}
+
+.grid-glow-flash-pink {
+  animation: grid-glow-flash-pink 0.5s ease-out forwards;
+}
+
+/* Opponent loses super streak → Flash BLUE then fade to default */
+@keyframes grid-glow-flash-blue {
+  0% { 
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.9), 0 0 80px rgba(59, 130, 246, 0.6);
+    border-color: rgba(59, 130, 246, 0.9);
+  }
+  100% { 
+    box-shadow: none;
+    border-color: rgba(55, 65, 81, 1);
+  }
+}
+
+.grid-glow-flash-blue {
+  animation: grid-glow-flash-blue 0.5s ease-out forwards;
+}
+
+/* ========================================
+   SUPER STREAK BANNER
+   ======================================== */
+
+@keyframes super-streak-pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    opacity: 0.85;
+    transform: scale(1.03);
+    filter: brightness(1.2);
+  }
+}
+
+.animate-super-streak-pulse {
+  animation: super-streak-pulse 0.8s ease-in-out infinite;
 }
 

@@ -10,9 +10,7 @@ interface SudokuGridProps {
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
   opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
-  currentStreak?: number; // Current streak count for glow intensification
-  playerStreakGlow?: boolean; // Blue glow for player mass streak
-  opponentStreakGlow?: boolean; // Pink glow for opponent mass streak
+  glowClass?: string; // Single class for grid perimeter glow (replaces playerStreakGlow/opponentStreakGlow)
 }
 
 interface FloatingFeedback {
@@ -57,18 +55,8 @@ function SudokuGrid({
   lockedOut = false,
   lastMoveResult = null,
   opponentScoredCells = new Set(),
-  currentStreak = 0,
-  playerStreakGlow = false,
-  opponentStreakGlow = false,
+  glowClass,
 }: SudokuGridProps) {
-  
-  // Get streak glow class based on streak count
-  const getStreakGlow = (streak: number): string => {
-    if (streak < 3) return '';
-    if (streak < 5) return 'shadow-[0_0_8px_rgba(0,255,255,0.4)]';
-    if (streak < 8) return 'shadow-[0_0_12px_rgba(0,255,255,0.6)]';
-    return 'shadow-[0_0_20px_rgba(255,0,255,0.8)]'; // Max streak = magenta
-  };
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
@@ -191,9 +179,9 @@ function SudokuGrid({
       ref={gridRef}
       className={`
         relative grid grid-cols-9 gap-0 border-2 
-        ${playerStreakGlow ? 'grid-glow-blue' : opponentStreakGlow ? 'grid-glow-pink' : 'border-gray-700'}
+        ${glowClass || 'border-gray-700'}
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
-        transition-colors
+        transition-all duration-300
         w-full
       `}
       style={{
@@ -268,7 +256,6 @@ function SudokuGrid({
                     ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     : 'cursor-default'
                 }
-                ${getStreakGlow(currentStreak)}
                 transition-colors duration-150 touch-manipulation
               `}
               style={{

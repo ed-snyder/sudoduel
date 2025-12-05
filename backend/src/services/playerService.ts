@@ -18,6 +18,7 @@ export interface MatchHistoryEntry {
 }
 
 export interface PlayerStats {
+  // Existing stats
   current_rating: number;
   games_played: number;
   total_matches: number;
@@ -30,6 +31,20 @@ export interface PlayerStats {
   rating_change_30d: number | null;
   rating_change_90d: number | null;
   rating_change_all_time: number | null;
+  
+  // New speed stats
+  cpm: number;                    // Cells per minute
+  avgTimeAtWin: number;           // Seconds remaining on wins
+  fastestWin: number;             // Seconds remaining on fastest win
+  
+  // New competition stats
+  upsetRate: number;              // Win % vs higher-rated opponents (0-100)
+  peakRating: number;             // Highest rating achieved
+  
+  // New streak stats
+  currentWinStreak: number;       // Current consecutive wins
+  bestWinStreak: number;          // Best ever consecutive wins
+  avgCellStreak: number;          // Average longest in-game streak
 }
 
 export const PlayerService = {
@@ -172,6 +187,82 @@ export const PlayerService = {
     const ratingChange90d = await this.getRatingChange(profile.id, ninetyDaysAgo);
     const ratingChangeAllTime = await this.getRatingChange(profile.id, new Date(0));
 
+    // Speed Stats: CPM (Cells per Minute)
+    const cpmResult = await query(
+      `SELECT 
+        SUM(mp.cells_completed) as total_cells,
+        SUM(COALESCE(mp.time_at_finish, 0)) as total_time_remaining
+      FROM match_players mp
+      JOIN matches m ON mp.match_id = m.id
+      WHERE mp.player_id = $1 AND m.status = 'COMPLETED'`,
+      [profile.id]
+    );
+    
+    const totalCells = parseInt(cpmResult.rows[0]?.total_cells || '0', 10);
+    const totalTimeRemaining = parseInt(cpmResult.rows[0]?.total_time_remaining || '0', 10);
+    // Calculate total time played: STARTING_TIME (210) * games - total_time_remaining
+    const STARTING_TIME = 210;
+    const totalTimePlayedSeconds = (totalMatches * STARTING_TIME) - totalTimeRemaining;
+    const cpm = totalTimePlayedSeconds > 0 ? (totalCells / (totalTimePlayedSeconds / 60)) : 0;
+
+    // Speed Stats: Avg Time at Win & Fastest Win
+    const winTimeResult = await query(
+      `SELECT 
+        AVG(mp.time_at_finish) as avg_time_remaining,
+        MAX(mp.time_at_finish) as fastest_win_time_remaining
+      FROM match_players mp
+      JOIN matches m ON mp.match_id = m.id
+      WHERE mp.player_id = $1 
+        AND m.status = 'COMPLETED' 
+        AND mp.is_winner = true
+        AND mp.time_at_finish IS NOT NULL`,
+      [profile.id]
+    );
+    
+    const avgTimeAtWin = Math.round(parseFloat(winTimeResult.rows[0]?.avg_time_remaining || '0'));
+    const fastestWin = parseInt(winTimeResult.rows[0]?.fastest_win_time_remaining || '0', 10);
+
+    // Competition Stats: Upset Rate
+    const upsetResult = await query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE mp.is_winner = true) as upset_wins,
+        COUNT(*) as total_underdog_games
+      FROM match_players mp
+      JOIN matches m ON mp.match_id = m.id
+      JOIN match_players opp ON opp.match_id = m.id AND opp.player_id != mp.player_id
+      WHERE mp.player_id = $1 
+        AND m.status = 'COMPLETED'
+        AND mp.rating_before < opp.rating_before`,
+      [profile.id]
+    );
+    
+    const upsetWins = parseInt(upsetResult.rows[0]?.upset_wins || '0', 10);
+    const underdogGames = parseInt(upsetResult.rows[0]?.total_underdog_games || '0', 10);
+    const upsetRate = underdogGames > 0 ? (upsetWins / underdogGames) * 100 : 0;
+
+    // Get peak rating and win streaks from player_profiles
+    const profileStatsResult = await query(
+      `SELECT peak_rating, current_win_streak, best_win_streak
+       FROM player_profiles
+       WHERE id = $1`,
+      [profile.id]
+    );
+    const profileStats = profileStatsResult.rows[0];
+    const peakRating = parseFloat(profileStats?.peak_rating || '1500');
+    const currentWinStreak = parseInt(profileStats?.current_win_streak || '0', 10);
+    const bestWinStreak = parseInt(profileStats?.best_win_streak || '0', 10);
+
+    // Streak Stats: Avg Cell Streak
+    const cellStreakResult = await query(
+      `SELECT AVG(longest_cell_streak) as avg_streak
+      FROM match_players mp
+      JOIN matches m ON mp.match_id = m.id
+      WHERE mp.player_id = $1 AND m.status = 'COMPLETED' AND mp.longest_cell_streak > 0`,
+      [profile.id]
+    );
+    
+    const avgCellStreak = Math.round(parseFloat(cellStreakResult.rows[0]?.avg_streak || '0') * 10) / 10;
+
     return {
       current_rating: rating?.rating || 1500,
       games_played: rating?.games_played || 0,
@@ -185,6 +276,15 @@ export const PlayerService = {
       rating_change_30d: ratingChange30d,
       rating_change_90d: ratingChange90d,
       rating_change_all_time: ratingChangeAllTime,
+      // New stats
+      cpm: Math.round(cpm * 10) / 10,
+      avgTimeAtWin,
+      fastestWin,
+      upsetRate: Math.round(upsetRate * 10) / 10,
+      peakRating,
+      currentWinStreak,
+      bestWinStreak,
+      avgCellStreak,
     };
   },
 

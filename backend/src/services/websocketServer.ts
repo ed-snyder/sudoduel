@@ -692,6 +692,8 @@ async function endGame(matchId: number) {
       ratingAfter: newRatings.player1.rating,
       rdAfter: newRatings.player1.rd,
       volatilityAfter: newRatings.player1.volatility,
+      timeAtFinish: results.player1.timeRemaining ?? null,
+      longestCellStreak: results.player1.longestCellStreak ?? 0,
     });
     console.log(`✅ [6/6a] Player 1 stats saved`);
 
@@ -707,8 +709,51 @@ async function endGame(matchId: number) {
       ratingAfter: newRatings.player2.rating,
       rdAfter: newRatings.player2.rd,
       volatilityAfter: newRatings.player2.volatility,
+      timeAtFinish: results.player2.timeRemaining ?? null,
+      longestCellStreak: results.player2.longestCellStreak ?? 0,
     });
     console.log(`✅ [6/6b] Player 2 stats saved`);
+
+    // Update win streaks and peak rating
+    console.log(`💾 [7/7] Updating win streaks and peak ratings...`);
+    const { query } = await import('../config/database');
+    
+    // Update player 1 win streak and peak rating
+    if (results.player1.isWinner) {
+      await query(`
+        UPDATE player_profiles 
+        SET current_win_streak = current_win_streak + 1,
+            best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+            peak_rating = GREATEST(peak_rating, $1)
+        WHERE id = $2
+      `, [newRatings.player1.rating, results.player1.playerId]);
+    } else {
+      await query(`
+        UPDATE player_profiles 
+        SET current_win_streak = 0,
+            peak_rating = GREATEST(peak_rating, $1)
+        WHERE id = $2
+      `, [newRatings.player1.rating, results.player1.playerId]);
+    }
+    
+    // Update player 2 win streak and peak rating
+    if (results.player2.isWinner) {
+      await query(`
+        UPDATE player_profiles 
+        SET current_win_streak = current_win_streak + 1,
+            best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+            peak_rating = GREATEST(peak_rating, $1)
+        WHERE id = $2
+      `, [newRatings.player2.rating, results.player2.playerId]);
+    } else {
+      await query(`
+        UPDATE player_profiles 
+        SET current_win_streak = 0,
+            peak_rating = GREATEST(peak_rating, $1)
+        WHERE id = $2
+      `, [newRatings.player2.rating, results.player2.playerId]);
+    }
+    console.log(`✅ [7/7] Win streaks and peak ratings updated`);
 
     // Clear matchmaking cache for this match so players can join new games
     MatchmakingService.clearMatch(matchId);

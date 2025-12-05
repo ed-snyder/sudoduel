@@ -11,6 +11,8 @@ interface PlayerGameState {
   isLocked: boolean;          // true when timer hits 0
   isSolved: boolean;
   lastMoveTime: number;
+  currentStreak: number;     // Current consecutive correct moves
+  longestCellStreak: number; // Longest streak achieved in this game
 }
 
 interface GameState {
@@ -65,6 +67,8 @@ export const GameStateManager = {
         isLocked: false,
         isSolved: false,
         lastMoveTime: Date.now(),
+        currentStreak: 0,
+        longestCellStreak: 0,
       },
       player2: {
         playerId: player2Id,
@@ -77,6 +81,8 @@ export const GameStateManager = {
         isLocked: false,
         isSolved: false,
         lastMoveTime: Date.now(),
+        currentStreak: 0,
+        longestCellStreak: 0,
       },
       status: 'WAITING',
       startedAt: null,
@@ -250,6 +256,8 @@ export const GameStateManager = {
     } else {
       // Incorrect move
       player.mistakes++;
+      // Reset streak on incorrect move
+      player.currentStreak = 0;
       // Time penalty for mistake (can go to 0, not negative)
       player.timeRemaining = Math.max(0, player.timeRemaining - TIME_PENALTY_INCORRECT);
       
@@ -326,6 +334,7 @@ export const GameStateManager = {
           cellsCompleted: p1.cellsCompleted,
           mistakes: p1.mistakes,
           timeRemaining: p1.timeRemaining,
+          longestCellStreak: p1.longestCellStreak,
           isWinner: winnerId === p1.playerId,
         },
         player2: {
@@ -334,6 +343,7 @@ export const GameStateManager = {
           cellsCompleted: p2.cellsCompleted,
           mistakes: p2.mistakes,
           timeRemaining: p2.timeRemaining,
+          longestCellStreak: p2.longestCellStreak,
           isWinner: winnerId === p2.playerId,
         },
         winnerId,
@@ -353,6 +363,7 @@ export const GameStateManager = {
           cellsCompleted: p1.cellsCompleted,
           mistakes: p1.mistakes,
           timeRemaining: p1.timeRemaining,
+          longestCellStreak: p1.longestCellStreak,
           isWinner: winnerId === p1.playerId,
         },
         player2: {
@@ -361,6 +372,7 @@ export const GameStateManager = {
           cellsCompleted: p2.cellsCompleted,
           mistakes: p2.mistakes,
           timeRemaining: p2.timeRemaining,
+          longestCellStreak: p2.longestCellStreak,
           isWinner: winnerId === p2.playerId,
         },
         winnerId,
@@ -434,6 +446,7 @@ export const GameStateManager = {
         cellsCompleted: p1.cellsCompleted,
         mistakes: p1.mistakes,
         timeRemaining: p1.timeRemaining,
+        longestCellStreak: p1.longestCellStreak,
         finalState: p1.isSolved ? 'SOLVED' : p1.isLocked ? 'LOCKED_OUT' : 'TIMEOUT',
         isWinner: winnerId === p1.playerId,
       },
@@ -443,6 +456,7 @@ export const GameStateManager = {
         cellsCompleted: p2.cellsCompleted,
         mistakes: p2.mistakes,
         timeRemaining: p2.timeRemaining,
+        longestCellStreak: p2.longestCellStreak,
         finalState: p2.isSolved ? 'SOLVED' : p2.isLocked ? 'LOCKED_OUT' : 'TIMEOUT',
         isWinner: winnerId === p2.playerId,
       },
