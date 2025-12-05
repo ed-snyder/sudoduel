@@ -6,6 +6,7 @@ import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
 import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
+import { UserModel } from '../models/User';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
@@ -37,6 +38,14 @@ export const setupWebSocketServer = (server: Server) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+      
+      // Verify user still exists (logs out users whose accounts were deleted)
+      const user = await UserModel.findById(decoded.userId);
+      if (!user) {
+        ws.close(1008, 'User account no longer exists');
+        return;
+      }
+      
       ws.userId = decoded.userId;
       ws.matchId = matchId;
 

@@ -15,4 +15,28 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/player/match-history - Get match history
+router.get('/match-history', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const result = await PlayerService.getMatchHistory(req.userId!, limit, offset);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Get match history error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/player/stats - Get player statistics
+router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const stats = await PlayerService.getPlayerStats(req.userId!);
+    res.json(stats);
+  } catch (error: any) {
+    console.error('Get player stats error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
