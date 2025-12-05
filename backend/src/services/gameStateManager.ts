@@ -494,6 +494,7 @@ export const GameStateManager = {
 
   // Mark a player as forfeiting the match. The opponent wins regardless of score.
   // CRITICAL: This function MUST ensure the forfeiting player NEVER wins.
+  // ABSOLUTE RULE: FORFEITING PLAYER ALWAYS LOSES, NO EXCEPTIONS
   forfeit(matchId: number, forfeitingPlayerId: number): void {
     const game = gameStates.get(matchId);
     if (!game || game.status !== 'IN_PROGRESS') {
@@ -511,19 +512,35 @@ export const GameStateManager = {
     // CRITICAL: Track both the forfeiting player and the winner
     // The forfeiting player MUST be set, and the winner MUST be the opponent
     game.forfeitingPlayerId = forfeitingPlayerId;
+    
+    // ABSOLUTE RULE: Winner is ALWAYS the opponent of the forfeiting player
+    // NO EXCEPTIONS - even if forfeiting player is ahead, they lose
     game.forfeitWinnerId = winner.playerId;
 
-    // Safety check: Ensure forfeitWinnerId is NOT the forfeiting player
+    // CRITICAL VALIDATION: Ensure forfeitWinnerId is NEVER the forfeiting player
     if (game.forfeitWinnerId === forfeitingPlayerId) {
-      console.error(`[GameState] ERROR: forfeitWinnerId matches forfeitingPlayerId! Correcting...`);
+      console.error(`[GameState] CRITICAL ERROR: forfeitWinnerId matches forfeitingPlayerId! FORCING correction...`);
+      // Force winner to be the opponent
       game.forfeitWinnerId = winner.playerId;
+    }
+    
+    // Double-check: Ensure we didn't somehow set the wrong winner
+    if (game.forfeitWinnerId === forfeitingPlayerId) {
+      console.error(`[GameState] CRITICAL ERROR: Double-check failed! Forcing opponent as winner...`);
+      game.forfeitWinnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
     }
 
     // Mark forfeiting player as effectively out of the game
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
     
-    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits, player ${winner.playerId} wins (forfeitWinnerId=${game.forfeitWinnerId})`);
+    // Final validation log
+    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits, player ${game.forfeitWinnerId} wins (forfeitWinnerId=${game.forfeitWinnerId}, forfeitingPlayerId=${game.forfeitingPlayerId})`);
+    
+    // Final assertion: forfeiting player must NOT be the winner
+    if (game.forfeitingPlayerId === game.forfeitWinnerId) {
+      console.error(`[GameState] CRITICAL ASSERTION FAILED: Forfeiting player is set as winner! This should NEVER happen!`);
+    }
   },
 
   /**
