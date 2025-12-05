@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 
 interface ProgressBarProps {
   progress: number; // 0-100
