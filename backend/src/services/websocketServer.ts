@@ -461,7 +461,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           }
 
           // Get a random puzzle for the rematch
-          const puzzle = await PuzzleModel.getRandomPuzzle(1);
+          const puzzle = await PuzzleModel.getRandomByLadder(1);
           if (!puzzle) {
             console.error('❌ No puzzle available for rematch');
             return;
