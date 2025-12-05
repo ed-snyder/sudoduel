@@ -1107,11 +1107,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             className={`
               w-full py-3 rounded-lg font-semibold transition-colors mb-3 text-base sm:text-lg
               ${rematchState === 'idle' 
-                ? 'bg-cyan-500 hover:bg-cyan-600 text-white' 
+                ? 'bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer' 
                 : rematchState === 'waiting'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
+                ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:bg-green-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
             `}
+            style={{
+              pointerEvents: rematchState === 'requested' ? 'none' : 'auto',
+              zIndex: 10
+            }}
           >
             {rematchState === 'idle' && 'Rematch'}
             {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
