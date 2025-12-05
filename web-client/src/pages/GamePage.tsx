@@ -816,15 +816,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
-            <div className="relative flex items-center">
+            <div className="relative flex items-center gap-2">
               {/* Player emote - positioned to the left of timer */}
               {myEmote && (
                 <div 
-                  className={`text-5xl sm:text-6xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`text-xl sm:text-2xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
                   style={{ 
                     zIndex: 10, 
-                    marginRight: '8px',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'inline-block',
@@ -842,7 +841,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               </div>
             </div>
             {/* Right: Opponent timer */}
-            <div className="relative flex items-center">
+            <div className="relative flex items-center gap-2">
               <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
                 <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
                   {formatTime(opponentTimeRemaining)}
@@ -851,11 +850,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               {/* Opponent emote - positioned to the right of timer */}
               {opponentEmote && (
                 <div 
-                  className={`text-5xl sm:text-6xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`text-xl sm:text-2xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
                   style={{ 
                     zIndex: 10, 
-                    marginLeft: '8px',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'inline-block',
@@ -976,9 +974,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </button>
       </div>
 
-      {/* Emote Picker */}
+      {/* Emote Picker - Below toolbar */}
       {showEmotePicker && (
-        <div className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 250px)' }}>
+        <div className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 340px)' }}>
           {EMOTES.map((emote) => (
             <button
               key={emote}
