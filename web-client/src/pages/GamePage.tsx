@@ -1163,24 +1163,6 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   // Main game UI - Compact layout with header above grid
   return (
     <div className="min-h-screen bg-white flex flex-col relative" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
-      {/* Super Streak Banner - Flashes at top of screen */}
-      {(mySuperStreak || opponentSuperStreak) && (
-        <div className="absolute top-20 left-0 right-0 z-50 flex justify-center pointer-events-none">
-          <div className={`
-            px-8 py-3 rounded-lg font-black text-xl tracking-[0.2em] uppercase
-            animate-super-streak-pulse
-            ${mySuperStreak && opponentSuperStreak 
-              ? 'text-purple-300 bg-purple-900/60 shadow-[0_0_30px_rgba(168,85,247,0.8)]'
-              : mySuperStreak 
-                ? 'text-blue-300 bg-blue-900/60 shadow-[0_0_30px_rgba(59,130,246,0.8)]'
-                : 'text-pink-300 bg-pink-900/60 shadow-[0_0_30px_rgba(236,72,153,0.8)]'
-            }
-          `}>
-            ⚡ SUPER STREAK ⚡
-          </div>
-        </div>
-      )}
-      
       {/* Disconnect Banner */}
       {opponentDisconnected && (
         <div className="absolute inset-x-0 z-50 mx-4" style={{ top: isCapacitor ? '64px' : '64px' }}>

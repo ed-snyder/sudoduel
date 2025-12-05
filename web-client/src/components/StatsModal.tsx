@@ -128,25 +128,6 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                 </div>
               </div>
 
-              {/* Accuracy */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Accuracy</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-3xl font-bold text-gray-800 mb-2">{stats.accuracy.toFixed(1)}%</div>
-                  <div className="text-sm text-gray-600">Cell Accuracy</div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    {stats.total_matches > 0 ? (
-                      <>
-                        {Math.round((stats.accuracy / 100) * (stats.total_matches * 81))} cells completed •{' '}
-                        {Math.round(((100 - stats.accuracy) / 100) * (stats.total_matches * 81))} mistakes
-                      </>
-                    ) : (
-                      'No matches played'
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* Speed Stats */}
               <div>
                 <h3 className="text-sm font-medium text-cyan-500 uppercase tracking-wide mb-3">Speed</h3>
