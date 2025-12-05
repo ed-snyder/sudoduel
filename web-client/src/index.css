@@ -266,19 +266,63 @@ html, body, #root {
   animation: catch-up-flash 0.3s ease-out;
 }
 
-/* Progress bar pulse when ahead by 5+ cells */
-@keyframes progress-bar-pulse {
+/* Progress bar pulse when ahead by 5+ cells - Blue for player */
+@keyframes progress-bar-pulse-blue {
   0%, 100% { 
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
   }
   50% { 
     transform: scale(1.02);
-    box-shadow: 0 0 8px 2px rgba(96, 165, 250, 0.6);
+    box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.6);
   }
 }
 
-.progress-bar-pulse {
-  animation: progress-bar-pulse 1.5s ease-in-out infinite;
+.progress-bar-pulse-blue {
+  animation: progress-bar-pulse-blue 1.5s ease-in-out infinite;
+}
+
+/* Progress bar pulse when ahead by 5+ cells - Pink for opponent */
+@keyframes progress-bar-pulse-pink {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4);
+  }
+  50% { 
+    transform: scale(1.02);
+    box-shadow: 0 0 8px 2px rgba(236, 72, 153, 0.6);
+  }
+}
+
+.progress-bar-pulse-pink {
+  animation: progress-bar-pulse-pink 1.5s ease-in-out infinite;
+}
+
+/* Grid glow for mass streak - Green for player */
+@keyframes grid-glow-green {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+  }
+}
+
+.grid-glow-green {
+  animation: grid-glow-green 2s ease-in-out infinite;
+}
+
+/* Grid glow for mass streak - Pink for opponent */
+@keyframes grid-glow-pink {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.6);
+  }
+}
+
+.grid-glow-pink {
+  animation: grid-glow-pink 2s ease-in-out infinite;
 }
 

@@ -66,6 +66,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   
   // Streak system
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [opponentStreak, setOpponentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [showStreakFlash, setShowStreakFlash] = useState(false);
   
@@ -232,6 +233,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         initAudio();
         resetStreak();
         setCurrentStreak(0);
+        setOpponentStreak(0);
         setLongestStreak(0);
         prevScoreDiffRef.current = 0;
         setDisplayedRating(null); // Reset rating display for new game
@@ -345,8 +347,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
           
-          // Track opponent's scored cells
+          // Track opponent's scored cells and streak
           if (correct) {
+            // Update opponent streak
+            setOpponentStreak((prevStreak) => prevStreak + 1);
+            
             const cellKey = `${row}-${col}`;
             setOpponentScoredCells((prev) => {
               // Only add if it's a new cell (not already in the set)
@@ -361,6 +366,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             
             // Optional: play distant tick for opponent moves
             // playDistantTick(); // Uncomment if enabled in settings
+          } else {
+            // Opponent made incorrect move - reset their streak
+            setOpponentStreak(0);
           }
         }
 
@@ -1223,7 +1231,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''}`} style={{ pointerEvents: 'auto' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''} ${currentStreak >= 5 ? 'grid-glow-green' : ''} ${opponentStreak >= 5 ? 'grid-glow-pink' : ''}`} style={{ pointerEvents: 'auto' }}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid

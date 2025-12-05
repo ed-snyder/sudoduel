@@ -15,7 +15,7 @@ export function ProgressBar({ progress, color, className, pulse = false }: Progr
 
   return (
     <div
-      className={`rounded-full overflow-hidden bg-gray-300/40 transition-all duration-150 ${pulse ? 'progress-bar-pulse' : ''} ${className || ''}`}
+      className={`rounded-full overflow-hidden bg-gray-300/40 transition-all duration-150 ${pulse ? (color === 'blue' ? 'progress-bar-pulse-blue' : 'progress-bar-pulse-pink') : ''} ${className || ''}`}
       style={{
         width: className?.includes('w-full') ? '100%' : '120px',
         height: '14px',
