@@ -10,31 +10,31 @@ export function ProgressBar({ progress, color, className }: ProgressBarProps) {
   // Clamp progress between 0-100
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
-  // Determine glow tier based on progress - stronger glows
+  // Determine glow tier based on progress - stronger glows with more gold color
   const glowStyle = useMemo(() => {
     if (clampedProgress >= 100) {
       return {
-        boxShadow: '0 0 24px rgba(234, 179, 8, 1), 0 0 40px rgba(234, 179, 8, 0.8), 0 0 60px rgba(234, 179, 8, 0.5)',
-        borderColor: '#EAB308',
-        borderWidth: '2px',
+        boxShadow: '0 0 40px rgba(255, 215, 0, 1), 0 0 70px rgba(255, 215, 0, 0.9), 0 0 100px rgba(255, 215, 0, 0.7), 0 0 130px rgba(255, 215, 0, 0.5)',
+        borderColor: '#FFD700', // Pure gold
+        borderWidth: '3px',
       };
     } else if (clampedProgress >= 90) {
       return {
-        boxShadow: '0 0 20px rgba(245, 158, 11, 0.9), 0 0 35px rgba(245, 158, 11, 0.6), 0 0 50px rgba(245, 158, 11, 0.4)',
-        borderColor: '#F59E0B',
-        borderWidth: '2px',
+        boxShadow: '0 0 35px rgba(255, 200, 0, 1), 0 0 60px rgba(255, 200, 0, 0.8), 0 0 85px rgba(255, 200, 0, 0.6)',
+        borderColor: '#FFC800', // Bright gold
+        borderWidth: '3px',
       };
     } else if (clampedProgress >= 75) {
       return {
-        boxShadow: '0 0 16px rgba(245, 158, 11, 0.7), 0 0 28px rgba(245, 158, 11, 0.5)',
-        borderColor: '#D97706',
+        boxShadow: '0 0 28px rgba(255, 193, 7, 0.9), 0 0 50px rgba(255, 193, 7, 0.7)',
+        borderColor: '#FFC107', // Amber gold
         borderWidth: '2px',
       };
     } else if (clampedProgress >= 50) {
       return {
-        boxShadow: '0 0 8px rgba(217, 119, 6, 0.5)',
-        borderColor: 'rgba(217, 119, 6, 0.6)',
-        borderWidth: '1px',
+        boxShadow: '0 0 15px rgba(255, 193, 7, 0.6)',
+        borderColor: 'rgba(255, 193, 7, 0.7)',
+        borderWidth: '2px',
       };
     }
     return {
@@ -49,7 +49,7 @@ export function ProgressBar({ progress, color, className }: ProgressBarProps) {
 
   return (
     <div
-      className={`rounded-full overflow-hidden bg-gray-700/50 transition-all duration-300 ${
+      className={`rounded-full overflow-hidden bg-gray-300/40 transition-all duration-150 ${
         isComplete ? 'progress-complete' : ''
       } ${className || ''}`}
       style={{
@@ -59,7 +59,7 @@ export function ProgressBar({ progress, color, className }: ProgressBarProps) {
       }}
     >
       <div
-        className="h-full rounded-full transition-all duration-300"
+        className="h-full rounded-full transition-all duration-150"
         style={{
           width: `${clampedProgress}%`,
           backgroundColor: baseColor,
