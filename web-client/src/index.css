@@ -298,27 +298,35 @@ html, body, #root {
   animation: progress-bar-pulse-pink 1.5s ease-in-out infinite;
 }
 
-/* Grid glow for mass streak - Green for player */
-@keyframes grid-glow-green {
+/* Grid glow for mass streak - Blue for player (perimeter only) */
+@keyframes grid-glow-blue {
   0%, 100% { 
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+    box-shadow: 
+      0 0 10px rgba(59, 130, 246, 0.4),
+      inset 0 0 10px rgba(59, 130, 246, 0.2);
   }
   50% { 
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 0.6),
+      inset 0 0 20px rgba(59, 130, 246, 0.3);
   }
 }
 
-.grid-glow-green {
-  animation: grid-glow-green 2s ease-in-out infinite;
+.grid-glow-blue {
+  animation: grid-glow-blue 2s ease-in-out infinite;
 }
 
-/* Grid glow for mass streak - Pink for opponent */
+/* Grid glow for mass streak - Pink for opponent (perimeter only) */
 @keyframes grid-glow-pink {
   0%, 100% { 
-    box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+    box-shadow: 
+      0 0 10px rgba(236, 72, 153, 0.4),
+      inset 0 0 10px rgba(236, 72, 153, 0.2);
   }
   50% { 
-    box-shadow: 0 0 20px rgba(236, 72, 153, 0.6);
+    box-shadow: 
+      0 0 20px rgba(236, 72, 153, 0.6),
+      inset 0 0 20px rgba(236, 72, 153, 0.3);
   }
 }
 

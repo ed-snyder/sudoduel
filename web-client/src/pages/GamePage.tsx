@@ -1141,7 +1141,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   progress={myProgress} 
                   color="blue" 
                   className="w-full max-w-[120px]"
-                  pulse={myState.score - opponentState.score > 5}
+                  pulse={true}
                 />
               </div>
             </div>
@@ -1152,7 +1152,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   progress={opponentProgress} 
                   color="pink" 
                   className="w-full max-w-[120px]"
-                  pulse={opponentState.score - myState.score > 5}
+                  pulse={true}
                 />
               </div>
             </div>
@@ -1231,7 +1231,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''} ${currentStreak >= 5 ? 'grid-glow-green' : ''} ${opponentStreak >= 5 ? 'grid-glow-pink' : ''}`} style={{ pointerEvents: 'auto' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''} ${currentStreak >= 5 ? 'grid-glow-blue' : ''} ${opponentStreak >= 5 ? 'grid-glow-pink' : ''}`} style={{ pointerEvents: 'auto' }}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
