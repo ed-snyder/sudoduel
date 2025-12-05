@@ -25,6 +25,7 @@ function AppContent() {
       <GamePage
         matchId={matchId}
         onGameEnd={() => setMatchId(null)}
+        onRematch={(newMatchId) => setMatchId(newMatchId)}
       />
     );
   }

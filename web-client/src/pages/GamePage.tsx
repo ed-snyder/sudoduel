@@ -16,6 +16,7 @@ const EMOTE_PICKER_DURATION = 3000; // 3 seconds
 interface GamePageProps {
   matchId: number;
   onGameEnd: () => void;
+  onRematch?: (newMatchId: number) => void;
 }
 
 interface PlayerState {
@@ -26,7 +27,7 @@ interface PlayerState {
   is_solved: boolean;
 }
 
-export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
+export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
@@ -262,7 +263,18 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
-    if (wsRef.current && rematchState === 'idle') {
+    if (!wsRef.current) return;
+    
+    // If opponent already requested rematch, accept it by sending REMATCH_REQUEST
+    // Backend will detect both players requested and create new match
+    if (rematchState === 'waiting') {
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
+      // State will be updated by REMATCH_ACCEPTED message
+      return;
+    }
+    
+    // If idle, request rematch
+    if (rematchState === 'idle') {
       setRematchState('requested');
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
       
@@ -662,7 +674,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
       case 'REMATCH_ACCEPTED':
         // Navigate to new match
         if (message.data.new_match_id) {
-          window.location.href = `/game/${message.data.new_match_id}`;
+          if (onRematch) {
+            // Use callback if provided (preferred)
+            onRematch(message.data.new_match_id);
+          } else {
+            // Fallback to window.location for compatibility
+            window.location.href = `/game/${message.data.new_match_id}`;
+          }
         }
         break;
 
@@ -1085,11 +1103,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           {/* Rematch button */}
           <button
             onClick={handleRematchRequest}
-            disabled={rematchState !== 'idle'}
+            disabled={rematchState === 'requested'}
             className={`
               w-full py-3 rounded-lg font-semibold transition-colors mb-3 text-base sm:text-lg
               ${rematchState === 'idle' 
                 ? 'bg-cyan-500 hover:bg-cyan-600 text-white' 
+                : rematchState === 'waiting'
+                ? 'bg-green-500 hover:bg-green-600 text-white'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
             `}
           >
