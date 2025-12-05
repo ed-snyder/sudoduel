@@ -817,7 +817,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
             <div className="relative flex items-center gap-2">
-              {/* Player emote - positioned to the left of timer */}
+              <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+                  {formatTime(myTimeRemaining)}
+                  {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
+                </div>
+              </div>
+              {/* Player emote - positioned to the right of timer */}
               {myEmote && (
                 <div 
                   className={`text-xl sm:text-2xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
@@ -833,21 +839,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   {myEmote}
                 </div>
               )}
-              <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
-                <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
-                  {formatTime(myTimeRemaining)}
-                  {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
-                </div>
-              </div>
             </div>
             {/* Right: Opponent timer */}
             <div className="relative flex items-center gap-2">
-              <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
-                <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
-                  {formatTime(opponentTimeRemaining)}
-                </div>
-              </div>
-              {/* Opponent emote - positioned to the right of timer */}
+              {/* Opponent emote - positioned to the left of timer */}
               {opponentEmote && (
                 <div 
                   className={`text-xl sm:text-2xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
@@ -863,6 +858,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   {opponentEmote}
                 </div>
               )}
+              <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+                  {formatTime(opponentTimeRemaining)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
