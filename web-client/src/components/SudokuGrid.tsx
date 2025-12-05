@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 
 interface SudokuGridProps {
   grid: number[][];
@@ -44,7 +44,7 @@ const playErrorSound = () => {
   }
 };
 
-export default function SudokuGrid({
+function SudokuGrid({
   grid,
   initialGrid,
   selectedCell,
@@ -330,3 +330,5 @@ export default function SudokuGrid({
     </div>
   );
 }
+
+export default memo(SudokuGrid);

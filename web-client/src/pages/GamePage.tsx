@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import SudokuGrid from '../components/SudokuGrid';
@@ -162,10 +162,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
-            // Correct move: update grid
+            // Correct move: grid already shows the number (optimistic was right)
+            // DON'T call setMyGrid again - just play sound, clear related notes, update state
             playCorrectSound();
             
-            // Clear notes from the placed cell itself
+            // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
             setNotes(prev => {
               const newNotes = new Map(prev);
@@ -176,13 +177,9 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             // Clear related notes (same row, column, box)
             clearRelatedNotes(row, col, value);
             
-            setMyGrid((prev) => {
-              const newGrid = prev.map((r) => [...r]);
-              newGrid[row][col] = value;
-              return newGrid;
-            });
+            // Grid already updated optimistically, no need to update again
           } else {
-            // Incorrect move: revert cell to empty (server already did this, but ensure UI matches)
+            // Incorrect move: REVERT the optimistic update
             playIncorrectSound();
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
@@ -386,15 +383,17 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
   };
 
 
-  const handleCellClick = (row: number, col: number) => {
+  const handleCellClick = useCallback((row: number, col: number) => {
     if (gameStatus !== 'playing' || myState?.is_locked) {
-      console.log(`[GamePage] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
+      if (import.meta.env.DEV) {
+        console.log(`[GamePage] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
+      }
       return;
     }
 
     // Check if cell is an initial clue - allow clicking for highlighting but log it
     const isInitial = initialGrid[row]?.[col] !== 0;
-    if (isInitial) {
+    if (isInitial && import.meta.env.DEV) {
       console.log(`[GamePage] Clicked initial clue cell (${row}, ${col}) - allowing for highlighting`);
     }
 
@@ -408,9 +407,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     // SudokuGrid will handle highlighting based on whether selected cell has a value
     // CRITICAL: This preserves the UX feature where clicking a cell with a number
     // highlights all identical numbers and related cells (row/column/3x3 box)
-    console.log(`[GamePage] Selecting cell (${row}, ${col}), current value: ${myGrid[row]?.[col]}, isInitial: ${isInitial}`);
+    if (import.meta.env.DEV) {
+      console.log(`[GamePage] Selecting cell (${row}, ${col}), current value: ${myGrid[row]?.[col]}, isInitial: ${isInitial}`);
+    }
     setSelectedCell({ row, col });
-  };
+  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, myGrid]);
 
   // Back button removed - forfeit can be accessed via other means if needed
   // const handleBackClick = () => { ... }
@@ -422,13 +423,17 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     setShowForfeitModal(false);
   };
 
-  const handleNumberClick = (num: number) => {
+  const handleNumberClick = useCallback((num: number) => {
     if (!selectedCell || gameStatus !== 'playing') {
-      console.log(`[GamePage] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
+      if (import.meta.env.DEV) {
+        console.log(`[GamePage] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
+      }
       return;
     }
     if (myState?.is_locked) {
-      console.log(`[GamePage] Number click blocked: myState.is_locked=${myState.is_locked}, myState.score=${myState.score}, opponentState.is_locked=${opponentState.is_locked}, opponentState.score=${opponentState.score}`);
+      if (import.meta.env.DEV) {
+        console.log(`[GamePage] Number click blocked: myState.is_locked=${myState.is_locked}, myState.score=${myState.score}, opponentState.is_locked=${opponentState.is_locked}, opponentState.score=${opponentState.score}`);
+      }
       return;
     }
 
@@ -461,20 +466,39 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         return;
       }
       
+      const { row, col } = selectedCell;
+      
+      // OPTIMISTIC: Update grid immediately
+      setMyGrid((prev) => {
+        const newGrid = prev.map((r) => [...r]);
+        newGrid[row][col] = num;
+        return newGrid;
+      });
+      
+      // OPTIMISTIC: Clear notes for this cell
+      const cellKey = `${row}-${col}`;
+      setNotes(prev => {
+        const newNotes = new Map(prev);
+        newNotes.delete(cellKey);
+        return newNotes;
+      });
+      
+      // Clear selection immediately
+      setSelectedCell(null);
+      
+      // Then send to server
       wsRef.current?.send(
         JSON.stringify({
           type: 'PLACE_NUMBER',
           data: {
-            row: selectedCell.row,
-            col: selectedCell.col,
+            row,
+            col,
             value: num,
           },
         })
       );
-      
-      setSelectedCell(null);
     }
-  };
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
