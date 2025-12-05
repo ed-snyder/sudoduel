@@ -233,18 +233,19 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             // DON'T call setMyGrid again - just play sound, clear related notes, update state
             playCorrectSound();
             
-            // Update streak
-            const newStreak = currentStreak + 1;
-            setCurrentStreak(newStreak);
-            if (newStreak > longestStreak) {
-              setLongestStreak(newStreak);
-            }
-            
-            // Streak flash at 5+
-            if (newStreak >= 5) {
-              setShowStreakFlash(true);
-              setTimeout(() => setShowStreakFlash(false), 300);
-            }
+            // Update streak using functional updates to avoid stale closure
+            setCurrentStreak((prevStreak) => {
+              const newStreak = prevStreak + 1;
+              setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
+              
+              // Streak flash at 5+
+              if (newStreak >= 5) {
+                setShowStreakFlash(true);
+                setTimeout(() => setShowStreakFlash(false), 300);
+              }
+              
+              return newStreak;
+            });
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -263,10 +264,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             playIncorrectSound();
             
             // Break streak with shatter effect
-            if (currentStreak >= 3) {
-              // Streak broken - could add visual shatter effect here
-            }
-            setCurrentStreak(0);
+            setCurrentStreak((prevStreak) => {
+              if (prevStreak >= 3) {
+                // Streak broken - could add visual shatter effect here
+              }
+              return 0;
+            });
             
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
