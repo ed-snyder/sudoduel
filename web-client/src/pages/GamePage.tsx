@@ -964,12 +964,12 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
       {/* Emote Picker */}
       {showEmotePicker && (
-        <div className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 320px)' }}>
+        <div className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 290px)' }}>
           {EMOTES.map((emote) => (
             <button
               key={emote}
               onClick={() => handleSelectEmote(emote)}
-              className="text-3xl sm:text-4xl p-2 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
+              className="text-3xl sm:text-4xl p-2 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation whitespace-nowrap"
             >
               {emote}
             </button>
