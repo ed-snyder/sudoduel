@@ -850,7 +850,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           {/* Row 2: Cells completed with progress bars */}
           <div className="flex items-center justify-between gap-2" style={{ marginBottom: '4px' }}>
             {/* Left: Player progress bar with score */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
                 <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" cellsCompleted={myState.cells_completed} />
               </div>
@@ -859,7 +859,7 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               </div>
             </div>
             {/* Right: Opponent progress bar with score */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+            <div className="flex items-center gap-1 flex-1 min-w-0 justify-end">
               <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0">
                 {opponentState.cells_completed}/81
               </div>
@@ -881,15 +881,15 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
                 </div>
               </div>
-              {/* Player emote - absolutely positioned to the right of timer */}
+              {/* Player emote - absolutely positioned to the right of timer, closer to center */}
               {myEmote && (
                 <div 
-                  className={`absolute text-3xl sm:text-4xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
                   style={{ 
                     zIndex: 10,
                     left: '100%',
-                    marginLeft: '10px',
+                    marginLeft: '5px',
                     top: '20%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
@@ -904,15 +904,15 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             </div>
             {/* Right: Opponent timer */}
             <div className="relative">
-              {/* Opponent emote - absolutely positioned to the left of timer */}
+              {/* Opponent emote - absolutely positioned to the left of timer, closer to center */}
               {opponentEmote && (
                 <div 
-                  className={`absolute text-3xl sm:text-4xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
                   style={{ 
                     zIndex: 10,
                     right: '100%',
-                    marginRight: '10px',
+                    marginRight: '5px',
                     top: '20%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
