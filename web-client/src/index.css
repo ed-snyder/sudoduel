@@ -279,7 +279,7 @@ html, body, #root {
 }
 
 .progress-bar-pulse-blue {
-  animation: progress-bar-pulse-blue 1.5s ease-in-out infinite;
+  animation: progress-bar-pulse-blue 3s ease-in-out infinite;
 }
 
 /* Progress bar pulse when ahead by 5+ cells - Pink for opponent */
@@ -295,17 +295,19 @@ html, body, #root {
 }
 
 .progress-bar-pulse-pink {
-  animation: progress-bar-pulse-pink 1.5s ease-in-out infinite;
+  animation: progress-bar-pulse-pink 3s ease-in-out infinite;
 }
 
 /* Grid glow for mass streak - Blue for player (perimeter only) */
 @keyframes grid-glow-blue {
   0%, 100% { 
+    border-color: rgba(59, 130, 246, 0.3);
     box-shadow: 
       0 0 10px rgba(59, 130, 246, 0.4),
       inset 0 0 10px rgba(59, 130, 246, 0.2);
   }
   50% { 
+    border-color: rgba(59, 130, 246, 0.6);
     box-shadow: 
       0 0 20px rgba(59, 130, 246, 0.6),
       inset 0 0 20px rgba(59, 130, 246, 0.3);
@@ -314,16 +316,20 @@ html, body, #root {
 
 .grid-glow-blue {
   animation: grid-glow-blue 2s ease-in-out infinite;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
 }
 
 /* Grid glow for mass streak - Pink for opponent (perimeter only) */
 @keyframes grid-glow-pink {
   0%, 100% { 
+    border-color: rgba(236, 72, 153, 0.3);
     box-shadow: 
       0 0 10px rgba(236, 72, 153, 0.4),
       inset 0 0 10px rgba(236, 72, 153, 0.2);
   }
   50% { 
+    border-color: rgba(236, 72, 153, 0.6);
     box-shadow: 
       0 0 20px rgba(236, 72, 153, 0.6),
       inset 0 0 20px rgba(236, 72, 153, 0.3);
@@ -332,5 +338,7 @@ html, body, #root {
 
 .grid-glow-pink {
   animation: grid-glow-pink 2s ease-in-out infinite;
+  border: 2px solid rgba(236, 72, 153, 0.3);
+  border-radius: 4px;
 }
 

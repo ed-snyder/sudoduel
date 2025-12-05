@@ -11,6 +11,8 @@ interface SudokuGridProps {
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
   opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
   currentStreak?: number; // Current streak count for glow intensification
+  playerStreakGlow?: boolean; // Blue glow for player mass streak
+  opponentStreakGlow?: boolean; // Pink glow for opponent mass streak
 }
 
 interface FloatingFeedback {
@@ -56,6 +58,8 @@ function SudokuGrid({
   lastMoveResult = null,
   opponentScoredCells = new Set(),
   currentStreak = 0,
+  playerStreakGlow = false,
+  opponentStreakGlow = false,
 }: SudokuGridProps) {
   
   // Get streak glow class based on streak count
@@ -186,7 +190,8 @@ function SudokuGrid({
     <div
       ref={gridRef}
       className={`
-        relative grid grid-cols-9 gap-0 border-2 border-gray-700 
+        relative grid grid-cols-9 gap-0 border-2 
+        ${playerStreakGlow ? 'grid-glow-blue' : opponentStreakGlow ? 'grid-glow-pink' : 'border-gray-700'}
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
         transition-colors
         w-full
