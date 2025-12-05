@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
+import { ProgressBar } from '../components/ProgressBar';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
@@ -576,6 +577,11 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Calculate progress percentages (0-100)
+  const totalCells = 81;
+  const myProgress = (myState.cells_completed / totalCells) * 100;
+  const opponentProgress = (opponentState.cells_completed / totalCells) * 100;
+
   // Rating no longer displayed in player info bar (removed)
 
   // Compute digit counts for number pad depletion styling (purely visual)
@@ -854,15 +860,25 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
             </div>
           </div>
           
-          {/* Row 2: Cells completed (no spaces) */}
-          <div className="flex items-center justify-between" style={{ marginBottom: '4px' }}>
-            {/* Left: Player score */}
-            <div className="text-sm sm:text-base font-mono text-gray-700">
-              {myState.cells_completed}/81
+          {/* Row 2: Cells completed with progress bars */}
+          <div className="flex items-center justify-between gap-2" style={{ marginBottom: '4px' }}>
+            {/* Left: Player score with progress bar */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0">
+                {myState.cells_completed}/81
+              </div>
+              <div className="flex-1 min-w-0">
+                <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" />
+              </div>
             </div>
-            {/* Right: Opponent score */}
-            <div className="text-sm sm:text-base font-mono text-gray-700">
-              {opponentState.cells_completed}/81
+            {/* Right: Opponent score with progress bar */}
+            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+              <div className="flex-1 min-w-0 flex justify-end">
+                <ProgressBar progress={opponentProgress} color="pink" className="w-full max-w-[120px]" />
+              </div>
+              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0">
+                {opponentState.cells_completed}/81
+              </div>
             </div>
           </div>
         </div>

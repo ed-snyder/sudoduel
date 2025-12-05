@@ -124,3 +124,17 @@ html, body, #root {
 .animate-fade-out {
   animation: fade-out 0.2s ease-out forwards;
 }
+
+/* Gold pulse animation for 100% progress */
+@keyframes gold-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 16px rgba(234, 179, 8, 0.8), 0 0 30px rgba(234, 179, 8, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(234, 179, 8, 1), 0 0 40px rgba(234, 179, 8, 0.7);
+  }
+}
+
+.progress-complete {
+  animation: gold-pulse 1.5s ease-in-out infinite;
+}
