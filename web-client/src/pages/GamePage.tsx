@@ -813,31 +813,35 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         </div>
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
-        <div className="px-3 sm:px-4 border-b border-gray-200" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
+        <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
-            {/* Left: Player timer + emote */}
-            <div className="flex items-center gap-2">
+            {/* Left: Player timer */}
+            <div className="relative">
               <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
                 <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
                   {formatTime(myTimeRemaining)}
                   {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
                 </div>
               </div>
+              {/* Player emote - absolutely positioned */}
               {myEmote && (
                 <div 
-                  className={`text-4xl sm:text-5xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute left-full ml-2 top-1/2 -translate-y-1/2 text-5xl sm:text-6xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
+                  style={{ zIndex: 10 }}
                 >
                   {myEmote}
                 </div>
               )}
             </div>
-            {/* Right: Opponent emote + timer */}
-            <div className="flex items-center gap-2">
+            {/* Right: Opponent timer */}
+            <div className="relative">
+              {/* Opponent emote - absolutely positioned */}
               {opponentEmote && (
                 <div 
-                  className={`text-4xl sm:text-5xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 text-5xl sm:text-6xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
+                  style={{ zIndex: 10 }}
                 >
                   {opponentEmote}
                 </div>
