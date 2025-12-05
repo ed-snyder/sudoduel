@@ -873,20 +873,14 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           
           {/* Row 2: Cells completed with progress bars */}
           <div className="flex items-center justify-between gap-2" style={{ marginBottom: '4px' }}>
-            {/* Left: Player progress bar with score */}
+            {/* Left: Player progress bar */}
             <div className="flex items-center flex-1 min-w-0 relative">
               <div className="flex-1 min-w-0">
                 <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" cellsCompleted={myState.cells_completed} />
               </div>
-              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ position: 'relative', left: '-20px' }}>
-                {myState.cells_completed}/81
-              </div>
             </div>
-            {/* Right: Opponent progress bar with score */}
+            {/* Right: Opponent progress bar */}
             <div className="flex items-center flex-1 min-w-0 justify-end relative">
-              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ position: 'relative', right: '-20px' }}>
-                {opponentState.cells_completed}/81
-              </div>
               <div className="flex-1 min-w-0 flex justify-end">
                 <ProgressBar progress={opponentProgress} color="pink" className="w-full max-w-[120px]" cellsCompleted={opponentState.cells_completed} />
               </div>
