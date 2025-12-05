@@ -854,13 +854,13 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
               <div className="flex-1 min-w-0">
                 <ProgressBar progress={myProgress} color="blue" className="w-full max-w-[120px]" cellsCompleted={myState.cells_completed} />
               </div>
-              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ marginLeft: '2px' }}>
+              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ marginLeft: '-4px' }}>
                 {myState.cells_completed}/81
               </div>
             </div>
             {/* Right: Opponent progress bar with score */}
             <div className="flex items-center flex-1 min-w-0 justify-end">
-              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ marginRight: '2px' }}>
+              <div className="text-sm sm:text-base font-mono text-gray-700 whitespace-nowrap flex-shrink-0" style={{ marginRight: '-4px' }}>
                 {opponentState.cells_completed}/81
               </div>
               <div className="flex-1 min-w-0 flex justify-end">
@@ -889,8 +889,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   style={{ 
                     zIndex: 10,
                     left: '100%',
-                    marginLeft: '15px',
-                    top: '15%',
+                    marginLeft: '25px',
+                    top: '12%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
@@ -912,8 +912,8 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
                   style={{ 
                     zIndex: 10,
                     right: '100%',
-                    marginRight: '15px',
-                    top: '15%',
+                    marginRight: '25px',
+                    top: '12%',
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
