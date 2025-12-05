@@ -234,6 +234,10 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
         setCurrentStreak(0);
         setLongestStreak(0);
         prevScoreDiffRef.current = 0;
+        setDisplayedRating(null); // Reset rating display for new game
+        setShowVictoryEffects(false);
+        setShowDefeatOverlay(false);
+        setShowScreenShake(false);
         const grid = message.data.initial_grid;
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
