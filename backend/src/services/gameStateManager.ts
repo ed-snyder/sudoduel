@@ -389,6 +389,44 @@ export const GameStateManager = {
       resultCode = 3;
     }
 
+    // CRITICAL SAFETY CHECK: Ensure forfeiting player NEVER wins
+    // This is a final safeguard that overrides ANY other win condition
+    // This handles edge cases like immediate forfeits, race conditions, etc.
+    if (game.forfeitingPlayerId != null) {
+      const forfeitingId = game.forfeitingPlayerId;
+      // If the current winner is the forfeiting player, override it
+      if (winnerId === forfeitingId) {
+        console.log(`[GameState] SAFETY CHECK: Winner ${winnerId} is forfeiting player, overriding to opponent`);
+        // The forfeiting player loses, opponent wins
+        if (forfeitingId === p1.playerId) {
+          winnerId = p2.playerId;
+          resultCode = 2;
+        } else if (forfeitingId === p2.playerId) {
+          winnerId = p1.playerId;
+          resultCode = 1;
+        } else {
+          // Fallback: if forfeitingId doesn't match either player, use forfeitWinnerId
+          if (game.forfeitWinnerId != null) {
+            winnerId = game.forfeitWinnerId;
+            resultCode = winnerId === p1.playerId ? 1 : 2;
+          } else {
+            // Last resort: opponent wins by default
+            winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+            resultCode = winnerId === p1.playerId ? 1 : 2;
+          }
+        }
+      }
+    }
+
+    // Additional safety: Check forfeitWinnerId if forfeitingPlayerId is somehow null
+    // This ensures we never allow a forfeiting player to win even in edge cases
+    if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
+      // Legacy forfeit case - ensure forfeitWinnerId is correct
+      winnerId = game.forfeitWinnerId;
+      resultCode = winnerId === p1.playerId ? 1 : 2;
+      console.log(`[GameState] Legacy forfeit safety check: winner is ${winnerId} (resultCode=${resultCode})`);
+    }
+
     return {
       player1: {
         playerId: p1.playerId,
@@ -414,24 +452,37 @@ export const GameStateManager = {
   },
 
   // Mark a player as forfeiting the match. The opponent wins regardless of score.
+  // CRITICAL: This function MUST ensure the forfeiting player NEVER wins.
   forfeit(matchId: number, forfeitingPlayerId: number): void {
     const game = gameStates.get(matchId);
-    if (!game || game.status !== 'IN_PROGRESS') return;
+    if (!game || game.status !== 'IN_PROGRESS') {
+      console.log(`[GameState] Forfeit ignored: game not in progress or doesn't exist`);
+      return;
+    }
 
     const p1 = game.player1;
     const p2 = game.player2;
+    
+    // Determine which player is forfeiting
     const forfeiter = p1.playerId === forfeitingPlayerId ? p1 : p2;
     const winner = forfeiter === p1 ? p2 : p1;
 
-    // Track both the forfeiting player and the winner
+    // CRITICAL: Track both the forfeiting player and the winner
+    // The forfeiting player MUST be set, and the winner MUST be the opponent
     game.forfeitingPlayerId = forfeitingPlayerId;
     game.forfeitWinnerId = winner.playerId;
+
+    // Safety check: Ensure forfeitWinnerId is NOT the forfeiting player
+    if (game.forfeitWinnerId === forfeitingPlayerId) {
+      console.error(`[GameState] ERROR: forfeitWinnerId matches forfeitingPlayerId! Correcting...`);
+      game.forfeitWinnerId = winner.playerId;
+    }
 
     // Mark forfeiting player as effectively out of the game
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
     
-    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits, player ${winner.playerId} wins`);
+    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits, player ${winner.playerId} wins (forfeitWinnerId=${game.forfeitWinnerId})`);
   },
 
   /**
