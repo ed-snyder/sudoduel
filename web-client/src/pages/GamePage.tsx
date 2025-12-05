@@ -263,11 +263,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
-    if (!wsRef.current) return;
+    console.log('[REMATCH] handleRematchRequest called, state:', rematchState);
+    if (!wsRef.current) {
+      console.log('[REMATCH] No WebSocket connection');
+      return;
+    }
     
     // If opponent already requested rematch, accept it by sending REMATCH_REQUEST
     // Backend will detect both players requested and create new match
     if (rematchState === 'waiting') {
+      console.log('[REMATCH] Accepting rematch request');
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
       // State will be updated by REMATCH_ACCEPTED message
       return;
@@ -275,6 +280,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     
     // If idle, request rematch
     if (rematchState === 'idle') {
+      console.log('[REMATCH] Requesting rematch');
       setRematchState('requested');
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
       
@@ -666,7 +672,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         break;
 
       case 'REMATCH_PENDING':
+        console.log('[REMATCH] REMATCH_PENDING received, requested_by:', message.data.requested_by, 'mySlot:', mySlotRef.current);
         if (message.data.requested_by !== mySlotRef.current) {
+          console.log('[REMATCH] Setting state to waiting');
           setRematchState('waiting');
         }
         break;
@@ -1101,26 +1109,39 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           )} */}
 
           {/* Rematch button */}
-          <button
-            onClick={handleRematchRequest}
-            disabled={rematchState === 'requested'}
-            className={`
-              w-full py-3 rounded-lg font-semibold transition-colors mb-3 text-base sm:text-lg
-              ${rematchState === 'idle' 
-                ? 'bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer' 
-                : rematchState === 'waiting'
-                ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
-            `}
-            style={{
-              pointerEvents: rematchState === 'requested' ? 'none' : 'auto',
-              zIndex: 10
-            }}
-          >
-            {rematchState === 'idle' && 'Rematch'}
-            {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
-            {rematchState === 'waiting' && 'Opponent wants rematch! Tap to accept'}
-          </button>
+          <div className="relative z-[60] w-full mb-3" style={{ pointerEvents: rematchState === 'requested' ? 'none' : 'auto' }}>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[REMATCH] Button clicked, state:', rematchState);
+                if (rematchState !== 'requested') {
+                  handleRematchRequest();
+                }
+              }}
+              disabled={rematchState === 'requested'}
+              className={`
+                w-full py-3 rounded-lg font-semibold transition-colors text-base sm:text-lg relative
+                ${rematchState === 'idle' 
+                  ? 'bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer active:bg-cyan-700' 
+                  : rematchState === 'waiting'
+                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:bg-green-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+              `}
+              style={{
+                pointerEvents: rematchState === 'requested' ? 'none' : 'auto',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                position: 'relative',
+                zIndex: 100
+              }}
+              type="button"
+            >
+              {rematchState === 'idle' && 'Rematch'}
+              {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
+              {rematchState === 'waiting' && 'Opponent wants rematch! Tap to accept'}
+            </button>
+          </div>
 
           <button
             onClick={onGameEnd}
