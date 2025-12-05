@@ -7,7 +7,7 @@ import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 
-const EMOTES = ['🖕', '🍆🤏', '🤣🫵', '🥱'];
+const EMOTES = ['🖕', '🍆🤏', '🤣🫵', '🍑'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
 const EMOTE_PICKER_DURATION = 3000; // 3 seconds
 
