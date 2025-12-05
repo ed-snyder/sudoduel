@@ -163,6 +163,18 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
           if (correct) {
             // Correct move: update grid
             playCorrectSound();
+            
+            // Clear notes from the placed cell itself
+            const cellKey = `${row}-${col}`;
+            setNotes(prev => {
+              const newNotes = new Map(prev);
+              newNotes.delete(cellKey);
+              return newNotes;
+            });
+            
+            // Clear related notes (same row, column, box)
+            clearRelatedNotes(row, col, value);
+            
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = value;
@@ -513,6 +525,49 @@ export default function GamePage({ matchId, onGameEnd }: GamePageProps) {
 
   const handleToggleNotes = () => {
     setNotesMode((prev) => !prev);
+  };
+
+  // Clear notes containing a value from the same row, column, and 3x3 box
+  const clearRelatedNotes = (row: number, col: number, value: number) => {
+    setNotes(prev => {
+      const newNotes = new Map(prev);
+      
+      // Get the 3x3 box starting position
+      const boxStartRow = Math.floor(row / 3) * 3;
+      const boxStartCol = Math.floor(col / 3) * 3;
+      
+      // Check all cells
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          // Skip the cell that was just filled
+          if (r === row && c === col) continue;
+          
+          // Check if cell is in same row, column, or box
+          const sameRow = r === row;
+          const sameCol = c === col;
+          const sameBox = (
+            r >= boxStartRow && r < boxStartRow + 3 &&
+            c >= boxStartCol && c < boxStartCol + 3
+          );
+          
+          if (sameRow || sameCol || sameBox) {
+            const cellKey = `${r}-${c}`;
+            const cellNotes = newNotes.get(cellKey);
+            
+            if (cellNotes && cellNotes.includes(value)) {
+              const updated = cellNotes.filter(n => n !== value);
+              if (updated.length === 0) {
+                newNotes.delete(cellKey);
+              } else {
+                newNotes.set(cellKey, updated);
+              }
+            }
+          }
+        }
+      }
+      
+      return newNotes;
+    });
   };
 
   const formatTime = (seconds: number) => {
