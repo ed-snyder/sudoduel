@@ -1,0 +1,11 @@
+{
+  "name": "sudoduel-monorepo",
+  "version": "1.0.0",
+  "description": "Sudoduel monorepo - see backend/ and web-client/ for service configs",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "web-client",
+    "shared"
+  ]
+}

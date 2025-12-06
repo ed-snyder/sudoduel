@@ -1,0 +1,5 @@
+# Root-level Railway config for monorepo
+# This tells Railway to look for service-specific configs in subdirectories
+
+[build]
+builder = "nixpacks"
