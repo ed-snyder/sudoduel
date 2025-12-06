@@ -80,6 +80,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
+  const [solutionGrid, setSolutionGrid] = useState<number[][]>([]);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [myState, setMyState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
   const [opponentState, setOpponentState] = useState<PlayerState>({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
@@ -325,8 +326,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         setShowDefeatOverlay(false);
         setShowScreenShake(false);
         const grid = message.data.initial_grid;
+        const solution = message.data.solution_grid || [];
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
+        setSolutionGrid(solution.map((row: number[]) => [...row]));
         // Initialize timers from server (use mySlotRef to avoid stale closure)
         if (mySlotRef.current === 1) {
           setMyTimeRemaining(message.data.player1_time_remaining || STARTING_TIME_SECONDS);
@@ -350,13 +353,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
-            // Correct move: NOW play synchronized feedback (haptic, sound, visual)
+            // Correct move: Feedback already played optimistically via local validation
+            // Just sync state with server's authoritative values
             const newStreak = myStreakRef.current + 1;
             myStreakRef.current = newStreak;
             setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
-            
-            // Trigger all feedback synchronously
-            triggerScoreFeedback(newStreak, row, col);
             
             // Completion flash (deferred check)
             setTimeout(() => {
@@ -374,18 +375,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               return newNotes;
             });
             
-            // Clear related notes (same row, column, box)
+            // Clear related notes (same row, column, box) - already done optimistically
             clearRelatedNotes(row, col, value);
             
             // Grid already updated optimistically, no need to update again
             // Update state to reflect server's authoritative score/time
             setMyState(player_state);
           } else {
-            // Incorrect move: IMMEDIATELY switch from optimistic correct feedback to incorrect
-            // CRITICAL: Override optimistic correct feedback instantly
+            // Incorrect move: Server says incorrect (should match our local validation)
+            // If we somehow played correct feedback optimistically, override it
+            // This should be rare since we validate locally, but handle edge cases
             setLastMoveResult({ correct: false, row, col });
             playIncorrectSound();
             hapticError();
+            myStreakRef.current = 0; // Reset streak
             
             // Revert grid to remove the incorrectly placed number
             setMyGrid((prev) => {
@@ -916,61 +919,89 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       const { row, col } = selectedCell;
       const cellKey = `${row}-${col}`;
       
-      // Check if cell was empty (for optimistic score update)
+      // INSTANT LOCAL VALIDATION: Check correctness using solution grid
+      const isCorrect = solutionGrid.length > 0 && solutionGrid[row]?.[col] === num;
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      // OPTIMISTIC: Update UI immediately, but DON'T play feedback yet
-      // Feedback will only play after server confirms the move is correct
-      // This prevents incorrect moves from playing correct feedback first
+      // PERFORMANCE: Measure feedback timing
+      const tapTime = performance.now();
       
-      // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
-      if (wasEmpty && !isInitialClue) {
-        setMyState(prev => ({
-          ...prev,
-          cells_completed: prev.cells_completed + 1,
-          score: prev.score + 1,
-        }));
+      // INSTANT FEEDBACK: Trigger immediately based on local validation
+      if (isCorrect) {
+        // Update streak immediately
+        const newStreak = myStreakRef.current + 1;
+        myStreakRef.current = newStreak;
+        setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
+        
+        // Trigger synchronized feedback instantly
+        triggerScoreFeedback(newStreak, row, col);
+        
+        // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
+        if (wasEmpty && !isInitialClue) {
+          setMyState(prev => ({
+            ...prev,
+            cells_completed: prev.cells_completed + 1,
+            score: prev.score + 1,
+          }));
+        }
+      } else {
+        // INSTANT ERROR FEEDBACK: Incorrect move
+        setLastMoveResult({ correct: false, row, col });
+        playIncorrectSound();
+        hapticError();
+        myStreakRef.current = 0; // Reset streak on error
+        
+        // Don't update grid for incorrect moves - let server handle it
       }
       
-      // OPTIMISTIC: Batch all state updates together for single render
-      // React 18+ automatically batches these, but being explicit helps
-      setMyGrid((prev) => {
-        const newGrid = prev.map((r) => [...r]);
-        newGrid[row][col] = num;
-        return newGrid;
-      });
+      // OPTIMISTIC: Update grid only for correct moves (we know it's correct locally)
+      if (isCorrect) {
+        setMyGrid((prev) => {
+          const newGrid = prev.map((r) => [...r]);
+          newGrid[row][col] = num;
+          return newGrid;
+        });
+        
+        // OPTIMISTIC: Clear notes for this cell (batched with grid update)
+        setNotes(prev => {
+          const newNotes = new Map(prev);
+          newNotes.delete(cellKey);
+          return newNotes;
+        });
+        
+        // Clear selection immediately (batched)
+        setSelectedCell(null);
+        
+        // DEFER: Clear related notes AFTER visual update (non-blocking)
+        const clearNotesRef = clearRelatedNotes;
+        const deferClearNotes = () => {
+          clearNotesRef(row, col, num);
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(deferClearNotes, { timeout: 100 });
+        } else {
+          setTimeout(deferClearNotes, 0);
+        }
+      } else {
+        // For incorrect moves, still clear selection but don't update grid
+        setSelectedCell(null);
+      }
       
-      // OPTIMISTIC: Clear notes for this cell (batched with grid update)
-      setNotes(prev => {
-        const newNotes = new Map(prev);
-        newNotes.delete(cellKey);
-        return newNotes;
-      });
-      
-      // Clear selection immediately (batched)
-      setSelectedCell(null);
+      if (import.meta.env.DEV) {
+        const feedbackTime = performance.now() - tapTime;
+        console.log(`[PERF] Feedback triggered ${feedbackTime.toFixed(2)}ms after tap`);
+        if (feedbackTime > 16) {
+          console.warn(`[PERF] Feedback delay exceeds 16ms frame budget`);
+        }
+      }
       
       if (import.meta.env.DEV) {
         performance.mark('number-click-state-update');
         performance.measure('number-click-to-state', 'number-click-start', 'number-click-state-update');
       }
       
-      // DEFER: Clear related notes AFTER visual update (non-blocking)
-      // Use requestIdleCallback with setTimeout fallback to avoid blocking paint
-      // Store in ref to avoid stale closure
-      const clearNotesRef = clearRelatedNotes;
-      const deferClearNotes = () => {
-        clearNotesRef(row, col, num);
-      };
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(deferClearNotes, { timeout: 100 });
-      } else {
-        // Fallback for browsers without requestIdleCallback
-        setTimeout(deferClearNotes, 0);
-      }
-      
-      // Then send to server (non-blocking, doesn't wait for response)
+      // Send to server (for synchronization, not validation - we already validated locally)
       wsRef.current?.send(
         JSON.stringify({
           type: 'PLACE_NUMBER',
@@ -982,7 +1013,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         })
       );
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;

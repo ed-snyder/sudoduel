@@ -146,6 +146,7 @@ export const setupWebSocketServer = (server: Server) => {
           type: 'GAME_START',
           data: {
             initial_grid: game.player1.grid,
+            solution_grid: game.solutionGrid, // Send solution for client-side validation
             player1_time_remaining: game.player1.timeRemaining,
             player2_time_remaining: game.player2.timeRemaining,
           },
