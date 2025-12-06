@@ -201,7 +201,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">League</span>
-            <span className="text-secondary font-display text-sm italic">Coming Soon</span>
+            <span className="text-secondary font-display text-sm italic">Coming soon to SudoDuel+</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">Global Rank</span>
@@ -249,12 +249,20 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           </div>
         ) : (
           <div className="w-full max-w-sm space-y-4">
-            <button
-              onClick={() => {/* TODO: Premium flow */}}
-              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
-            >
-              Upgrade to SudoDuel+
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {/* TODO: Premium flow */}}
+                className="flex-1 py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
+              >
+                Upgrade to SudoDuel+
+              </button>
+              <button
+                onClick={() => alert('Coming Soon to SudoDuel+')}
+                className="flex-1 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all flex items-center justify-center"
+              >
+                Daily Challenge
+              </button>
+            </div>
 
             <button
               onClick={handleFindMatch}
