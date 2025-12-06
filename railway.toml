@@ -1,5 +1,6 @@
 # Root-level Railway config for monorepo
-# This tells Railway to look for service-specific configs in subdirectories
+# Backend service should set root directory to empty (repo root) and use this Dockerfile
 
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
