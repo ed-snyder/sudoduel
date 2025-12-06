@@ -390,36 +390,52 @@ export const GameStateManager = {
     }
     
     // Legacy check: if forfeitWinnerId is set but forfeitingPlayerId is null
-    // This handles old forfeit logic - treat as forfeit
-    // CRITICAL: Validate that forfeitWinnerId is correct (not the forfeiting player)
+    // CRITICAL: We CANNOT trust forfeitWinnerId alone - it might be incorrectly set
+    // Instead, check if there's a disconnected player who exceeded grace period
     if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
-      // In legacy case, we don't know who forfeited, so we can't validate
-      // But we should still use forfeitWinnerId as it was explicitly set
-      winnerId = game.forfeitWinnerId;
-      resultCode = winnerId === p1.playerId ? 1 : 2;
-      console.log(`[GameState] Legacy forfeit: winner is ${winnerId} (resultCode=${resultCode})`);
-      return {
-        player1: {
-          playerId: p1.playerId,
-          score: p1.score,
-          cellsCompleted: p1.cellsCompleted,
-          mistakes: p1.mistakes,
-          timeRemaining: p1.timeRemaining,
-          longestCellStreak: p1.longestCellStreak,
-          isWinner: winnerId === p1.playerId,
-        },
-        player2: {
-          playerId: p2.playerId,
-          score: p2.score,
-          cellsCompleted: p2.cellsCompleted,
-          mistakes: p2.mistakes,
-          timeRemaining: p2.timeRemaining,
-          longestCellStreak: p2.longestCellStreak,
-          isWinner: winnerId === p2.playerId,
-        },
-        winnerId,
-        resultCode,
-      };
+      // Try to determine who forfeited from disconnect status
+      if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
+        const elapsed = Date.now() - game.disconnectTime;
+        if (elapsed >= 15000) {
+          // Disconnected player exceeded grace period - they forfeited
+          const forfeitingId = game.disconnectedPlayerId;
+          game.forfeitingPlayerId = forfeitingId;
+          // Determine winner: opponent of forfeiting player
+          if (forfeitingId === p1.playerId) {
+            winnerId = p2.playerId;
+            resultCode = 2;
+          } else {
+            winnerId = p1.playerId;
+            resultCode = 1;
+          }
+          console.log(`[GameState] Legacy forfeit resolved: disconnected player ${forfeitingId} forfeited, player ${winnerId} wins`);
+          return {
+            player1: {
+              playerId: p1.playerId,
+              score: p1.score,
+              cellsCompleted: p1.cellsCompleted,
+              mistakes: p1.mistakes,
+              timeRemaining: p1.timeRemaining,
+              longestCellStreak: p1.longestCellStreak,
+              isWinner: winnerId === p1.playerId,
+            },
+            player2: {
+              playerId: p2.playerId,
+              score: p2.score,
+              cellsCompleted: p2.cellsCompleted,
+              mistakes: p2.mistakes,
+              timeRemaining: p2.timeRemaining,
+              longestCellStreak: p2.longestCellStreak,
+              isWinner: winnerId === p2.playerId,
+            },
+            winnerId,
+            resultCode,
+          };
+        }
+      }
+      // If we can't determine who forfeited, DO NOT trust forfeitWinnerId
+      // Log error and fall through to normal win conditions (but forfeit check will catch it)
+      console.error(`[GameState] CRITICAL: forfeitWinnerId is set (${game.forfeitWinnerId}) but forfeitingPlayerId is null and no disconnected player found. Cannot safely determine winner.`);
     }
 
     // ============================================================
@@ -454,15 +470,17 @@ export const GameStateManager = {
     } else {
       // Forfeit occurred but wasn't caught above - this shouldn't happen, but handle it
       console.error(`[GameState] ERROR: Forfeit detected but not handled in early return! forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
-      // Force forfeit handling
+      // Force forfeit handling - determine who forfeited
       const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
       if (forfeitingId != null) {
+        // We know who forfeited - opponent always wins
         winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
         resultCode = winnerId === p1.playerId ? 1 : 2;
-      } else if (game.forfeitWinnerId != null) {
-        // Use forfeitWinnerId as last resort
-        winnerId = game.forfeitWinnerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+      } else {
+        // CRITICAL: If we don't know who forfeited, DO NOT trust forfeitWinnerId
+        // It might be incorrectly set. Log error and let final safety check handle it.
+        console.error(`[GameState] CRITICAL: Cannot determine forfeiting player! forfeitWinnerId=${game.forfeitWinnerId} cannot be trusted.`);
+        // Don't set winnerId here - let final safety check handle it
       }
     }
 
@@ -494,19 +512,64 @@ export const GameStateManager = {
     }
     
     // Additional safety: Check forfeitWinnerId if forfeitingPlayerId is somehow null
-    // This should not happen if forfeit() was called correctly, but handle it as legacy case
+    // CRITICAL: We CANNOT trust forfeitWinnerId - it might be incorrectly set to the forfeiting player
+    // Instead, try to determine who forfeited from disconnect status
     if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
-      // Legacy forfeit case - use forfeitWinnerId but log warning
-      console.warn(`[GameState] Legacy forfeit safety check: forfeitingPlayerId is null but forfeitWinnerId is set. Using forfeitWinnerId=${game.forfeitWinnerId}`);
-      winnerId = game.forfeitWinnerId;
-      resultCode = winnerId === p1.playerId ? 1 : 2;
-      console.log(`[GameState] Legacy forfeit safety check: winner is ${winnerId} (resultCode=${resultCode})`);
+      // Try to determine forfeiting player from disconnect
+      if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
+        const elapsed = Date.now() - game.disconnectTime;
+        if (elapsed >= 15000) {
+          // Disconnected player exceeded grace period - they forfeited
+          const forfeitingId = game.disconnectedPlayerId;
+          // CRITICAL: Validate that forfeitWinnerId is NOT the forfeiting player
+          if (game.forfeitWinnerId === forfeitingId) {
+            console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is WRONG. Correcting...`);
+            // Force correct winner: opponent of forfeiting player
+            winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+            resultCode = winnerId === p1.playerId ? 1 : 2;
+          } else {
+            // forfeitWinnerId seems correct, but still determine from forfeitingId to be safe
+            winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+            resultCode = winnerId === p1.playerId ? 1 : 2;
+            console.log(`[GameState] Legacy forfeit safety check: disconnected player ${forfeitingId} forfeited, player ${winnerId} wins`);
+          }
+        } else {
+          // Grace period not expired yet - don't treat as forfeit
+          console.warn(`[GameState] Legacy forfeit safety check: forfeitWinnerId is set but grace period not expired. Ignoring forfeit.`);
+        }
+      } else {
+        // No disconnected player - cannot determine who forfeited
+        // DO NOT trust forfeitWinnerId - it might be wrong
+        console.error(`[GameState] CRITICAL: forfeitWinnerId is set (${game.forfeitWinnerId}) but cannot determine forfeiting player. Cannot safely use forfeitWinnerId.`);
+        // Don't set winnerId - let final validation catch it
+      }
     }
     
     // FINAL VALIDATION: Double-check that forfeiting player is not the winner
-    if (game.forfeitingPlayerId != null && winnerId === game.forfeitingPlayerId) {
-      console.error(`[GameState] CRITICAL: Final validation failed - forfeiting player is winner! FORCING correction`);
-      winnerId = game.forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+    // Also check disconnected player who exceeded grace period
+    const finalForfeitingId = game.forfeitingPlayerId ?? 
+      (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
+    
+    if (finalForfeitingId != null) {
+      if (winnerId === finalForfeitingId) {
+        console.error(`[GameState] CRITICAL: Final validation failed - forfeiting player (${finalForfeitingId}) is winner! FORCING correction`);
+        winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
+      }
+      
+      // Additional check: if forfeitWinnerId is set and matches forfeiting player, that's wrong
+      if (game.forfeitWinnerId === finalForfeitingId) {
+        console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is INCORRECT. Winner should be opponent.`);
+        // Force correct winner
+        winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
+      }
+    }
+    
+    // Final absolute check: if forfeitWinnerId is set, validate it's not the forfeiting player
+    if (game.forfeitWinnerId != null && finalForfeitingId != null && game.forfeitWinnerId === finalForfeitingId) {
+      console.error(`[GameState] CRITICAL: forfeitWinnerId matches forfeiting player! Overriding winner.`);
+      winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
       resultCode = winnerId === p1.playerId ? 1 : 2;
     }
 
