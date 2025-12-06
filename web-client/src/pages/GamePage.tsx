@@ -133,6 +133,49 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const [showSuperFlash, setShowSuperFlash] = useState(false);
   const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
   const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
+  
+  // Event banner system
+  interface BannerMessage {
+    text: string;
+    colorClass: string;
+    priority: number;
+  }
+  const [bannerMessage, setBannerMessage] = useState<BannerMessage | null>(null);
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevCellsRemainingRef = useRef<number>(41); // Start with max empty cells
+  const [isDownToWire, setIsDownToWire] = useState(false);
+  const [shownLowTimeWarning, setShownLowTimeWarning] = useState(false);
+  
+  // Function to show a banner message
+  const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000) => {
+    // Clear any existing timeout
+    if (bannerTimeoutRef.current) {
+      clearTimeout(bannerTimeoutRef.current);
+    }
+    
+    // Check priority - only show if higher or equal priority than current
+    // Higher number = higher priority
+    setBannerMessage(prev => {
+      if (prev && prev.priority > priority) {
+        return prev; // Keep existing higher priority message
+      }
+      return { text, colorClass, priority };
+    });
+    
+    // Auto-hide after duration
+    bannerTimeoutRef.current = setTimeout(() => {
+      setBannerMessage(null);
+    }, duration);
+  }, []);
+  
+  // Cleanup banner timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (bannerTimeoutRef.current) {
+        clearTimeout(bannerTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -226,6 +269,103 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       return () => clearTimeout(timer);
     }
   }, [lastMoveResult]);
+  
+  // Banner trigger 1: Lead changes (Priority: 5)
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+    
+    const myScore = myState.score;
+    const oppScore = opponentState.score;
+    const currentDiff = myScore - oppScore;
+    const prevDiff = prevScoreDiffRef.current;
+    
+    // Gained the lead: was behind or tied, now ahead
+    if (prevDiff <= 0 && currentDiff > 0) {
+      showBanner("Gained the Lead!", "text-indigo-500", 5);
+    }
+    // Lost the lead: was ahead or tied, now behind
+    else if (prevDiff >= 0 && currentDiff < 0) {
+      showBanner("Lost the Lead!", "text-pink-500", 5);
+    }
+    
+    prevScoreDiffRef.current = currentDiff;
+  }, [myState.score, opponentState.score, gameStatus, showBanner]);
+  
+  // Banner trigger 2: Cells remaining milestones (Priority: 3)
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+    
+    const cellsRemaining = 81 - myState.cells_completed;
+    const prevRemaining = prevCellsRemainingRef.current;
+    
+    // Only trigger when crossing the threshold (not on initial load)
+    if (prevRemaining > 9 && cellsRemaining <= 9 && cellsRemaining === 9) {
+      showBanner("9 cells left!", "text-indigo-500", 3);
+    } else if (prevRemaining > 3 && cellsRemaining <= 3 && cellsRemaining === 3) {
+      showBanner("3 cells left!", "text-indigo-500", 3);
+    } else if (prevRemaining > 1 && cellsRemaining <= 1 && cellsRemaining === 1) {
+      showBanner("Final cell!", "text-indigo-500", 3);
+    }
+    
+    prevCellsRemainingRef.current = cellsRemaining;
+  }, [myState.cells_completed, gameStatus, showBanner]);
+  
+  // Banner trigger 3: Down to the wire (Priority: 7)
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+    
+    const myCellsRemaining = 81 - myState.cells_completed;
+    const oppCellsRemaining = 81 - opponentState.cells_completed;
+    
+    const bothUnder9 = myCellsRemaining <= 9 && oppCellsRemaining <= 9;
+    
+    if (bothUnder9 && !isDownToWire) {
+      setIsDownToWire(true);
+      showBanner("Down to the wire!", "text-red-500", 7, 3000);
+    } else if (!bothUnder9) {
+      setIsDownToWire(false);
+    }
+  }, [myState.cells_completed, opponentState.cells_completed, gameStatus, isDownToWire, showBanner]);
+  
+  // Banner trigger 4: Running out of time (Priority: 10 - Highest)
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+    
+    if (myTimeRemaining < 10 && myTimeRemaining > 0 && !shownLowTimeWarning) {
+      setShownLowTimeWarning(true);
+      showBanner("Running out of time!", "text-red-500", 10, 3000);
+    }
+    
+    // Reset warning if time goes back above 10 (shouldn't happen, but handle edge case)
+    if (myTimeRemaining >= 10) {
+      setShownLowTimeWarning(false);
+    }
+  }, [myTimeRemaining, gameStatus, shownLowTimeWarning, showBanner]);
+  
+  // Critical state vignette
+  const isCriticalState = useMemo(() => {
+    if (gameStatus !== 'playing') return false;
+    
+    const myCellsRemaining = 81 - myState.cells_completed;
+    const oppCellsRemaining = 81 - opponentState.cells_completed;
+    const bothUnder9 = myCellsRemaining <= 9 && oppCellsRemaining <= 9;
+    const lowTime = myTimeRemaining < 10 && myTimeRemaining > 0;
+    
+    return bothUnder9 || lowTime;
+  }, [myState.cells_completed, opponentState.cells_completed, myTimeRemaining, gameStatus]);
+  
+  // Clear banner and reset states when game ends
+  useEffect(() => {
+    if (gameStatus === 'ended') {
+      setBannerMessage(null);
+      setIsDownToWire(false);
+      setShownLowTimeWarning(false);
+      if (bannerTimeoutRef.current) {
+        clearTimeout(bannerTimeoutRef.current);
+        bannerTimeoutRef.current = null;
+      }
+    }
+  }, [gameStatus]);
 
   // PERFORMANCE: Measure DOM paint time after state updates
   useEffect(() => {
@@ -325,6 +465,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         setDisplayedRating(null); // Reset rating display for new game
         setShowDefeatOverlay(false);
         setShowScreenShake(false);
+        // Reset banner states
+        setBannerMessage(null);
+        setIsDownToWire(false);
+        setShownLowTimeWarning(false);
+        prevCellsRemainingRef.current = 41;
+        if (bannerTimeoutRef.current) {
+          clearTimeout(bannerTimeoutRef.current);
+          bannerTimeoutRef.current = null;
+        }
         const grid = message.data.initial_grid;
         const solution = message.data.solution_grid || [];
         setMyGrid(grid.map((row: number[]) => [...row]));
@@ -1371,6 +1520,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   // Main game UI - Compact layout with header above grid
   return (
     <div className={`min-h-screen bg-white flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Critical state vignette */}
+      {isCriticalState && (
+        <div className="critical-vignette fixed inset-0 pointer-events-none z-40" />
+      )}
+      
       {/* Score pulse overlay - raspberry blue vignette */}
       {showScorePulse !== 'none' && (
         <div 
@@ -1531,6 +1685,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* EVENT BANNER - Between timer and grid */}
+        <div className="h-10 flex items-center justify-center">
+          {bannerMessage && (
+            <span className={`banner-pulse ${bannerMessage.colorClass}`}>
+              {bannerMessage.text}
+            </span>
+          )}
         </div>
       </div>
 

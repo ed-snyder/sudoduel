@@ -317,6 +317,46 @@ html, body, #root {
   animation: almost-complete-glow 1.5s ease-in-out infinite;
 }
 
+/* Event banner animation - subtle scale pulse + fade in */
+@keyframes banner-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  40% {
+    transform: scale(1.0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.0);
+  }
+}
+
+.banner-pulse {
+  animation: banner-pulse 0.4s ease-out forwards;
+  font-weight: 700;
+  font-size: 1.125rem; /* text-lg */
+  letter-spacing: 0.025em;
+}
+
+/* Critical state vignette - red pulsing glow */
+@keyframes critical-vignette-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 60px 20px rgba(239, 68, 68, 0.25);
+  }
+  50% {
+    box-shadow: inset 0 0 80px 30px rgba(239, 68, 68, 0.4);
+  }
+}
+
+.critical-vignette {
+  animation: critical-vignette-pulse 1.5s ease-in-out infinite;
+}
+
 /* Comeback flash - updated to use raspberry blue */
 @keyframes catch-up-flash {
   0% { background-color: rgba(99, 102, 241, 0); }
