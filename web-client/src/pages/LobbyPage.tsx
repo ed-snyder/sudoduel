@@ -114,12 +114,12 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   return (
     <div className="min-h-screen bg-void flex flex-col">
       {/* Header with Logo */}
-      <div className="px-4 pt-20 pb-2 flex flex-col items-center safe-top">
+      <div className="px-4 pt-32 pb-4 flex flex-col items-center safe-top">
         <SudoDuelLogo size="lg" />
       </div>
       
       {/* Player Card */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-6">
         <div className="bg-surface rounded-xl p-4 border border-grid-line">
           <div className="flex items-center gap-4">
             {/* Avatar - Tappable */}
@@ -193,7 +193,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Stats for Selected Difficulty */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-6">
         <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-muted font-body text-sm">Rating</span>
