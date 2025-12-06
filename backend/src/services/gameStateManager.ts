@@ -487,90 +487,56 @@ export const GameStateManager = {
     // ============================================================
     // FINAL ABSOLUTE SAFETY CHECK: FORFEITING PLAYER NEVER WINS
     // ============================================================
-    // This is a final safeguard that runs AFTER normal win conditions
-    // It ensures that even if forfeitingPlayerId was somehow missed above,
-    // the forfeiting player CANNOT win
-    // Also check disconnectedPlayerId as additional safety net
-    const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
+    // CRITICAL: This is the LAST check before returning results
+    // It MUST ensure the forfeiting player NEVER wins, NO MATTER WHAT
+    // Calculate forfeiting player ID from all possible sources
+    let finalForfeitingId: number | null = null;
     
-    if (forfeitingId != null) {
-      // CRITICAL: If ANY forfeit occurred, the forfeiting player ALWAYS loses
-      // Override winnerId regardless of score or other conditions
-      console.error(`[GameState] FINAL SAFETY CHECK: Forfeit detected (forfeitingId=${forfeitingId}), FORCING opponent win regardless of current winnerId=${winnerId}`);
-      // The forfeiting/disconnected player loses, opponent wins - NO EXCEPTIONS
-      if (forfeitingId === p1.playerId) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } else if (forfeitingId === p2.playerId) {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      } else {
-        // Last resort: determine opponent
-        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+    // Source 1: Explicit forfeitingPlayerId (most reliable)
+    if (game.forfeitingPlayerId != null) {
+      finalForfeitingId = game.forfeitingPlayerId;
+    }
+    // Source 2: Disconnected player who exceeded grace period
+    else if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
+      const elapsed = Date.now() - game.disconnectTime;
+      if (elapsed >= 15000) {
+        finalForfeitingId = game.disconnectedPlayerId;
+        // Also set forfeitingPlayerId for consistency
+        game.forfeitingPlayerId = finalForfeitingId;
       }
     }
     
-    // Additional safety: Check forfeitWinnerId if forfeitingPlayerId is somehow null
-    // CRITICAL: We CANNOT trust forfeitWinnerId - it might be incorrectly set to the forfeiting player
-    // Instead, try to determine who forfeited from disconnect status
-    if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
-      // Try to determine forfeiting player from disconnect
-      if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
-        const elapsed = Date.now() - game.disconnectTime;
-        if (elapsed >= 15000) {
-          // Disconnected player exceeded grace period - they forfeited
-          const forfeitingId = game.disconnectedPlayerId;
-          // CRITICAL: Validate that forfeitWinnerId is NOT the forfeiting player
-          if (game.forfeitWinnerId === forfeitingId) {
-            console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is WRONG. Correcting...`);
-            // Force correct winner: opponent of forfeiting player
-            winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-            resultCode = winnerId === p1.playerId ? 1 : 2;
-          } else {
-            // forfeitWinnerId seems correct, but still determine from forfeitingId to be safe
-            winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-            resultCode = winnerId === p1.playerId ? 1 : 2;
-            console.log(`[GameState] Legacy forfeit safety check: disconnected player ${forfeitingId} forfeited, player ${winnerId} wins`);
-          }
-        } else {
-          // Grace period not expired yet - don't treat as forfeit
-          console.warn(`[GameState] Legacy forfeit safety check: forfeitWinnerId is set but grace period not expired. Ignoring forfeit.`);
-        }
-      } else {
-        // No disconnected player - cannot determine who forfeited
-        // DO NOT trust forfeitWinnerId - it might be wrong
-        console.error(`[GameState] CRITICAL: forfeitWinnerId is set (${game.forfeitWinnerId}) but cannot determine forfeiting player. Cannot safely use forfeitWinnerId.`);
-        // Don't set winnerId - let final validation catch it
-      }
-    }
-    
-    // FINAL VALIDATION: Double-check that forfeiting player is not the winner
-    // Also check disconnected player who exceeded grace period
-    const finalForfeitingId = game.forfeitingPlayerId ?? 
-      (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
-    
+    // CRITICAL: If ANY forfeit occurred, FORCE the forfeiting player to lose
     if (finalForfeitingId != null) {
-      if (winnerId === finalForfeitingId) {
-        console.error(`[GameState] CRITICAL: Final validation failed - forfeiting player (${finalForfeitingId}) is winner! FORCING correction`);
-        winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+      // ABSOLUTE RULE: Forfeiting player ALWAYS loses, opponent ALWAYS wins
+      // Override ANY previous winner determination
+      const correctWinnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+      const correctResultCode = correctWinnerId === p1.playerId ? 1 : 2;
+      
+      // If current winnerId is wrong, force correction
+      if (winnerId !== correctWinnerId) {
+        console.error(`[GameState] CRITICAL: Forfeit detected (forfeitingId=${finalForfeitingId}), FORCING opponent win. Current winnerId=${winnerId} is WRONG. Correcting to ${correctWinnerId}`);
+        winnerId = correctWinnerId;
+        resultCode = correctResultCode;
       }
       
-      // Additional check: if forfeitWinnerId is set and matches forfeiting player, that's wrong
-      if (game.forfeitWinnerId === finalForfeitingId) {
-        console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is INCORRECT. Winner should be opponent.`);
-        // Force correct winner
-        winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+      // CRITICAL VALIDATION: Ensure forfeitWinnerId is correct (if set)
+      if (game.forfeitWinnerId != null) {
+        if (game.forfeitWinnerId === finalForfeitingId) {
+          console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is WRONG. Correcting...`);
+          game.forfeitWinnerId = correctWinnerId;
+        } else if (game.forfeitWinnerId !== correctWinnerId) {
+          console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match correct winner (${correctWinnerId}). Correcting...`);
+          game.forfeitWinnerId = correctWinnerId;
+        }
       }
-    }
-    
-    // Final absolute check: if forfeitWinnerId is set, validate it's not the forfeiting player
-    if (game.forfeitWinnerId != null && finalForfeitingId != null && game.forfeitWinnerId === finalForfeitingId) {
-      console.error(`[GameState] CRITICAL: forfeitWinnerId matches forfeiting player! Overriding winner.`);
-      winnerId = finalForfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-      resultCode = winnerId === p1.playerId ? 1 : 2;
+      
+      // Final assertion: winnerId MUST be the opponent
+      if (winnerId === finalForfeitingId) {
+        console.error(`[GameState] CRITICAL ASSERTION FAILED: winnerId (${winnerId}) matches forfeiting player! This should NEVER happen! FORCING correction...`);
+        winnerId = correctWinnerId;
+        resultCode = correctResultCode;
+      }
     }
 
     return {
@@ -612,32 +578,36 @@ export const GameStateManager = {
     const p1 = game.player1;
     const p2 = game.player2;
     
-    // Determine which player is forfeiting
-    const forfeiter = p1.playerId === forfeitingPlayerId ? p1 : p2;
-    const winner = forfeiter === p1 ? p2 : p1;
-
-    // CRITICAL: Track both the forfeiting player and the winner
-    // The forfeiting player MUST be set, and the winner MUST be the opponent
-    game.forfeitingPlayerId = forfeitingPlayerId;
+    // CRITICAL: Validate forfeitingPlayerId matches one of the players
+    if (forfeitingPlayerId !== p1.playerId && forfeitingPlayerId !== p2.playerId) {
+      console.error(`[GameState] CRITICAL ERROR: Invalid forfeitingPlayerId ${forfeitingPlayerId}. Must be either ${p1.playerId} or ${p2.playerId}`);
+      return;
+    }
     
     // ABSOLUTE RULE: Winner is ALWAYS the opponent of the forfeiting player
-    // NO EXCEPTIONS - even if forfeiting player is ahead, they lose
-    game.forfeitWinnerId = winner.playerId;
-
+    // Calculate winner directly - NO EXCEPTIONS
+    const correctWinnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+    
+    // CRITICAL: Set forfeiting player FIRST
+    game.forfeitingPlayerId = forfeitingPlayerId;
+    
+    // CRITICAL: Set winner to ALWAYS be the opponent
+    game.forfeitWinnerId = correctWinnerId;
+    
     // CRITICAL VALIDATION: Ensure forfeitWinnerId is NEVER the forfeiting player
     if (game.forfeitWinnerId === forfeitingPlayerId) {
-      console.error(`[GameState] CRITICAL ERROR: forfeitWinnerId matches forfeitingPlayerId! FORCING correction...`);
-      // Force winner to be the opponent
-      game.forfeitWinnerId = winner.playerId;
+      console.error(`[GameState] CRITICAL ERROR: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeitingPlayerId (${forfeitingPlayerId})! FORCING correction...`);
+      game.forfeitWinnerId = correctWinnerId;
     }
     
-    // Double-check: Ensure we didn't somehow set the wrong winner
+    // Triple-check: Ensure we didn't somehow set the wrong winner
     if (game.forfeitWinnerId === forfeitingPlayerId) {
-      console.error(`[GameState] CRITICAL ERROR: Double-check failed! Forcing opponent as winner...`);
-      game.forfeitWinnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+      console.error(`[GameState] CRITICAL ERROR: Triple-check failed! Forcing opponent as winner...`);
+      game.forfeitWinnerId = correctWinnerId;
     }
-
+    
     // Mark forfeiting player as effectively out of the game
+    const forfeiter = forfeitingPlayerId === p1.playerId ? p1 : p2;
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
     
@@ -646,7 +616,17 @@ export const GameStateManager = {
     
     // Final assertion: forfeiting player must NOT be the winner
     if (game.forfeitingPlayerId === game.forfeitWinnerId) {
-      console.error(`[GameState] CRITICAL ASSERTION FAILED: Forfeiting player is set as winner! This should NEVER happen!`);
+      console.error(`[GameState] CRITICAL ASSERTION FAILED: Forfeiting player (${game.forfeitingPlayerId}) is set as winner! This should NEVER happen! FORCING correction...`);
+      game.forfeitWinnerId = correctWinnerId;
+    }
+    
+    // Final absolute check before returning
+    if (game.forfeitingPlayerId === game.forfeitWinnerId) {
+      console.error(`[GameState] CRITICAL: Final check failed! Forfeiting player is winner! This is IMPOSSIBLE. Aborting forfeit.`);
+      // Reset forfeit state - something is seriously wrong
+      game.forfeitingPlayerId = null;
+      game.forfeitWinnerId = null;
+      return;
     }
   },
 
