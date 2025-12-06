@@ -87,6 +87,12 @@ export default {
         // Grid
         'grid-line': '#2D1B69',
         'grid-line-strong': '#3D2580',
+        
+        // Semantic text colors
+        'primary': '#F0E6FF',
+        'secondary': '#B8A8D4',
+        'muted': '#7A6B99',
+        'disabled': '#4A3D66',
       },
       
       /* =========================================

@@ -29,35 +29,77 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Logo/Header */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
-        <img 
-          src="/sudoduel-logo.png" 
-          alt="Sudoduel" 
-          className="h-28 mb-6 object-contain"
+    <div className="min-h-screen bg-void flex flex-col relative overflow-hidden">
+      {/* Synthwave Grid Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(13,2,33,0.9) 0%, rgba(13,2,33,0.7) 40%, rgba(139,0,255,0.15) 100%)'
+          }}
         />
-        <p className="text-gray-500 mb-8">Competitive 1v1 Sudoku</p>
+        <div 
+          className="absolute left-0 right-0 bottom-0 h-[60%]"
+          style={{
+            background: `
+              linear-gradient(to right, rgba(139,0,255,0.3) 1px, transparent 1px),
+              linear-gradient(to top, rgba(139,0,255,0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '60px 40px',
+            transform: 'perspective(500px) rotateX(60deg)',
+            transformOrigin: 'center top',
+            maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%)',
+            WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%)'
+          }}
+        />
+        <div 
+          className="absolute left-0 right-0 h-[2px]"
+          style={{
+            top: '45%',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255,0,255,0.6) 20%, rgba(0,255,255,0.6) 50%, rgba(255,0,255,0.6) 80%, transparent 100%)',
+            boxShadow: '0 0 20px rgba(255,0,255,0.5), 0 0 40px rgba(0,255,255,0.3)',
+          }}
+        />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10 safe-top safe-bottom">
+        <div className="mb-2 relative">
+          <img 
+            src="/sudoduel-logo.png" 
+            alt="SudoDuel" 
+            className="h-32 sm:h-36 object-contain drop-shadow-2xl"
+            style={{
+              filter: 'drop-shadow(0 0 20px rgba(0,255,255,0.4)) drop-shadow(0 0 40px rgba(255,0,255,0.3))'
+            }}
+          />
+        </div>
         
-        {/* Tab Switcher */}
+        <p 
+          className="text-secondary mb-8 font-body text-lg tracking-wide"
+          style={{ textShadow: '0 0 20px rgba(139,0,255,0.5)' }}
+        >
+          Competitive 1v1 Sudoku
+        </p>
+        
         <div className="w-full max-w-sm mb-6">
-          <div className="flex bg-gray-50 rounded-lg p-1">
+          <div className="flex bg-surface rounded-lg p-1 border border-grid-line">
             <button
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 text-center rounded-md font-medium transition-colors ${
+              className={`flex-1 py-2.5 text-center rounded-md font-body font-semibold uppercase tracking-wider text-sm transition-all duration-200 ${
                 isLogin
-                  ? 'bg-white text-gray-800 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
+                  ? 'bg-player/20 text-player border border-player/50 shadow-glow-player-subtle'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 text-center rounded-md font-medium transition-colors ${
+              className={`flex-1 py-2.5 text-center rounded-md font-body font-semibold uppercase tracking-wider text-sm transition-all duration-200 ${
                 !isLogin
-                  ? 'bg-white text-gray-800 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
+                  ? 'bg-player/20 text-player border border-player/50 shadow-glow-player-subtle'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               Sign Up
@@ -65,11 +107,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Form */}
         <div className="w-full max-w-sm space-y-4">
           {error && (
-            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div 
+              className="px-4 py-3 bg-error/10 border border-error/50 rounded-lg animate-shake"
+              style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
+            >
+              <p className="text-error text-sm font-body">{error}</p>
             </div>
           )}
 
@@ -80,7 +124,7 @@ export default function LoginPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Display Name"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full px-4 py-3.5 bg-surface border border-grid-line rounded-lg text-primary font-body placeholder-muted focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all duration-200"
                 required={!isLogin}
               />
             )}
@@ -90,7 +134,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full px-4 py-3.5 bg-surface border border-grid-line rounded-lg text-primary font-body placeholder-muted focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all duration-200"
               required
             />
 
@@ -99,32 +143,41 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full px-4 py-3.5 bg-surface border border-grid-line rounded-lg text-primary font-body placeholder-muted focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all duration-200"
               required
             />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 active:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3.5 bg-transparent border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:shadow-none transition-all duration-200"
             >
-              {loading ? 'Please wait...' : isLogin ? 'Log In' : 'Create Account'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Please wait...
+                </span>
+              ) : isLogin ? 'Log In' : 'Create Account'}
             </button>
           </form>
         </div>
         
-        {/* Footer link */}
         {isLogin && (
-          <p className="mt-6 text-gray-500">
+          <p className="mt-8 text-muted font-body">
             Don't have an account?{' '}
             <button 
               onClick={() => setIsLogin(false)}
-              className="text-blue-500 font-medium hover:text-blue-600 transition-colors"
+              className="text-player font-semibold hover:text-player-bright transition-colors"
             >
               Sign Up
             </button>
           </p>
         )}
+        
+        <p className="absolute bottom-4 text-xs text-muted/50 font-mono">v1.0.0</p>
       </div>
     </div>
   );
