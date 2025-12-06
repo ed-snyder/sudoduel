@@ -72,7 +72,7 @@ export default function SudoDuelLogo({ className = '', size = 'lg', animated = t
         className={`${sizeMap[size]} relative select-none ${animated ? 'animate-logo-shimmer' : ''}`}
         style={{
           ...logoStyle,
-          background: 'linear-gradient(135deg, #00FFFF 0%, #7FFFFF 25%, #00FFFF 50%, #00B3B3 75%, #00FFFF 100%)',
+          background: 'linear-gradient(135deg, #00B3B3 0%, #00CCCC 25%, #00B3B3 50%, #008080 75%, #00B3B3 100%)',
           backgroundSize: '200% 200%',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
