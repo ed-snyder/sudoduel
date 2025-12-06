@@ -65,27 +65,6 @@ export function useGameSounds() {
     source.start();
   }, []);
 
-  // Generate a ping sound (fallback if no custom sound loaded)
-  const playGeneratedPing = useCallback((frequency: number) => {
-    const ctx = audioContextRef.current;
-    if (!ctx) return;
-
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
-
-    gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.15);
-  }, []);
 
   // Generate incorrect sound (fallback if no custom sound loaded)
   const playGeneratedIncorrect = useCallback(() => {
