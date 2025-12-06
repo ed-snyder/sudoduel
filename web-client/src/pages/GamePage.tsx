@@ -69,20 +69,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const [myStreak, setMyStreak] = useState(0); // Renamed from currentStreak
   const [opponentStreak, setOpponentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [showStreakFlash, setShowStreakFlash] = useState(false);
-  
-  // Track previous streaks for detecting super streak loss
-  const prevMyStreakRef = useRef(0);
-  const prevOpponentStreakRef = useRef(0);
-  
-  // Streak loss flash state
-  const [streakLostFlash, setStreakLostFlash] = useState<'none' | 'player' | 'opponent' | 'both'>('none');
-  
-  // Derived states
-  const myOnFire = myStreak >= 5 && myStreak < 8;
-  const mySuperStreak = myStreak >= 8;
-  const opponentOnFire = opponentStreak >= 5 && opponentStreak < 8;
-  const opponentSuperStreak = opponentStreak >= 8;
   
   // Rematch system
   const [rematchState, setRematchState] = useState<'idle' | 'requested' | 'waiting'>('idle');
@@ -91,7 +77,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   // const [rematchSeries, setRematchSeries] = useState({ wins: 0, losses: 0 });
   
   // Pressure indicators
-  const [showCatchUpFlash, setShowCatchUpFlash] = useState(false);
   const prevScoreDiffRef = useRef<number>(0);
   const [showVictoryEffects, setShowVictoryEffects] = useState(false);
   const [showDefeatOverlay, setShowDefeatOverlay] = useState(false);
@@ -191,75 +176,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     }
   }, [lastMoveResult]);
 
-  // Streak loss detection - detect when super streak is lost
-  useEffect(() => {
-    const prevMy = prevMyStreakRef.current;
-    const prevOpp = prevOpponentStreakRef.current;
-    
-    const playerLostSuper = prevMy >= 8 && myStreak < 8;
-    const opponentLostSuper = prevOpp >= 8 && opponentStreak < 8;
-    
-    if (playerLostSuper && opponentLostSuper) {
-      // Both lost simultaneously → no flash, just return to default
-      setStreakLostFlash('both');
-    } else if (playerLostSuper) {
-      // Player lost their super streak → grid flashes PINK
-      setStreakLostFlash('player');
-    } else if (opponentLostSuper) {
-      // Opponent lost their super streak → grid flashes BLUE
-      setStreakLostFlash('opponent');
-    }
-    
-    // Clear flash after animation completes
-    if (playerLostSuper || opponentLostSuper) {
-      setTimeout(() => setStreakLostFlash('none'), 500);
-    }
-    
-    prevMyStreakRef.current = myStreak;
-    prevOpponentStreakRef.current = opponentStreak;
-  }, [myStreak, opponentStreak]);
-
-  // Get grid glow class based on streak states
-  const getGridGlowClass = useCallback((): string => {
-    // Handle streak loss flash first (temporary state)
-    if (streakLostFlash === 'player') {
-      return 'grid-glow-flash-pink'; // Player lost super streak → flash pink
-    }
-    if (streakLostFlash === 'opponent') {
-      return 'grid-glow-flash-blue'; // Opponent lost super streak → flash blue
-    }
-    if (streakLostFlash === 'both') {
-      return ''; // Both lost → return to default immediately (no flash)
-    }
-    
-    // Both have super streak → bright purple
-    if (mySuperStreak && opponentSuperStreak) {
-      return 'grid-glow-super-purple';
-    }
-    
-    // Player has super streak → very bright blue
-    if (mySuperStreak) {
-      return 'grid-glow-super-blue';
-    }
-    
-    // Opponent has super streak → very bright pink
-    if (opponentSuperStreak) {
-      return 'grid-glow-super-pink';
-    }
-    
-    // Player on fire (5-7) → soft blue perimeter
-    if (myOnFire) {
-      return 'grid-glow-blue';
-    }
-    
-    // Opponent on fire (5-7) → soft pink perimeter
-    if (opponentOnFire) {
-      return 'grid-glow-pink';
-    }
-    
-    // Default: no glow
-    return '';
-  }, [streakLostFlash, mySuperStreak, opponentSuperStreak, myOnFire, opponentOnFire]);
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
@@ -336,9 +252,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         setMyStreak(0);
         setOpponentStreak(0);
         setLongestStreak(0);
-        prevMyStreakRef.current = 0;
-        prevOpponentStreakRef.current = 0;
-        setStreakLostFlash('none');
         prevScoreDiffRef.current = 0;
         setDisplayedRating(null); // Reset rating display for new game
         setShowVictoryEffects(false);
@@ -381,13 +294,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             setMyStreak((prevStreak) => {
               const newStreak = prevStreak + 1;
               setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
-              
-              // Streak flash at 5+
-              if (newStreak >= 5) {
-                setShowStreakFlash(true);
-                setTimeout(() => setShowStreakFlash(false), 300);
-              }
-              
               return newStreak;
             });
             
@@ -427,15 +333,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           
           // Update pressure indicators
           const newScoreDiff = player_state.score - opponentState.score;
-          const wasBehind = oldScoreDiff < 0;
-          const nowAheadOrTied = newScoreDiff >= 0;
-          
-          if (wasBehind && nowAheadOrTied && correct) {
-            // Caught up! Show flash
-            setShowCatchUpFlash(true);
-            setTimeout(() => setShowCatchUpFlash(false), 300);
-          }
-          
           prevScoreDiffRef.current = newScoreDiff;
           
           // Remove from opponent scored cells if player scores it (reclaimed)
@@ -1279,7 +1176,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                   progress={myProgress} 
                   color="blue" 
                   className="w-full max-w-[120px]"
-                  pulse={true}
                 />
               </div>
             </div>
@@ -1290,17 +1186,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                   progress={opponentProgress} 
                   color="pink" 
                   className="w-full max-w-[120px]"
-                  pulse={true}
                 />
               </div>
             </div>
           </div>
           
-          {/* Catch-up flash overlay */}
-          {showCatchUpFlash && <div className="absolute inset-0 catch-up-flash pointer-events-none z-30" />}
-          
-          {/* Streak flash overlay */}
-          {showStreakFlash && <div className="absolute inset-0 streak-flash pointer-events-none z-30" />}
         </div>
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
@@ -1369,7 +1259,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
 
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''} ${showVictoryEffects ? 'neon-grid-pulse' : ''}`} style={{ pointerEvents: 'auto' }}>
+        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ pointerEvents: 'auto' }}>
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
@@ -1382,7 +1272,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                 lockedOut={myState.is_locked}
                 lastMoveResult={lastMoveResult}
                 opponentScoredCells={opponentScoredCells}
-                glowClass={getGridGlowClass()}
               />
             </div>
           )}

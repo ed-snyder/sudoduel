@@ -10,7 +10,6 @@ interface SudokuGridProps {
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
   opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
-  glowClass?: string; // Single class for grid perimeter glow (replaces playerStreakGlow/opponentStreakGlow)
 }
 
 interface FloatingFeedback {
@@ -55,7 +54,6 @@ function SudokuGrid({
   lockedOut = false,
   lastMoveResult = null,
   opponentScoredCells = new Set(),
-  glowClass,
 }: SudokuGridProps) {
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -178,8 +176,7 @@ function SudokuGrid({
     <div
       ref={gridRef}
       className={`
-        relative grid grid-cols-9 gap-0 border-2 
-        ${glowClass || 'border-gray-700'}
+        relative grid grid-cols-9 gap-0 border-2 border-gray-700
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
         transition-all duration-300
         w-full

@@ -3,10 +3,9 @@ interface ProgressBarProps {
   progress: number; // 0-100
   color: 'blue' | 'pink';
   className?: string;
-  pulse?: boolean; // Pulse animation when ahead by more than 5 cells
 }
 
-export function ProgressBar({ progress, color, className, pulse = false }: ProgressBarProps) {
+export function ProgressBar({ progress, color, className }: ProgressBarProps) {
   // Clamp progress between 0-100
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
@@ -15,7 +14,7 @@ export function ProgressBar({ progress, color, className, pulse = false }: Progr
 
   return (
     <div
-      className={`rounded-full overflow-hidden bg-gray-300/40 transition-all duration-150 ${pulse ? (color === 'blue' ? 'progress-bar-pulse-blue' : 'progress-bar-pulse-pink') : ''} ${className || ''}`}
+      className={`rounded-full overflow-hidden bg-gray-300/40 transition-all duration-150 ${className || ''}`}
       style={{
         width: className?.includes('w-full') ? '100%' : '120px',
         height: '14px',
