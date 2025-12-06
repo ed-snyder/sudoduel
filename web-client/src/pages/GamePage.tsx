@@ -716,6 +716,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const checkCompletions = useCallback((grid: number[][], row: number, col: number) => {
     const newCompletedCells = new Set<string>();
     
+    // Guard: return early if grid is not initialized
+    if (!grid || grid.length === 0 || !grid[row]) {
+      return;
+    }
+    
     // Check row
     if (grid[row].every(v => v !== 0)) {
       for (let c = 0; c < 9; c++) newCompletedCells.add(`${row}-${c}`);
@@ -753,8 +758,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const calculateAlmostCompleteCells = useCallback((grid: number[][]): Set<string> => {
     const result = new Set<string>();
     
+    // Guard: return empty set if grid is not initialized or empty
+    if (!grid || grid.length === 0 || !grid[0] || grid[0].length === 0) {
+      return result;
+    }
+    
     // Check each row
     for (let row = 0; row < 9; row++) {
+      if (!grid[row]) continue;
       const emptyCells: string[] = [];
       for (let col = 0; col < 9; col++) {
         if (grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
@@ -766,7 +777,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     for (let col = 0; col < 9; col++) {
       const emptyCells: string[] = [];
       for (let row = 0; row < 9; row++) {
-        if (grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
+        if (grid[row] && grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
       }
       if (emptyCells.length === 1) result.add(emptyCells[0]);
     }
@@ -777,7 +788,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         const emptyCells: string[] = [];
         for (let r = boxRow * 3; r < boxRow * 3 + 3; r++) {
           for (let c = boxCol * 3; c < boxCol * 3 + 3; c++) {
-            if (grid[r][c] === 0) emptyCells.push(`${r}-${c}`);
+            if (grid[r] && grid[r][c] === 0) emptyCells.push(`${r}-${c}`);
           }
         }
         if (emptyCells.length === 1) result.add(emptyCells[0]);
