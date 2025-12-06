@@ -2,15 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from backend directory
+COPY backend/package*.json ./
 
 # Install ALL dependencies (including devDependencies for TypeScript build)
 RUN npm ci
 
-# Copy all necessary files (tsconfig.json and source)
-COPY tsconfig.json ./
-COPY src ./src
+# Copy backend files
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
 
 # Build TypeScript
 RUN npm run build
