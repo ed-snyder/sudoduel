@@ -355,6 +355,7 @@ html, body, #root {
 
 .critical-vignette {
   animation: critical-vignette-pulse 1.5s ease-in-out infinite;
+  will-change: box-shadow, opacity; /* GPU acceleration hint */
 }
 
 /* Comeback flash - updated to use raspberry blue */

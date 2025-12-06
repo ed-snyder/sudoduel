@@ -384,6 +384,13 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         console.log(`[WS] FORFEIT from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
         // Mark forfeit in game state and then end the game (ratings, stats, GAME_END)
         GameStateManager.forfeit(matchId, userProfile.id);
+        
+        // Verify forfeit state was set correctly
+        const gameAfterForfeit = GameStateManager.getGame(matchId);
+        if (gameAfterForfeit) {
+          console.log(`[WS] After forfeit: forfeitingPlayerId=${gameAfterForfeit.forfeitingPlayerId}, forfeitWinnerId=${gameAfterForfeit.forfeitWinnerId}`);
+        }
+        
         await endGame(matchId);
       } catch (error) {
         console.error(`❌ Error handling FORFEIT:`, error);
@@ -640,6 +647,9 @@ async function endGame(matchId: number) {
   // Set status to COMPLETED immediately to prevent race conditions
   game.status = 'COMPLETED';
   console.log(`✅ Set game.status to COMPLETED in memory`);
+  
+  // Log forfeit state before getting results
+  console.log(`[endGame] Forfeit state check: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
 
   const results = GameStateManager.getFinalResults(matchId);
   console.log(`📊 Final results:`, results);
@@ -811,9 +821,13 @@ async function endGame(matchId: number) {
       winnerSlot = 2;
     }
 
-    // Determine reason: FORFEIT override if set, otherwise based on final states
-    if (game?.forfeitWinnerId != null) {
+    // CRITICAL: Check for forfeit FIRST - this must override everything
+    // Check both forfeitingPlayerId and forfeitWinnerId to ensure we catch all forfeit cases
+    const hasForfeit = game?.forfeitingPlayerId != null || game?.forfeitWinnerId != null;
+    
+    if (hasForfeit) {
       reason = 'FORFEIT';
+      console.log(`[endGame] FORFEIT detected: forfeitingPlayerId=${game?.forfeitingPlayerId}, forfeitWinnerId=${game?.forfeitWinnerId}`);
     } else if (winnerSlot === null) {
       reason = 'DRAW';
     } else {

@@ -209,7 +209,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     };
   }, [matchId, token]);
 
-  // Timer is now managed by server - no client-side countdown needed
+  // Client-side timer countdown for smooth UI updates
+  // Syncs with server updates but provides smooth countdown between updates
+  useEffect(() => {
+    if (gameStatus !== 'playing' || myTimerPaused) return;
+    
+    const interval = setInterval(() => {
+      setMyTimeRemaining(prev => {
+        if (prev <= 0) return 0;
+        const newTime = prev - 1;
+        if (import.meta.env.DEV) {
+          console.log(`[TIMER] Tick at ${performance.now()}, time: ${newTime}`);
+        }
+        return newTime;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [gameStatus, myTimerPaused]); // ONLY depend on gameStatus and pause state
 
   // Rating counter animation on game end
   useEffect(() => {
@@ -331,13 +348,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   useEffect(() => {
     if (gameStatus !== 'playing') return;
     
-    if (myTimeRemaining < 10 && myTimeRemaining > 0 && !shownLowTimeWarning) {
+    if (myTimeRemaining < 15 && myTimeRemaining > 0 && !shownLowTimeWarning) {
       setShownLowTimeWarning(true);
       showBanner("Running out of time!", "text-red-500", 10, 3000);
     }
     
-    // Reset warning if time goes back above 10 (shouldn't happen, but handle edge case)
-    if (myTimeRemaining >= 10) {
+    // Reset warning if time goes back above 15 (shouldn't happen, but handle edge case)
+    if (myTimeRemaining >= 15) {
       setShownLowTimeWarning(false);
     }
   }, [myTimeRemaining, gameStatus, shownLowTimeWarning, showBanner]);
@@ -349,7 +366,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     const myCellsRemaining = 81 - myState.cells_completed;
     const oppCellsRemaining = 81 - opponentState.cells_completed;
     const bothUnder9 = myCellsRemaining <= 9 && oppCellsRemaining <= 9;
-    const lowTime = myTimeRemaining < 10 && myTimeRemaining > 0;
+    const lowTime = myTimeRemaining < 15 && myTimeRemaining > 0;
     
     return bothUnder9 || lowTime;
   }, [myState.cells_completed, opponentState.cells_completed, myTimeRemaining, gameStatus]);
@@ -474,6 +491,22 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           clearTimeout(bannerTimeoutRef.current);
           bannerTimeoutRef.current = null;
         }
+        // CRITICAL: Reset ALL game state for rematch/new game
+        setMyState({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
+        setOpponentState({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
+        setOpponentScoredCells(new Set()); // CRITICAL: Clear opponent scored cells
+        setLastMoveResult(null);
+        setSelectedCell(null);
+        setNotes(new Map());
+        setCompletedCells(new Set());
+        setLastScoredCell(null);
+        setShowScorePulse('none');
+        setShowMicroShake(false);
+        setShowSuperFlash(false);
+        setMyEmote(null);
+        setOpponentEmote(null);
+        setMyEmoteFadingOut(false);
+        setOpponentEmoteFadingOut(false);
         const grid = message.data.initial_grid;
         const solution = message.data.solution_grid || [];
         setMyGrid(grid.map((row: number[]) => [...row]));

@@ -584,6 +584,14 @@ export const GameStateManager = {
       return;
     }
     
+    // CRITICAL: Stop the timer IMMEDIATELY to prevent checkVictoryConditions from running
+    // This prevents a race condition where the timer tick might trigger normal game end
+    if (game.timerInterval) {
+      clearInterval(game.timerInterval);
+      game.timerInterval = null;
+      console.log(`[GameState] Stopped timer interval to prevent race condition`);
+    }
+    
     // ABSOLUTE RULE: Winner is ALWAYS the opponent of the forfeiting player
     // Calculate winner directly - NO EXCEPTIONS
     const correctWinnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
@@ -639,8 +647,18 @@ export const GameStateManager = {
    *  2. Opponent locks out + your score > opponent's → Win
    *  3. Opponent locks out + you surpass their score before you lock → Win
    *  4. Both locked → Higher score wins (draw if equal)
+   * 
+   * CRITICAL: If a forfeit has occurred, return false to prevent normal game end logic.
+   * Forfeit handling must be done separately via getFinalResults().
    */
   checkVictoryConditions(game: GameState): boolean {
+    // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
+    // Forfeit must be handled separately to ensure forfeiting player always loses
+    if (game.forfeitingPlayerId != null) {
+      console.log(`[GameState] checkVictoryConditions: Forfeit detected, returning false to prevent normal game end`);
+      return false;
+    }
+    
     const p1 = game.player1;
     const p2 = game.player2;
 
