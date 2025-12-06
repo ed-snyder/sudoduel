@@ -1348,13 +1348,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               <button
                 key={num}
                 onClick={() => handleNumberClick(num)}
-                onTouchStart={(e) => {
-                  // PERFORMANCE: Use touchstart for instant mobile response (eliminates 300ms delay)
-                  if (gameStatus === 'playing' && !myState.is_locked && !depleted) {
-                    e.preventDefault(); // Prevent click event
-                    handleNumberClick(num);
-                  }
-                }}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className={`
                   min-h-[48px] sm:min-h-[56px] rounded-lg transition-colors touch-manipulation font-bold

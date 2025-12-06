@@ -230,13 +230,6 @@ function SudokuGrid({
                 }
               }}
               onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
-              onTouchStart={(e) => {
-                // PERFORMANCE: Use touchstart for instant mobile response (eliminates 300ms delay)
-                if (!lockedOut) {
-                  e.preventDefault(); // Prevent click event
-                  onCellClick(rowIndex, colIndex);
-                }
-              }}
               className={`
                 relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
