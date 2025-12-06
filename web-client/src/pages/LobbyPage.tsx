@@ -251,41 +251,16 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           <div className="w-full max-w-sm space-y-4">
             <button
               onClick={() => {/* TODO: Premium flow */}}
-              className="w-full max-w-xs mx-auto py-3 bg-transparent border-2 border-player rounded-lg hover:bg-player/20 transition-all relative overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, rgba(0,255,255,0.1) 0%, rgba(139,0,255,0.1) 100%)',
-              }}
+              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
             >
-              <span 
-                className="font-display font-black text-lg relative z-10 animate-logo-shimmer"
-                style={{
-                  background: 'linear-gradient(135deg, #00B3B3 0%, #00CCCC 25%, #00B3B3 50%, #008080 75%, #00B3B3 100%)',
-                  backgroundSize: '200% 200%',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                Upgrade to SudoDuel+
-              </span>
+              Upgrade to SudoDuel+
             </button>
 
             <button
               onClick={handleFindMatch}
-              className="w-full py-4 bg-transparent border-2 border-opponent text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-opponent/20 active:scale-[0.98] transition-all relative"
-              style={{
-                boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2)',
-              }}
+              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
             >
-              <span 
-                className="text-opponent relative z-10"
-                style={{
-                  WebkitTextStroke: '1px #FF00FF',
-                  textShadow: '0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(255, 0, 255, 0.5)',
-                }}
-              >
-                Find Match
-              </span>
+              Find Match
             </button>
           </div>
         )}
