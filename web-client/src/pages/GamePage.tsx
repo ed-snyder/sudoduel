@@ -300,8 +300,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           // Update MY grid and state
           if (correct) {
             // Correct move: grid already shows the number (optimistic was right)
-            // DON'T call setMyGrid again - just play sound, clear related notes, update state
-            playCorrectSound();
+            // Sound and animation already played optimistically, so don't play again
+            // Just update state and reconcile
             
             // Update streak tracking
             myStreakRef.current += 1;
@@ -319,22 +319,28 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             clearRelatedNotes(row, col, value);
             
             // Grid already updated optimistically, no need to update again
+            // Animation already shown optimistically, no need to update lastMoveResult
+            // Just update state to reflect server's authoritative score/time
+            setMyState(player_state);
           } else {
             // Incorrect move: REVERT the optimistic update
+            // Play error sound (we optimistically played correct sound, need to correct it)
             playIncorrectSound();
             
             // Break streak
             myStreakRef.current = 0;
             
+            // Revert grid
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = 0;
               return newGrid;
             });
+            
+            // Revert optimistic score update (server's player_state has correct values)
+            setMyState(player_state);
+            setLastMoveResult({ correct: false, row, col });
           }
-          
-          setMyState(player_state);
-          setLastMoveResult({ correct, row, col });
           
           // Update pressure indicators
           const newScoreDiff = player_state.score - opponentState.score;
@@ -662,6 +668,51 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     setShowForfeitModal(false);
   };
 
+  // Clear notes containing a value from the same row, column, and 3x3 box
+  // OPTIMIZED: Memoized to avoid recreating function on every render
+  const clearRelatedNotes = useCallback((row: number, col: number, value: number) => {
+    setNotes(prev => {
+      const newNotes = new Map(prev);
+      
+      // Get the 3x3 box starting position
+      const boxStartRow = Math.floor(row / 3) * 3;
+      const boxStartCol = Math.floor(col / 3) * 3;
+      
+      // OPTIMIZED: Pre-calculate bounds to avoid repeated calculations
+      const boxEndRow = boxStartRow + 3;
+      const boxEndCol = boxStartCol + 3;
+      
+      // Check all cells
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          // Skip the cell that was just filled
+          if (r === row && c === col) continue;
+          
+          // Check if cell is in same row, column, or box
+          const sameRow = r === row;
+          const sameCol = c === col;
+          const sameBox = r >= boxStartRow && r < boxEndRow && c >= boxStartCol && c < boxEndCol;
+          
+          if (sameRow || sameCol || sameBox) {
+            const cellKey = `${r}-${c}`;
+            const cellNotes = newNotes.get(cellKey);
+            
+            if (cellNotes && cellNotes.includes(value)) {
+              const updated = cellNotes.filter(n => n !== value);
+              if (updated.length === 0) {
+                newNotes.delete(cellKey);
+              } else {
+                newNotes.set(cellKey, updated);
+              }
+            }
+          }
+        }
+      }
+      
+      return newNotes;
+    });
+  }, []);
+
   const handleNumberClick = useCallback((num: number) => {
     // PERFORMANCE: Mark start of number click handling
     if (import.meta.env.DEV) {
@@ -718,6 +769,26 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       const { row, col } = selectedCell;
       const cellKey = `${row}-${col}`;
       
+      // Check if cell was empty (for optimistic score update)
+      const wasEmpty = myGrid[row]?.[col] === 0;
+      const isInitialClue = initialGrid[row]?.[col] !== 0;
+      
+      // IMMEDIATE FEEDBACK: Play sound, show animation, update visual state ALL AT ONCE
+      // Optimistically assume correct (most moves are correct)
+      playCorrectSound();
+      
+      // Show floating feedback immediately (optimistic "+5s!")
+      setLastMoveResult({ correct: true, row, col });
+      
+      // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
+      if (wasEmpty && !isInitialClue) {
+        setMyState(prev => ({
+          ...prev,
+          cells_completed: prev.cells_completed + 1,
+          score: prev.score + 1,
+        }));
+      }
+      
       // OPTIMISTIC: Batch all state updates together for single render
       // React 18+ automatically batches these, but being explicit helps
       setMyGrid((prev) => {
@@ -755,7 +826,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         setTimeout(deferClearNotes, 0);
       }
       
-      // Then send to server (non-blocking)
+      // Then send to server (non-blocking, doesn't wait for response)
       wsRef.current?.send(
         JSON.stringify({
           type: 'PLACE_NUMBER',
@@ -767,7 +838,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         })
       );
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, playCorrectSound, clearRelatedNotes]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
@@ -815,51 +886,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const handleToggleNotes = () => {
     setNotesMode((prev) => !prev);
   };
-
-  // Clear notes containing a value from the same row, column, and 3x3 box
-  // OPTIMIZED: Memoized to avoid recreating function on every render
-  const clearRelatedNotes = useCallback((row: number, col: number, value: number) => {
-    setNotes(prev => {
-      const newNotes = new Map(prev);
-      
-      // Get the 3x3 box starting position
-      const boxStartRow = Math.floor(row / 3) * 3;
-      const boxStartCol = Math.floor(col / 3) * 3;
-      
-      // OPTIMIZED: Pre-calculate bounds to avoid repeated calculations
-      const boxEndRow = boxStartRow + 3;
-      const boxEndCol = boxStartCol + 3;
-      
-      // Check all cells
-      for (let r = 0; r < 9; r++) {
-        for (let c = 0; c < 9; c++) {
-          // Skip the cell that was just filled
-          if (r === row && c === col) continue;
-          
-          // Check if cell is in same row, column, or box
-          const sameRow = r === row;
-          const sameCol = c === col;
-          const sameBox = r >= boxStartRow && r < boxEndRow && c >= boxStartCol && c < boxEndCol;
-          
-          if (sameRow || sameCol || sameBox) {
-            const cellKey = `${r}-${c}`;
-            const cellNotes = newNotes.get(cellKey);
-            
-            if (cellNotes && cellNotes.includes(value)) {
-              const updated = cellNotes.filter(n => n !== value);
-              if (updated.length === 0) {
-                newNotes.delete(cellKey);
-              } else {
-                newNotes.set(cellKey, updated);
-              }
-            }
-          }
-        }
-      }
-      
-      return newNotes;
-    });
-  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
