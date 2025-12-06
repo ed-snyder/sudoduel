@@ -8,14 +8,12 @@ COPY package*.json ./
 # Install ALL dependencies (including devDependencies for TypeScript build)
 RUN npm ci
 
-# Copy tsconfig.json first to ensure it's available
+# Copy all necessary files (tsconfig.json and source)
 COPY tsconfig.json ./
-
-# Copy source code
 COPY src ./src
 
-# Verify files exist and build TypeScript
-RUN ls -la && echo "--- tsconfig.json ---" && cat tsconfig.json && echo "--- Building ---" && npm run build
+# Build TypeScript
+RUN npm run build
 
 # Remove dev dependencies after build to reduce image size
 RUN npm prune --production
