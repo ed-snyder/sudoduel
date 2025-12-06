@@ -193,7 +193,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Stats for Selected Difficulty */}
-      <div className="px-4 py-6">
+      <div className="px-4 py-3">
         <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">Rating</span>
