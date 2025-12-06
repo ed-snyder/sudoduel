@@ -425,24 +425,45 @@ export const GameStateManager = {
     // ============================================================
     // NORMAL WIN CONDITIONS (only if NO forfeit occurred)
     // ============================================================
-    // Win condition 1: Puzzle solved
-    if (p1.isSolved && !p2.isSolved) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.isSolved && !p1.isSolved) {
-      winnerId = p2.playerId;
-      resultCode = 2;
-    } 
-    // Win condition 2-4: Score comparison (higher score wins, draw if equal)
-    else if (p1.score > p2.score) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.score > p1.score) {
-      winnerId = p2.playerId;
-      resultCode = 2;
+    // CRITICAL: Skip normal win conditions if ANY forfeit indicator is set
+    // This prevents score-based winner determination when a forfeit occurred
+    const hasAnyForfeit = game.forfeitingPlayerId != null || 
+                          (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) ||
+                          (game.disconnectedPlayerId != null && game.disconnectTime != null && (Date.now() - game.disconnectTime >= 15000));
+    
+    if (!hasAnyForfeit) {
+      // Win condition 1: Puzzle solved
+      if (p1.isSolved && !p2.isSolved) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.isSolved && !p1.isSolved) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } 
+      // Win condition 2-4: Score comparison (higher score wins, draw if equal)
+      else if (p1.score > p2.score) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.score > p1.score) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else {
+        // Equal scores = draw
+        resultCode = 3;
+      }
     } else {
-      // Equal scores = draw
-      resultCode = 3;
+      // Forfeit occurred but wasn't caught above - this shouldn't happen, but handle it
+      console.error(`[GameState] ERROR: Forfeit detected but not handled in early return! forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+      // Force forfeit handling
+      const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
+      if (forfeitingId != null) {
+        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
+      } else if (game.forfeitWinnerId != null) {
+        // Use forfeitWinnerId as last resort
+        winnerId = game.forfeitWinnerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
+      }
     }
 
     // ============================================================
@@ -455,21 +476,20 @@ export const GameStateManager = {
     const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
     
     if (forfeitingId != null) {
-      // If winnerId is the forfeiting player OR null (tied scores), FORCE opponent to win
-      if (winnerId === forfeitingId || winnerId === null) {
-        console.error(`[GameState] FINAL SAFETY CHECK: Winner ${winnerId} is forfeiting/disconnected player ${forfeitingId} or null (tied), FORCING opponent win`);
-        // The forfeiting/disconnected player loses, opponent wins - NO EXCEPTIONS
-        if (forfeitingId === p1.playerId) {
-          winnerId = p2.playerId;
-          resultCode = 2;
-        } else if (forfeitingId === p2.playerId) {
-          winnerId = p1.playerId;
-          resultCode = 1;
-        } else {
-          // Last resort: determine opponent
-          winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-          resultCode = winnerId === p1.playerId ? 1 : 2;
-        }
+      // CRITICAL: If ANY forfeit occurred, the forfeiting player ALWAYS loses
+      // Override winnerId regardless of score or other conditions
+      console.error(`[GameState] FINAL SAFETY CHECK: Forfeit detected (forfeitingId=${forfeitingId}), FORCING opponent win regardless of current winnerId=${winnerId}`);
+      // The forfeiting/disconnected player loses, opponent wins - NO EXCEPTIONS
+      if (forfeitingId === p1.playerId) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else if (forfeitingId === p2.playerId) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else {
+        // Last resort: determine opponent
+        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
       }
     }
     
