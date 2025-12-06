@@ -333,6 +333,8 @@ export const GameStateManager = {
       // The forfeiting player ALWAYS loses, opponent ALWAYS wins
       const forfeitingId = game.forfeitingPlayerId;
       
+      // CRITICAL: IGNORE forfeitWinnerId if forfeitingPlayerId is set
+      // Always determine winner based on forfeitingPlayerId to ensure correctness
       // Determine winner: ALWAYS the opponent of the forfeiting player
       if (forfeitingId === p1.playerId) {
         winnerId = p2.playerId;
@@ -341,16 +343,11 @@ export const GameStateManager = {
         winnerId = p1.playerId;
         resultCode = 1;
       } else {
-        // Fallback: if forfeitingId doesn't match either player, determine from forfeitWinnerId
-        // But validate that forfeitWinnerId is NOT the forfeiting player
-        if (game.forfeitWinnerId != null && game.forfeitWinnerId !== forfeitingId) {
-          winnerId = game.forfeitWinnerId;
-          resultCode = winnerId === p1.playerId ? 1 : 2;
-        } else {
-          // Last resort: determine opponent by process of elimination
-          winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-          resultCode = winnerId === p1.playerId ? 1 : 2;
-        }
+        // Fallback: forfeitingId doesn't match either player (shouldn't happen)
+        console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match either player!`);
+        // Last resort: determine opponent by process of elimination
+        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+        resultCode = winnerId === p1.playerId ? 1 : 2;
       }
       
       // CRITICAL VALIDATION: Ensure winnerId is NEVER the forfeiting player
@@ -358,6 +355,11 @@ export const GameStateManager = {
         console.error(`[GameState] CRITICAL ERROR: winnerId matches forfeitingId! Forcing correction...`);
         winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
         resultCode = winnerId === p1.playerId ? 1 : 2;
+      }
+      
+      // Additional validation: If forfeitWinnerId is set but doesn't match our determined winner, log warning
+      if (game.forfeitWinnerId != null && game.forfeitWinnerId !== winnerId) {
+        console.warn(`[GameState] WARNING: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match determined winner (${winnerId}). Using determined winner.`);
       }
       
       console.log(`[GameState] FORFEIT RESULT: player ${forfeitingId} forfeited, player ${winnerId} wins (resultCode=${resultCode})`);
@@ -389,7 +391,10 @@ export const GameStateManager = {
     
     // Legacy check: if forfeitWinnerId is set but forfeitingPlayerId is null
     // This handles old forfeit logic - treat as forfeit
-    if (game.forfeitWinnerId != null) {
+    // CRITICAL: Validate that forfeitWinnerId is correct (not the forfeiting player)
+    if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
+      // In legacy case, we don't know who forfeited, so we can't validate
+      // But we should still use forfeitWinnerId as it was explicitly set
       winnerId = game.forfeitWinnerId;
       resultCode = winnerId === p1.playerId ? 1 : 2;
       console.log(`[GameState] Legacy forfeit: winner is ${winnerId} (resultCode=${resultCode})`);
@@ -469,8 +474,10 @@ export const GameStateManager = {
     }
     
     // Additional safety: Check forfeitWinnerId if forfeitingPlayerId is somehow null
+    // This should not happen if forfeit() was called correctly, but handle it as legacy case
     if (game.forfeitWinnerId != null && game.forfeitingPlayerId == null) {
-      // Legacy forfeit case - ensure forfeitWinnerId is correct
+      // Legacy forfeit case - use forfeitWinnerId but log warning
+      console.warn(`[GameState] Legacy forfeit safety check: forfeitingPlayerId is null but forfeitWinnerId is set. Using forfeitWinnerId=${game.forfeitWinnerId}`);
       winnerId = game.forfeitWinnerId;
       resultCode = winnerId === p1.playerId ? 1 : 2;
       console.log(`[GameState] Legacy forfeit safety check: winner is ${winnerId} (resultCode=${resultCode})`);
