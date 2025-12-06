@@ -12,7 +12,6 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
 
   useEffect(() => {
     if (isOpen) {
-      // Load settings from localStorage
       const sound = localStorage.getItem('soundEnabled');
       const haptic = localStorage.getItem('hapticEnabled');
       setSoundEnabled(sound !== 'false');
@@ -33,14 +32,14 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-surface border border-grid-line rounded-xl w-full max-w-md shadow-2xl animate-scale-in">
         {/* Header */}
-        <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-800">Settings</h2>
+        <div className="px-5 py-4 border-b border-grid-line flex items-center justify-between">
+          <h2 className="text-xl font-heading font-semibold text-primary tracking-wide">SETTINGS</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-muted hover:text-player transition-colors p-1"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -49,24 +48,28 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
         </div>
 
         {/* Content */}
-        <div className="px-4 py-4 space-y-6">
+        <div className="px-5 py-5 space-y-6">
           {/* Toggles */}
           <div className="space-y-4">
             {/* Sound Effects */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-gray-800">Sound Effects</div>
-                <div className="text-sm text-gray-500">Play sounds for moves</div>
+                <div className="font-body font-medium text-primary">Sound Effects</div>
+                <div className="text-sm text-muted font-body">Play sounds for moves</div>
               </div>
               <button
                 onClick={() => handleSoundToggle(!soundEnabled)}
-                className={`relative w-12 h-7 rounded-full transition-colors ${
-                  soundEnabled ? 'bg-blue-500' : 'bg-gray-300'
+                className={`relative w-14 h-8 rounded-full transition-all duration-200 ${
+                  soundEnabled 
+                    ? 'bg-player/30 border-2 border-player shadow-glow-player-subtle' 
+                    : 'bg-elevated border-2 border-grid-line'
                 }`}
               >
                 <div
-                  className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    soundEnabled ? 'translate-x-5' : 'translate-x-0'
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full transition-all duration-200 ${
+                    soundEnabled 
+                      ? 'translate-x-6 bg-player shadow-glow-player-subtle' 
+                      : 'translate-x-0 bg-muted'
                   }`}
                 />
               </button>
@@ -75,18 +78,22 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
             {/* Haptic Feedback */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-gray-800">Haptic Feedback</div>
-                <div className="text-sm text-gray-500">Vibrate on incorrect moves</div>
+                <div className="font-body font-medium text-primary">Haptic Feedback</div>
+                <div className="text-sm text-muted font-body">Vibrate on incorrect moves</div>
               </div>
               <button
                 onClick={() => handleHapticToggle(!hapticEnabled)}
-                className={`relative w-12 h-7 rounded-full transition-colors ${
-                  hapticEnabled ? 'bg-blue-500' : 'bg-gray-300'
+                className={`relative w-14 h-8 rounded-full transition-all duration-200 ${
+                  hapticEnabled 
+                    ? 'bg-player/30 border-2 border-player shadow-glow-player-subtle' 
+                    : 'bg-elevated border-2 border-grid-line'
                 }`}
               >
                 <div
-                  className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    hapticEnabled ? 'translate-x-5' : 'translate-x-0'
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full transition-all duration-200 ${
+                    hapticEnabled 
+                      ? 'translate-x-6 bg-player shadow-glow-player-subtle' 
+                      : 'translate-x-0 bg-muted'
                   }`}
                 />
               </button>
@@ -94,10 +101,10 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
           </div>
 
           {/* About */}
-          <div className="pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-500">
-              <div className="font-medium text-gray-700 mb-1">About</div>
-              <div>Sudoduel v1.0.0</div>
+          <div className="pt-4 border-t border-grid-line">
+            <div className="text-sm text-muted font-body">
+              <div className="font-medium text-secondary mb-1">About</div>
+              <div className="font-mono text-xs">SudoDuel v1.0.0</div>
             </div>
           </div>
 
@@ -108,7 +115,7 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
                 onLogout();
                 onClose();
               }}
-              className="w-full py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
+              className="w-full py-3 bg-transparent border-2 border-error text-error font-body font-semibold rounded-lg hover:bg-error/20 hover:shadow-glow-error transition-all"
             >
               Log Out
             </button>
@@ -118,4 +125,3 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
     </div>
   );
 }
-

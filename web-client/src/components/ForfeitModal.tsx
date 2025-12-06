@@ -8,24 +8,25 @@ export function ForfeitModal({ isOpen, onConfirm, onCancel }: ForfeitModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-xs w-full mx-4 shadow-xl">
-        <h2 className="text-xl font-bold text-gray-800 text-center mb-4">
-          Forfeit Match?
+    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-surface border border-error/30 rounded-xl p-6 max-w-xs w-full shadow-2xl animate-scale-in"
+        style={{ boxShadow: '0 0 30px rgba(255,51,102,0.2)' }}>
+        <h2 className="text-xl font-heading font-bold text-primary text-center mb-4 tracking-wide">
+          FORFEIT MATCH?
         </h2>
-        <p className="text-gray-600 text-center text-sm mb-6">
+        <p className="text-secondary text-center text-sm font-body mb-6">
           You will lose this match and your rating will decrease.
         </p>
         <div className="flex flex-col gap-3">
           <button
             onClick={onConfirm}
-            className="w-full py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
+            className="w-full py-3 bg-error/20 border-2 border-error text-error font-body font-semibold rounded-lg hover:bg-error/30 hover:shadow-glow-error transition-all"
           >
-            Yes
+            Yes, Forfeit
           </button>
           <button
             onClick={onCancel}
-            className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200"
+            className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold rounded-lg hover:border-player/50 hover:text-player transition-all"
           >
             Back to Game
           </button>
@@ -34,5 +35,3 @@ export function ForfeitModal({ isOpen, onConfirm, onCancel }: ForfeitModalProps)
     </div>
   );
 }
-
-
