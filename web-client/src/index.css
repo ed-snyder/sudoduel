@@ -1,3 +1,8 @@
+/* Import design system styles - must be before @tailwind */
+@import url('./styles/design-tokens.css');
+@import url('./styles/typography.css');
+@import url('./styles/animations.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
