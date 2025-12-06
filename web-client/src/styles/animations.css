@@ -776,7 +776,33 @@
 }
 
 /* =========================================
-   16. REDUCED MOTION
+   16. MATRIX RAIN ANIMATION
+   ========================================= */
+
+/* Matrix rain falling effect */
+@keyframes matrix-fall {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--matrix-opacity, 0.3);
+  }
+  90% {
+    opacity: var(--matrix-opacity, 0.3);
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.animate-matrix-fall {
+  animation: matrix-fall linear infinite;
+}
+
+/* =========================================
+   17. REDUCED MOTION
    ========================================= */
 
 @media (prefers-reduced-motion: reduce) {
