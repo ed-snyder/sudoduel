@@ -145,9 +145,9 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             
             {/* Info */}
             <div className="flex-1">
-              <div className="font-semibold text-primary font-body text-lg">{user?.display_name || 'Player'}</div>
-              <div className="text-sm text-secondary font-body">
-                Rating: <span className="font-mono text-player">{Math.round(user?.rating || 1500)}</span>
+              <div className="font-black text-primary font-display text-lg">{user?.display_name || 'Player'}</div>
+              <div className="text-sm text-secondary font-display">
+                Rating: <span className="font-display text-player">{Math.round(user?.rating || 1500)}</span>
               </div>
             </div>
             
@@ -173,7 +173,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
               key={diff.key}
               onClick={() => diff.available && setSelectedDifficulty(diff.key)}
               disabled={!diff.available}
-              className={`flex-1 py-3 px-2 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all relative ${
+              className={`flex-1 py-3 px-2 rounded-lg font-display font-black text-sm uppercase tracking-wider transition-all relative ${
                 selectedDifficulty === diff.key
                   ? 'bg-player/20 text-player border-2 border-player shadow-glow-player-subtle'
                   : diff.available
@@ -196,28 +196,28 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       <div className="px-4 py-6">
         <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-muted font-body text-sm">Rating</span>
-            <span className="text-primary font-mono font-semibold">{Math.round(user?.rating || 1500)}</span>
+            <span className="text-muted font-display text-sm">Rating</span>
+            <span className="text-primary font-display font-black">{Math.round(user?.rating || 1500)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-muted font-body text-sm">League</span>
-            <span className="text-secondary font-body text-sm italic">Coming Soon</span>
+            <span className="text-muted font-display text-sm">League</span>
+            <span className="text-secondary font-display text-sm italic">Coming Soon</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-muted font-body text-sm">Global Rank</span>
-            <span className="text-secondary font-body text-sm italic">Coming Soon</span>
+            <span className="text-muted font-display text-sm">Global Rank</span>
+            <span className="text-secondary font-display text-sm italic">Coming Soon</span>
           </div>
         </div>
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-8 pb-4">
+      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-12 pb-4">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
             style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
           >
-            <p className="text-error text-sm font-body">{error}</p>
+            <p className="text-error text-sm font-display">{error}</p>
           </div>
         )}
 
@@ -234,15 +234,15 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
               />
             </div>
             
-            <h2 className="text-xl font-heading font-semibold text-primary mb-2 tracking-wide">SEARCHING...</h2>
-            <p className="text-secondary font-body mb-1">Looking for an opponent</p>
-            <p className="text-player text-lg font-mono mb-6">
+            <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
+            <p className="text-secondary font-display mb-1">Looking for an opponent</p>
+            <p className="text-player text-lg font-display mb-6">
               0:{String(30 - attemptsRef.current).padStart(2, '0')}
             </p>
             
             <button
               onClick={handleCancel}
-              className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold rounded-lg hover:border-error/50 hover:text-error transition-all"
+              className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-error/50 hover:text-error transition-all"
             >
               Cancel
             </button>
@@ -250,28 +250,28 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         ) : (
           <div className="w-full max-w-sm space-y-4">
             <button
-              onClick={handleFindMatch}
-              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-body font-bold uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              onClick={() => {/* TODO: Premium flow */}}
+              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center gap-2"
             >
-              Find Match
+              <span>👑</span>
+              <span>Upgrade to SudoDuel+</span>
             </button>
 
             <button
-              onClick={() => {/* TODO: Premium flow */}}
-              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-body font-semibold rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center gap-2"
+              onClick={handleFindMatch}
+              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
             >
-              <span>👑</span>
-              <span>Upgrade to Premium</span>
+              Find Match
             </button>
           </div>
         )}
       </div>
 
       {/* Bottom Buttons */}
-      <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
+      <div className="px-4 pb-6 pt-8 flex gap-3 safe-bottom">
         <button
           onClick={() => setShowMatchHistory(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -280,7 +280,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         </button>
         <button
           onClick={() => setShowStats(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

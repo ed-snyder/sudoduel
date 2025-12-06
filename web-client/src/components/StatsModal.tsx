@@ -87,10 +87,10 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-surface border border-grid-line rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-scale-in">
+      <div className="bg-surface border-2 border-opponent rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-scale-in">
         {/* Header */}
         <div className="px-5 py-4 border-b border-grid-line flex items-center justify-between">
-          <h2 className="text-xl font-heading font-semibold text-primary tracking-wide">STATISTICS</h2>
+          <h2 className="text-xl font-display font-black text-primary tracking-wide">STATISTICS</h2>
           <button
             onClick={onClose}
             className="text-muted hover:text-player transition-colors p-1"
@@ -110,21 +110,21 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <p className="text-error font-body">{error}</p>
+              <p className="text-error font-display">{error}</p>
             </div>
           ) : stats ? (
             <div className="space-y-6">
               {/* Current Rating */}
               <div className="text-center py-4 bg-elevated/30 rounded-xl border border-player/30">
-                <div className="text-4xl font-mono font-bold text-player" style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}>
+                <div className="text-4xl font-display font-black text-player" style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}>
                   {Math.round(stats.current_rating)}
                 </div>
-                <div className="text-sm text-muted font-body mt-1">Current Rating</div>
+                <div className="text-sm text-muted font-display mt-1">Current Rating</div>
               </div>
 
               {/* Speed Stats */}
               <div>
-                <h3 className="text-sm font-heading font-medium text-player uppercase tracking-wider mb-3">Speed</h3>
+                <h3 className="text-sm font-display font-black text-player uppercase tracking-wider mb-3">Speed</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="CPM" value={stats.cpm.toFixed(1)} sublabel="cells/min" />
                   <StatCard label="Avg Win" value={formatTime(stats.avgTimeAtWin)} sublabel="time left" />
@@ -134,7 +134,7 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
 
               {/* Competition Stats */}
               <div>
-                <h3 className="text-sm font-heading font-medium text-opponent uppercase tracking-wider mb-3">Competition</h3>
+                <h3 className="text-sm font-display font-black text-opponent uppercase tracking-wider mb-3">Competition</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="Upset Rate" value={`${stats.upsetRate.toFixed(0)}%`} sublabel="vs higher" />
                   <StatCard label="Peak" value={Math.round(stats.peakRating).toString()} sublabel="all-time" highlight />
@@ -144,7 +144,7 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
 
               {/* Streak Stats */}
               <div>
-                <h3 className="text-sm font-heading font-medium text-warning uppercase tracking-wider mb-3">Streaks</h3>
+                <h3 className="text-sm font-display font-black text-warning uppercase tracking-wider mb-3">Streaks</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="Current" value={stats.currentWinStreak.toString()} sublabel="win streak" fire={stats.currentWinStreak >= 3} />
                   <StatCard label="Best" value={stats.bestWinStreak.toString()} sublabel="all-time" />
@@ -154,31 +154,31 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
 
               {/* Rating Changes */}
               <div>
-                <h3 className="text-sm font-heading font-medium text-secondary uppercase tracking-wider mb-3">Rating History</h3>
+                <h3 className="text-sm font-display font-black text-secondary uppercase tracking-wider mb-3">Rating History</h3>
                 <div className="grid grid-cols-4 gap-2">
                   <div className="bg-elevated/50 rounded-lg p-2 border border-grid-line/50 text-center">
-                    <div className={`text-sm font-mono font-bold ${(stats.rating_change_1d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                    <div className={`text-sm font-display font-black ${(stats.rating_change_1d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
                       {formatRatingChange(stats.rating_change_1d)}
                     </div>
-                    <div className="text-xs text-muted font-body">24h</div>
+                    <div className="text-xs text-muted font-display">24h</div>
                   </div>
                   <div className="bg-elevated/50 rounded-lg p-2 border border-grid-line/50 text-center">
-                    <div className={`text-sm font-mono font-bold ${(stats.rating_change_30d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                    <div className={`text-sm font-display font-black ${(stats.rating_change_30d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
                       {formatRatingChange(stats.rating_change_30d)}
                     </div>
-                    <div className="text-xs text-muted font-body">30d</div>
+                    <div className="text-xs text-muted font-display">30d</div>
                   </div>
                   <div className="bg-elevated/50 rounded-lg p-2 border border-grid-line/50 text-center">
-                    <div className={`text-sm font-mono font-bold ${(stats.rating_change_90d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                    <div className={`text-sm font-display font-black ${(stats.rating_change_90d ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
                       {formatRatingChange(stats.rating_change_90d)}
                     </div>
-                    <div className="text-xs text-muted font-body">90d</div>
+                    <div className="text-xs text-muted font-display">90d</div>
                   </div>
                   <div className="bg-elevated/50 rounded-lg p-2 border border-grid-line/50 text-center">
-                    <div className={`text-sm font-mono font-bold ${(stats.rating_change_all_time ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                    <div className={`text-sm font-display font-black ${(stats.rating_change_all_time ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
                       {formatRatingChange(stats.rating_change_all_time)}
                     </div>
-                    <div className="text-xs text-muted font-body">All</div>
+                    <div className="text-xs text-muted font-display">All</div>
                   </div>
                 </div>
               </div>

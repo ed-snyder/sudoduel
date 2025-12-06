@@ -99,10 +99,10 @@ export default {
          TYPOGRAPHY
          ========================================= */
       fontFamily: {
-        display: ['Industry', 'Orbitron', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Orbitron', 'Industry', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['Rajdhani', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['Share Tech Mono', 'SF Mono', 'ui-monospace', 'monospace'],
+        display: ['Industry', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['Industry', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['Industry', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['Industry', 'ui-monospace', 'monospace'],
       },
       
       fontSize: {
