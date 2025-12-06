@@ -4,6 +4,5 @@ dist
 .gitignore
 *.md
 scripts
-tsconfig.json
 .env
 .env.local

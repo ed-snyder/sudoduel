@@ -1,6 +1,2 @@
 # Root-level Railway config for monorepo
-# Backend service should set root directory to empty (repo root) and use this Dockerfile
-
-[build]
-builder = "dockerfile"
-dockerfilePath = "Dockerfile"
+# Backend service should set root directory to "backend" and use backend/Dockerfile
