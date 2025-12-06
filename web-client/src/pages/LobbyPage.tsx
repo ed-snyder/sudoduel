@@ -4,11 +4,14 @@ import { matchmakingAPI } from '../services/api';
 import MatchHistoryModal from '../components/MatchHistoryModal';
 import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
+import AvatarPickerModal from '../components/AvatarPickerModal';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 
 interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
 }
+
+type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
 export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   const { user, logout } = useAuth();
@@ -17,9 +20,27 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   const [showMatchHistory, setShowMatchHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  // Use browser timer type instead of NodeJS.Timeout to avoid Node typings in the client bundle
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
+  const [avatar, setAvatar] = useState(() => {
+    return localStorage.getItem('userAvatar') || '😎';
+  });
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
+
+  const isPremium = false;
+
+  const difficulties: { key: Difficulty; label: string; available: boolean }[] = [
+    { key: 'easy', label: 'Easy', available: true },
+    { key: 'medium', label: 'Medium', available: false },
+    { key: 'hard', label: 'Hard', available: false },
+    { key: 'ultra', label: 'Ultra', available: false },
+  ];
+
+  const handleAvatarSave = (newAvatar: string) => {
+    setAvatar(newAvatar);
+    localStorage.setItem('userAvatar', newAvatar);
+  };
 
   const stopPolling = () => {
     if (pollingRef.current) {
@@ -41,7 +62,6 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         stopPolling();
         onMatchFound(response.match_id!);
       } else {
-        // Start polling
         pollForMatch();
       }
     } catch (err: any) {
@@ -55,7 +75,6 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       attemptsRef.current++;
       
       if (attemptsRef.current >= 30) {
-        // 30 seconds timeout
         try {
           await matchmakingAPI.leave();
         } catch (e) {}
@@ -66,17 +85,14 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       }
 
       try {
-        // Use status check instead of join() to avoid spamming the backend
         const response = await matchmakingAPI.status() as { status: string; match_id?: number };
         
         if (response.status === 'matched') {
           stopPolling();
           onMatchFound(response.match_id!);
         } else if (response.status === 'queued') {
-          // Still in queue, continue polling
           pollForMatch();
         } else {
-          // Not queued anymore (maybe left queue?), stop polling
           setSearching(false);
           stopPolling();
         }
@@ -91,38 +107,54 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
     stopPolling();
     try {
       await matchmakingAPI.leave();
-    } catch (err) {
-      // Ignore
-    }
+    } catch (err) {}
     setSearching(false);
   };
 
   return (
     <div className="min-h-screen bg-void flex flex-col">
-      {/* Header */}
-      <div className="px-4 pt-8 pb-6 flex flex-col items-center relative z-10 safe-top">
+      {/* Header with Logo */}
+      <div className="px-4 pt-6 pb-2 flex flex-col items-center safe-top">
         <SudoDuelLogo size="lg" />
       </div>
       
-      {/* Main Content - Centered */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-16">
-        {/* Player Card */}
-        <div className="w-full max-w-sm mb-6">
-          <div className="bg-surface rounded-lg p-4 flex items-center gap-4 border border-grid-line">
-            <div className="w-12 h-12 bg-player/20 rounded-full flex items-center justify-center border border-player/50">
-              <span className="text-player text-xl font-bold font-heading">
-                {user?.display_name?.[0]?.toUpperCase() || 'P'}
-              </span>
-            </div>
+      {/* Player Card */}
+      <div className="px-4 py-3">
+        <div className="bg-surface rounded-xl p-4 border border-grid-line">
+          <div className="flex items-center gap-4">
+            {/* Avatar - Tappable */}
+            <button
+              onClick={() => setShowAvatarPicker(true)}
+              className="relative group"
+            >
+              <div 
+                className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-player text-2xl font-heading font-bold transition-all group-hover:shadow-glow-player"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(0,255,255,0.2) 0%, rgba(139,0,255,0.2) 100%)',
+                  boxShadow: 'inset 0 0 15px rgba(0,255,255,0.3)'
+                }}
+              >
+                {avatar}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-player rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg className="w-3 h-3 text-void" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </div>
+            </button>
+            
+            {/* Info */}
             <div className="flex-1">
-              <div className="font-body font-semibold text-primary">{user?.display_name || 'Player'}</div>
-              <div className="text-sm text-muted font-body">
+              <div className="font-semibold text-primary font-body text-lg">{user?.display_name || 'Player'}</div>
+              <div className="text-sm text-secondary font-body">
                 Rating: <span className="font-mono text-player">{Math.round(user?.rating || 1500)}</span>
               </div>
             </div>
+            
+            {/* Settings Button */}
             <button 
               onClick={() => setShowSettings(true)}
-              className="text-muted hover:text-player transition-colors p-1"
+              className="text-muted hover:text-player transition-colors p-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -131,71 +163,140 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* History and Stats Buttons */}
-        <div className="w-full max-w-sm mb-8 flex gap-3">
-          <button
-            onClick={() => setShowMatchHistory(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            History
-          </button>
-          <button
-            onClick={() => setShowStats(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Stats
-          </button>
-        </div>
-
-        {/* Main Action */}
-        <div className="w-full max-w-sm">
-          {error && (
-            <div className="mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg">
-              <p className="text-error text-sm font-body">{error}</p>
-            </div>
-          )}
-
-          {searching ? (
-            <div className="text-center">
-              {/* Spinner */}
-              <div className="w-16 h-16 border-4 border-surface border-t-player rounded-full animate-spin mx-auto mb-6"
-                style={{ boxShadow: '0 0 15px rgba(0,255,255,0.3)' }} />
-              
-              <h2 className="text-xl font-heading font-semibold text-primary mb-2">Searching...</h2>
-              <p className="text-secondary font-body mb-1">Looking for an opponent</p>
-              <p className="text-muted text-sm font-mono mb-6">
-                {attemptsRef.current}:{String(30 - attemptsRef.current).padStart(2, '0')}
-              </p>
-              
-              <button
-                onClick={handleCancel}
-                className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold rounded-lg hover:border-player/50 hover:text-player transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={handleFindMatch}
-                className="w-full py-4 bg-transparent border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player transition-all"
-              >
-                Find Match
-              </button>
-              <p className="mt-3 text-muted text-sm font-body text-center">Ranked • 210 seconds</p>
-            </>
-          )}
+      {/* Difficulty Selection */}
+      <div className="px-4 py-2">
+        <div className="flex gap-2">
+          {difficulties.map((diff) => (
+            <button
+              key={diff.key}
+              onClick={() => diff.available && setSelectedDifficulty(diff.key)}
+              disabled={!diff.available}
+              className={`flex-1 py-3 px-2 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all relative ${
+                selectedDifficulty === diff.key
+                  ? 'bg-player/20 text-player border-2 border-player shadow-glow-player-subtle'
+                  : diff.available
+                  ? 'bg-surface text-secondary border border-grid-line hover:border-player/50'
+                  : 'bg-surface/50 text-muted border border-grid-line/50 cursor-not-allowed'
+              }`}
+            >
+              {diff.label}
+              {!diff.available && (
+                <span className="absolute -top-2 -right-2 text-xs px-1.5 py-0.5 bg-elevated border border-grid-line text-muted rounded font-mono">
+                  Soon
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Stats for Selected Difficulty */}
+      <div className="px-4 py-3">
+        <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-muted font-body text-sm">Rating</span>
+            <span className="text-primary font-mono font-semibold">{Math.round(user?.rating || 1500)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted font-body text-sm">League</span>
+            <span className="text-secondary font-body text-sm italic">Coming Soon</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted font-body text-sm">Global Rank</span>
+            <span className="text-secondary font-body text-sm italic">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Action Area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-4">
+        {error && (
+          <div 
+            className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
+            style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
+          >
+            <p className="text-error text-sm font-body">{error}</p>
+          </div>
+        )}
+
+        {searching ? (
+          <div className="w-full max-w-sm text-center">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full border-4 border-surface" />
+              <div 
+                className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
+                style={{ 
+                  boxShadow: '0 0 20px rgba(0,255,255,0.5)',
+                  filter: 'drop-shadow(0 0 10px rgba(0,255,255,0.8))'
+                }}
+              />
+            </div>
+            
+            <h2 className="text-xl font-heading font-semibold text-primary mb-2 tracking-wide">SEARCHING...</h2>
+            <p className="text-secondary font-body mb-1">Looking for an opponent</p>
+            <p className="text-player text-lg font-mono mb-6">
+              0:{String(30 - attemptsRef.current).padStart(2, '0')}
+            </p>
+            
+            <button
+              onClick={handleCancel}
+              className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold rounded-lg hover:border-error/50 hover:text-error transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="w-full max-w-sm space-y-4">
+            <button
+              onClick={handleFindMatch}
+              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-body font-bold uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+            >
+              Find Match
+            </button>
+
+            <button
+              onClick={() => {/* TODO: Premium flow */}}
+              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-body font-semibold rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center gap-2"
+            >
+              <span>👑</span>
+              <span>Upgrade to Premium</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Buttons */}
+      <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
+        <button
+          onClick={() => setShowMatchHistory(true)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          History
+        </button>
+        <button
+          onClick={() => setShowStats(true)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-body font-medium rounded-lg hover:border-player/50 hover:text-player transition-all"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Stats
+        </button>
+      </div>
+
       {/* Modals */}
+      <AvatarPickerModal
+        isOpen={showAvatarPicker}
+        onClose={() => setShowAvatarPicker(false)}
+        currentAvatar={avatar}
+        onSave={handleAvatarSave}
+        isPremium={isPremium}
+      />
       <MatchHistoryModal
         isOpen={showMatchHistory}
         onClose={() => setShowMatchHistory(false)}
