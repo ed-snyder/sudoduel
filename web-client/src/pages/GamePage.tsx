@@ -1164,9 +1164,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                   className="w-full max-w-[120px]"
                 />
               </div>
+              <div className="text-xs sm:text-sm font-mono font-semibold text-blue-500 ml-2 whitespace-nowrap">
+                {myState.cells_completed}/81
+              </div>
             </div>
             {/* Right: Opponent progress bar */}
             <div className="flex items-center flex-1 min-w-0 justify-end relative">
+              <div className="text-xs sm:text-sm font-mono font-semibold text-fuchsia-500 mr-2 whitespace-nowrap">
+                {opponentState.cells_completed}/81
+              </div>
               <div className="flex-1 min-w-0 flex justify-end">
                 <ProgressBar 
                   progress={opponentProgress} 
