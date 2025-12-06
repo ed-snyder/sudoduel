@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SudoDuelLogo from '../components/SudoDuelLogo';
-import MatrixRain from '../components/MatrixRain';
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -32,11 +31,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-void flex flex-col">
-      {/* Matrix rain background */}
-      <MatrixRain />
-      
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom">
         {/* Logo */}
         <div className="mb-4">
           <SudoDuelLogo size="xl" />
