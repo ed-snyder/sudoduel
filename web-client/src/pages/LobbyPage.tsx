@@ -4,6 +4,7 @@ import { matchmakingAPI } from '../services/api';
 import MatchHistoryModal from '../components/MatchHistoryModal';
 import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
+import SudoDuelLogo from '../components/SudoDuelLogo';
 
 interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
@@ -97,14 +98,10 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-void flex flex-col">
       {/* Header */}
-      <div className="px-4 py-6 border-b border-gray-200 flex flex-col items-center">
-        <img 
-          src="/sudoduel-logo.png" 
-          alt="Sudoduel" 
-          className="h-20 object-contain"
-        />
+      <div className="px-4 pt-6 pb-4 flex flex-col items-center relative z-10 safe-top">
+        <SudoDuelLogo size="lg" />
       </div>
       
       {/* Player Card */}

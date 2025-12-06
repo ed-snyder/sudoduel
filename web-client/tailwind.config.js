@@ -217,6 +217,10 @@ export default {
         // Timer
         'timer-warning': 'timer-warning-pulse 1.5s ease-in-out infinite',
         'timer-critical': 'timer-critical-pulse 0.75s ease-in-out infinite',
+        
+        // Logo
+        'logo-shimmer': 'logo-shimmer 3s ease-in-out infinite',
+        'float': 'float 4s ease-in-out infinite',
       },
       
       keyframes: {
@@ -278,6 +282,15 @@ export default {
         'shimmer': {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        'logo-shimmer': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
         },
       },
       

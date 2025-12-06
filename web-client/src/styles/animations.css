@@ -751,7 +751,32 @@
 }
 
 /* =========================================
-   15. REDUCED MOTION
+   15. LOGO ANIMATIONS
+   ========================================= */
+
+/* Logo shimmer */
+@keyframes logo-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-logo-shimmer {
+  animation: logo-shimmer 3s ease-in-out infinite;
+}
+
+/* Logo float/bob */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* =========================================
+   16. REDUCED MOTION
    ========================================= */
 
 @media (prefers-reduced-motion: reduce) {

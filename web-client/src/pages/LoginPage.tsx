@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import SudoDuelLogo from '../components/SudoDuelLogo';
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -29,59 +30,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-void flex flex-col relative overflow-hidden">
-      {/* Synthwave Grid Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(13,2,33,0.9) 0%, rgba(13,2,33,0.7) 40%, rgba(139,0,255,0.15) 100%)'
-          }}
-        />
-        <div 
-          className="absolute left-0 right-0 bottom-0 h-[60%]"
-          style={{
-            background: `
-              linear-gradient(to right, rgba(139,0,255,0.3) 1px, transparent 1px),
-              linear-gradient(to top, rgba(139,0,255,0.3) 1px, transparent 1px)
-            `,
-            backgroundSize: '60px 40px',
-            transform: 'perspective(500px) rotateX(60deg)',
-            transformOrigin: 'center top',
-            maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%)',
-            WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%)'
-          }}
-        />
-        <div 
-          className="absolute left-0 right-0 h-[2px]"
-          style={{
-            top: '45%',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255,0,255,0.6) 20%, rgba(0,255,255,0.6) 50%, rgba(255,0,255,0.6) 80%, transparent 100%)',
-            boxShadow: '0 0 20px rgba(255,0,255,0.5), 0 0 40px rgba(0,255,255,0.3)',
-          }}
-        />
-      </div>
-
+    <div className="min-h-screen bg-void flex flex-col">
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10 safe-top safe-bottom">
-        <div className="mb-2 relative">
-          <img 
-            src="/sudoduel-logo.png" 
-            alt="SudoDuel" 
-            className="h-32 sm:h-36 object-contain drop-shadow-2xl"
-            style={{
-              filter: 'drop-shadow(0 0 20px rgba(0,255,255,0.4)) drop-shadow(0 0 40px rgba(255,0,255,0.3))'
-            }}
-          />
+      <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom">
+        {/* Logo */}
+        <div className="mb-4">
+          <SudoDuelLogo size="xl" />
         </div>
         
-        <p 
-          className="text-secondary mb-8 font-body text-lg tracking-wide"
-          style={{ textShadow: '0 0 20px rgba(139,0,255,0.5)' }}
-        >
+        {/* Tagline */}
+        <p className="text-secondary mb-10 font-body text-lg tracking-wide">
           Competitive 1v1 Sudoku
         </p>
         
+        {/* Tab Switcher */}
         <div className="w-full max-w-sm mb-6">
           <div className="flex bg-surface rounded-lg p-1 border border-grid-line">
             <button
@@ -107,6 +69,7 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* Form */}
         <div className="w-full max-w-sm space-y-4">
           {error && (
             <div 
@@ -150,7 +113,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-transparent border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:shadow-none transition-all duration-200"
+              className="w-full py-3.5 bg-transparent border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
