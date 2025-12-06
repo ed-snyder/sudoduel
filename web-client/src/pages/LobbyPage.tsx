@@ -331,7 +331,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             Stats
           </span>
         </button>
-      </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AvatarPickerModal
