@@ -10,6 +10,10 @@ interface SudokuGridProps {
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
   opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
+  lastScoredCell?: { row: number; col: number } | null;
+  completedCells?: Set<string>;
+  almostCompleteCells?: Set<string>;
+  currentStreak?: number;
 }
 
 interface FloatingFeedback {
@@ -18,6 +22,7 @@ interface FloatingFeedback {
   col: number;
   text: string;
   correct: boolean;
+  streak?: number;
 }
 
 // Play error sound using Web Audio API
@@ -54,6 +59,10 @@ function SudokuGrid({
   lockedOut = false,
   lastMoveResult = null,
   opponentScoredCells = new Set(),
+  lastScoredCell = null,
+  completedCells = new Set(),
+  almostCompleteCells = new Set(),
+  currentStreak = 0,
 }: SudokuGridProps) {
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -114,9 +123,10 @@ function SudokuGrid({
     
     if (correct) {
       // Correct answer: show "+5s!" (bonus is 5 seconds)
+      // Enhanced text at high streaks
       setFloatingFeedbacks((prev) => [
         ...prev,
-        { id: feedbackId, row, col, text: '+5s!', correct: true },
+        { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
       ]);
     } else {
       // Incorrect answer: show "-30s!" and play sound/vibration
@@ -140,7 +150,7 @@ function SudokuGrid({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [lastMoveResult]);
+  }, [lastMoveResult, currentStreak]);
 
   // Helper function to get cell position
   const getCellPosition = (row: number, col: number) => {
@@ -218,6 +228,15 @@ function SudokuGrid({
           // Check if opponent has scored this cell but player hasn't
           // Only show pink tint if player hasn't scored it yet and it's not an initial clue
           const opponentScored = opponentScoredCells.has(cellKey) && !hasValue && !isInitial;
+          
+          // Check if this cell just scored (for pop animation)
+          const isJustScored = lastScoredCell?.row === rowIndex && lastScoredCell?.col === colIndex;
+          
+          // Check if this cell is part of a completed row/col/box
+          const isCompleted = completedCells.has(cellKey);
+          
+          // Check if this cell is almost complete (last empty in row/col/box)
+          const isAlmostComplete = almostCompleteCells.has(cellKey);
 
           return (
             <button
@@ -247,6 +266,8 @@ function SudokuGrid({
                     ? 'opponent-scored'
                     : 'bg-white'
                 }
+                ${isCompleted ? 'completion-flash' : ''}
+                ${isAlmostComplete ? 'almost-complete-glow' : ''}
                 ${
                   !lockedOut
                     ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
@@ -265,6 +286,7 @@ function SudokuGrid({
                   className={`
                     text-base sm:text-lg md:text-xl lg:text-2xl font-bold
                     ${isInitial ? 'text-gray-800' : 'text-blue-500'}
+                    ${isJustScored ? 'cell-score-pop' : ''}
                   `}
                   style={{ fontSize: 'clamp(1.125rem, 5vw, 2rem)' }}
                 >
@@ -310,15 +332,23 @@ function SudokuGrid({
           >
             <span
               className={`
-                text-lg sm:text-xl md:text-2xl font-bold whitespace-nowrap block
+                whitespace-nowrap block font-bold
                 ${feedback.correct 
-                  ? 'text-emerald-500' 
-                  : 'text-red-500'
+                  ? (feedback.streak && feedback.streak >= 8 
+                      ? 'text-indigo-400 text-2xl font-black'
+                      : feedback.streak && feedback.streak >= 5
+                      ? 'text-indigo-400 text-xl font-bold'
+                      : 'text-green-400 text-lg font-semibold')
+                  : 'text-red-500 text-lg'
                 }
               `}
               style={{
                 textShadow: feedback.correct
-                  ? '0 0 8px rgba(16, 185, 129, 0.6)'
+                  ? (feedback.streak && feedback.streak >= 8
+                      ? '0 0 12px rgba(99, 102, 241, 0.8), 0 0 24px rgba(99, 102, 241, 0.4)'
+                      : feedback.streak && feedback.streak >= 5
+                      ? '0 0 10px rgba(99, 102, 241, 0.6)'
+                      : '0 0 8px rgba(16, 185, 129, 0.6)')
                   : '0 0 8px rgba(239, 68, 68, 0.6)',
               }}
             >

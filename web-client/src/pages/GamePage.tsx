@@ -32,7 +32,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
-  const { victory: hapticVictory, bigWin: hapticBigWin, success: hapticSuccess, error: hapticError } = useHaptics();
+  const { victory: hapticVictory, bigWin: hapticBigWin, success: hapticSuccess, error: hapticError, vibrate } = useHaptics();
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -81,6 +81,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const [showDefeatOverlay, setShowDefeatOverlay] = useState(false);
   const [displayedRating, setDisplayedRating] = useState<number | null>(null);
   const [showScreenShake, setShowScreenShake] = useState(false);
+  
+  // Addictive scoring feedback system state
+  const [showScorePulse, setShowScorePulse] = useState<'none' | 'normal' | 'intense'>('none');
+  const [showMicroShake, setShowMicroShake] = useState(false);
+  const [showSuperFlash, setShowSuperFlash] = useState(false);
+  const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
+  const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
 
   // Connect to WebSocket
   useEffect(() => {
@@ -299,17 +306,50 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
-            // Correct move: grid already shows the number (optimistic visual update)
-            // NOW play correct feedback immediately (sound, animation, haptic)
-            // Clear any previous feedback first to avoid conflicts
-            setLastMoveResult(null);
-            playCorrectSound();
-            hapticSuccess();
-            setLastMoveResult({ correct: true, row, col });
+            // Correct move: feedback already played optimistically, now add enhanced effects
+            const newStreak = myStreakRef.current + 1;
+            myStreakRef.current = newStreak;
+            setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
             
-            // Update streak tracking
-            myStreakRef.current += 1;
-            setLongestStreak((prevLongest) => Math.max(prevLongest, myStreakRef.current));
+            // FEATURE 1: Escalating haptic patterns
+            hapticSuccess();
+            if (newStreak >= 8) {
+              vibrate([15, 25, 15, 25, 40]); // Triumphant pattern
+            } else if (newStreak >= 5) {
+              vibrate([10, 20, 30]); // Building intensity
+            } else if (newStreak >= 3) {
+              vibrate([10, 15]); // Double tap
+            }
+            
+            // FEATURE 2: Screen edge pulse
+            setShowScorePulse(newStreak >= 5 ? 'intense' : 'normal');
+            setTimeout(() => setShowScorePulse('none'), 400);
+            
+            // FEATURE 3: Cell pop animation
+            setLastScoredCell({ row, col });
+            setTimeout(() => setLastScoredCell(null), 300);
+            
+            // FEATURE 5a: Micro-shake at streak milestones
+            if ([3, 5, 8].includes(newStreak)) {
+              setShowMicroShake(true);
+              setTimeout(() => setShowMicroShake(false), 150);
+            }
+            
+            // FEATURE 5c: SUPER flash at streak 8
+            if (newStreak === 8) {
+              setShowSuperFlash(true);
+              setTimeout(() => setShowSuperFlash(false), 600);
+            }
+            
+            // FEATURE 5d: Completion flash
+            // Grid already updated optimistically, check with current state
+            // Use setTimeout to ensure grid state has updated
+            setTimeout(() => {
+              setMyGrid((prevGrid) => {
+                checkCompletions(prevGrid, row, col);
+                return prevGrid; // Return unchanged
+              });
+            }, 0);
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -326,9 +366,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             // Update state to reflect server's authoritative score/time
             setMyState(player_state);
           } else {
-            // Incorrect move: REVERT the optimistic visual update IMMEDIATELY
-            // CRITICAL: Set incorrect feedback FIRST to prevent any correct feedback from showing
-            // React batches state updates, so setting incorrect directly will override any pending correct
+            // Incorrect move: IMMEDIATELY switch from optimistic correct feedback to incorrect
+            // CRITICAL: Override optimistic correct feedback instantly
             setLastMoveResult({ correct: false, row, col });
             playIncorrectSound();
             hapticError();
@@ -673,6 +712,83 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     setShowForfeitModal(false);
   };
 
+  // Check for completed rows/columns/boxes and trigger flash
+  const checkCompletions = useCallback((grid: number[][], row: number, col: number) => {
+    const newCompletedCells = new Set<string>();
+    
+    // Check row
+    if (grid[row].every(v => v !== 0)) {
+      for (let c = 0; c < 9; c++) newCompletedCells.add(`${row}-${c}`);
+    }
+    
+    // Check column
+    if (grid.every(r => r[col] !== 0)) {
+      for (let r = 0; r < 9; r++) newCompletedCells.add(`${r}-${col}`);
+    }
+    
+    // Check box
+    const boxRowStart = Math.floor(row / 3) * 3;
+    const boxColStart = Math.floor(col / 3) * 3;
+    let boxComplete = true;
+    for (let r = boxRowStart; r < boxRowStart + 3; r++) {
+      for (let c = boxColStart; c < boxColStart + 3; c++) {
+        if (grid[r][c] === 0) boxComplete = false;
+      }
+    }
+    if (boxComplete) {
+      for (let r = boxRowStart; r < boxRowStart + 3; r++) {
+        for (let c = boxColStart; c < boxColStart + 3; c++) {
+          newCompletedCells.add(`${r}-${c}`);
+        }
+      }
+    }
+    
+    if (newCompletedCells.size > 0) {
+      setCompletedCells(newCompletedCells);
+      setTimeout(() => setCompletedCells(new Set()), 400);
+    }
+  }, []);
+
+  // Calculate almost-complete cells (last empty cell in row/col/box)
+  const calculateAlmostCompleteCells = useCallback((grid: number[][]): Set<string> => {
+    const result = new Set<string>();
+    
+    // Check each row
+    for (let row = 0; row < 9; row++) {
+      const emptyCells: string[] = [];
+      for (let col = 0; col < 9; col++) {
+        if (grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
+      }
+      if (emptyCells.length === 1) result.add(emptyCells[0]);
+    }
+    
+    // Check each column
+    for (let col = 0; col < 9; col++) {
+      const emptyCells: string[] = [];
+      for (let row = 0; row < 9; row++) {
+        if (grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
+      }
+      if (emptyCells.length === 1) result.add(emptyCells[0]);
+    }
+    
+    // Check each 3x3 box
+    for (let boxRow = 0; boxRow < 3; boxRow++) {
+      for (let boxCol = 0; boxCol < 3; boxCol++) {
+        const emptyCells: string[] = [];
+        for (let r = boxRow * 3; r < boxRow * 3 + 3; r++) {
+          for (let c = boxCol * 3; c < boxCol * 3 + 3; c++) {
+            if (grid[r][c] === 0) emptyCells.push(`${r}-${c}`);
+          }
+        }
+        if (emptyCells.length === 1) result.add(emptyCells[0]);
+      }
+    }
+    
+    return result;
+  }, []);
+
+  const almostCompleteCells = useMemo(() => calculateAlmostCompleteCells(myGrid), [myGrid, calculateAlmostCompleteCells]);
+
   // Clear notes containing a value from the same row, column, and 3x3 box
   // OPTIMIZED: Memoized to avoid recreating function on every render
   const clearRelatedNotes = useCallback((row: number, col: number, value: number) => {
@@ -778,9 +894,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      // IMMEDIATE VISUAL FEEDBACK: Update grid immediately for responsiveness
-      // DO NOT play sound/animation/haptic optimistically - wait for server confirmation
-      // This prevents incorrect moves from showing correct feedback first
+      // IMMEDIATE FEEDBACK: Play correct feedback optimistically (most moves are correct)
+      // Sound, animation, and haptic all happen instantly for best UX
+      // If server says incorrect, we'll immediately switch to incorrect feedback
+      playCorrectSound();
+      hapticSuccess();
+      setLastMoveResult({ correct: true, row, col });
       
       // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
       if (wasEmpty && !isInitialClue) {
@@ -840,7 +959,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         })
       );
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes, playCorrectSound, hapticSuccess]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
@@ -927,6 +1046,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       </div>
     );
   }
+
 
   // Waiting for opponent
   if (gameStatus === 'waiting') {
@@ -1194,7 +1314,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className="min-h-screen bg-white flex flex-col relative" style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className={`min-h-screen bg-white flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Score pulse overlay - raspberry blue vignette */}
+      {showScorePulse !== 'none' && (
+        <div 
+          className={`fixed inset-0 z-50 pointer-events-none ${
+            showScorePulse === 'intense' ? 'score-pulse-intense' : 'score-pulse'
+          }`} 
+        />
+      )}
+      
+      {/* SUPER flash overlay */}
+      {showSuperFlash && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <span className="super-flash text-5xl font-black tracking-widest">SUPER!</span>
+        </div>
+      )}
+      
       {/* Disconnect Banner */}
       {opponentDisconnected && (
         <div className="absolute inset-x-0 z-50 mx-4" style={{ top: isCapacitor ? '64px' : '64px' }}>
@@ -1357,6 +1493,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                 lockedOut={myState.is_locked}
                 lastMoveResult={lastMoveResult}
                 opponentScoredCells={opponentScoredCells}
+                lastScoredCell={lastScoredCell}
+                completedCells={completedCells}
+                almostCompleteCells={almostCompleteCells}
+                currentStreak={myStreakRef.current}
               />
             </div>
           )}

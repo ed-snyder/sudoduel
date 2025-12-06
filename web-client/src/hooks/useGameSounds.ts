@@ -118,22 +118,92 @@ export function useGameSounds() {
     oscBuzz.stop(ctx.currentTime + 0.15);
   }, []);
 
-  // Correct move sound
+  // Correct move sound - enhanced with layered audio
   const playCorrectSound = useCallback(() => {
     initAudio();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
     
     streakRef.current = Math.min(streakRef.current + 1, 8);
-    const pitchMultiplier = STREAK_PITCH_MULTIPLIERS[streakRef.current - 1];
-
-    if (correctBufferRef.current) {
-      // Use custom sound with pitch shift
-      playBuffer(correctBufferRef.current, pitchMultiplier);
-    } else {
-      // Fallback to generated sound
-      const baseFreq = 523.25; // C5
-      playGeneratedPing(baseFreq * pitchMultiplier);
+    const streak = streakRef.current;
+    const pitchMultiplier = STREAK_PITCH_MULTIPLIERS[streak - 1];
+    const baseFreq = 523.25; // C5
+    
+    // Layer 1: Click transient (noise burst for attack)
+    const clickDuration = 0.015;
+    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * clickDuration, ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * 0.3;
     }
-  }, [initAudio, playBuffer, playGeneratedPing]);
+    const noiseSource = ctx.createBufferSource();
+    const noiseGain = ctx.createGain();
+    noiseSource.buffer = noiseBuffer;
+    noiseGain.gain.setValueAtTime(0.15, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + clickDuration);
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start();
+    noiseSource.stop(ctx.currentTime + clickDuration);
+    
+    // Layer 2: Main tone (sine wave)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(baseFreq * pitchMultiplier, ctx.currentTime);
+    gain1.gain.setValueAtTime(0, ctx.currentTime);
+    gain1.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.01);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start();
+    osc1.stop(ctx.currentTime + 0.2);
+    
+    // Layer 3: Harmony (fifth above) - starts at streak 3+
+    if (streak >= 3) {
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(baseFreq * pitchMultiplier * 1.5, ctx.currentTime); // Perfect fifth
+      gain2.gain.setValueAtTime(0, ctx.currentTime);
+      gain2.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start();
+      osc2.stop(ctx.currentTime + 0.18);
+    }
+    
+    // Layer 4: Full chord (major third) - starts at streak 5+
+    if (streak >= 5) {
+      const osc3 = ctx.createOscillator();
+      const gain3 = ctx.createGain();
+      osc3.type = 'triangle';
+      osc3.frequency.setValueAtTime(baseFreq * pitchMultiplier * 1.25, ctx.currentTime); // Major third
+      gain3.gain.setValueAtTime(0, ctx.currentTime);
+      gain3.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.015);
+      gain3.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc3.connect(gain3);
+      gain3.connect(ctx.destination);
+      osc3.start();
+      osc3.stop(ctx.currentTime + 0.22);
+    }
+    
+    // Layer 5: Sub bass thump for streak 8
+    if (streak >= 8) {
+      const oscBass = ctx.createOscillator();
+      const gainBass = ctx.createGain();
+      oscBass.type = 'sine';
+      oscBass.frequency.setValueAtTime(80, ctx.currentTime);
+      oscBass.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+      gainBass.gain.setValueAtTime(0.25, ctx.currentTime);
+      gainBass.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      oscBass.connect(gainBass);
+      gainBass.connect(ctx.destination);
+      oscBass.start();
+      oscBass.stop(ctx.currentTime + 0.15);
+    }
+  }, [initAudio]);
 
   // Incorrect move sound
   const playIncorrectSound = useCallback(() => {

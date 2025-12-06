@@ -1,7 +1,16 @@
 // Haptic feedback hook - works on web (vibration API) and Capacitor
 
 export function useHaptics() {
+  // Check if haptics are enabled (respect user preference)
+  const isHapticsEnabled = () => {
+    if (typeof window === 'undefined') return false;
+    const hapticEnabled = localStorage.getItem('hapticEnabled');
+    return hapticEnabled !== 'false'; // Default to enabled
+  };
+
   const vibrate = (pattern: number | number[] = 10) => {
+    if (!isHapticsEnabled()) return;
+    
     // Check for Capacitor Haptics plugin first (when you add it later)
     if ((window as any).Capacitor?.Plugins?.Haptics) {
       (window as any).Capacitor.Plugins.Haptics.impact({ style: 'light' });
