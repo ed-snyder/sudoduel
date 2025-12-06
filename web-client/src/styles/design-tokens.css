@@ -1,0 +1,346 @@
+/* ===========================================
+   SudoDuel Design Tokens
+   Synthwave Theme v2.0
+   =========================================== */
+
+:root {
+  /* =========================================
+     1. PRIMARY IDENTITY COLORS
+     ========================================= */
+  
+  /* Player Identity (Cyan) */
+  --player-primary: #00FFFF;
+  --player-bright: #7FFFFF;
+  --player-dim: #00B3B3;
+  --player-glow: rgba(0, 255, 255, 0.6);
+  --player-bg: rgba(0, 255, 255, 0.1);
+  --player-bg-strong: rgba(0, 255, 255, 0.2);
+
+  /* Opponent Identity (Magenta) */
+  --opponent-primary: #FF00FF;
+  --opponent-bright: #FF7FFF;
+  --opponent-dim: #B300B3;
+  --opponent-glow: rgba(255, 0, 255, 0.6);
+  --opponent-bg: rgba(255, 0, 255, 0.1);
+  --opponent-bg-strong: rgba(255, 0, 255, 0.2);
+
+  /* Accent (Purple - The Bridge) */
+  --accent-primary: #8B00FF;
+  --accent-bright: #B366FF;
+  --accent-dim: #5C00A6;
+  --accent-glow: rgba(139, 0, 255, 0.6);
+
+  /* =========================================
+     2. SEMANTIC COLORS
+     ========================================= */
+  
+  /* Feedback States */
+  --success: #00FF88;
+  --success-dim: #00B35F;
+  --success-glow: rgba(0, 255, 136, 0.6);
+  
+  --error: #FF3366;
+  --error-dim: #B32447;
+  --error-glow: rgba(255, 51, 102, 0.6);
+  
+  --warning: #FFB800;
+  --warning-dim: #B38200;
+  --warning-glow: rgba(255, 184, 0, 0.6);
+
+  /* =========================================
+     3. NEUTRAL & TEXT COLORS
+     ========================================= */
+  
+  --text-primary: #F0E6FF;
+  --text-secondary: #B8A8D4;
+  --text-muted: #7A6B99;
+  --text-disabled: #4A3D66;
+  --text-inverse: #0D0221;
+
+  /* =========================================
+     4. BACKGROUND COLORS
+     ========================================= */
+  
+  --bg-void: #0D0221;
+  --bg-deep: #120330;
+  --bg-surface: #1A0640;
+  --bg-elevated: #240850;
+  --bg-hover: #2E0A60;
+  --bg-overlay: rgba(13, 2, 33, 0.85);
+  --bg-overlay-heavy: rgba(13, 2, 33, 0.95);
+
+  /* Grid/Structural */
+  --grid-line: #2D1B69;
+  --grid-line-strong: #3D2580;
+  --border-subtle: #1F1045;
+  --border-default: #2D1B69;
+  --border-strong: #4A2D99;
+
+  /* =========================================
+     5. MONETIZATION COLORS
+     ========================================= */
+  
+  --currency-gold: #FFD700;
+  --currency-gold-bright: #FFEC80;
+  --currency-gold-dim: #B39700;
+  --currency-gold-glow: rgba(255, 215, 0, 0.6);
+  --premium: #FFD700;
+  --sale: #FF4466;
+  --sale-glow: rgba(255, 68, 102, 0.6);
+
+  /* =========================================
+     6. RARITY TIER COLORS
+     ========================================= */
+  
+  --rarity-common: #9090A0;
+  --rarity-common-bg: rgba(144, 144, 160, 0.15);
+  
+  --rarity-uncommon: #00FF88;
+  --rarity-uncommon-bg: rgba(0, 255, 136, 0.15);
+  
+  --rarity-rare: #00FFFF;
+  --rarity-rare-bg: rgba(0, 255, 255, 0.15);
+  
+  --rarity-epic: #FF00FF;
+  --rarity-epic-bg: rgba(255, 0, 255, 0.15);
+  
+  --rarity-legendary: #FFD700;
+  --rarity-legendary-bg: rgba(255, 215, 0, 0.2);
+
+  /* =========================================
+     7. LEAGUE TIER COLORS
+     ========================================= */
+  
+  --league-bronze: #CD7F32;
+  --league-bronze-bg: #8B4513;
+  
+  --league-silver: #C0C0C0;
+  --league-silver-bg: #808080;
+  
+  --league-gold: #FFD700;
+  --league-gold-bg: #B8860B;
+  
+  --league-platinum: #E5E4E2;
+  --league-platinum-bg: #A0A0A0;
+  
+  --league-diamond: #B9F2FF;
+  --league-diamond-bg: #4A9EBF;
+  
+  --league-master: #FF00FF;
+  --league-master-bg: #800080;
+  
+  --league-gm: linear-gradient(135deg, #00FFFF 0%, #FF00FF 100%);
+  --league-gm-bg: #4A0080;
+
+  /* =========================================
+     8. CHROME/METALLIC EFFECT COLORS
+     ========================================= */
+  
+  --chrome-highlight: #FFFFFF;
+  --chrome-light: #E0F0FF;
+  --chrome-mid: #80C0E0;
+  --chrome-dark: #406080;
+  --chrome-shadow: #203040;
+
+  /* =========================================
+     9. GRADIENTS
+     ========================================= */
+  
+  /* Sunset gradient for hero moments */
+  --gradient-sunset: linear-gradient(
+    to bottom,
+    #0D0221 0%,
+    #1A0640 20%,
+    #3D1580 40%,
+    #8B00FF 55%,
+    #FF00FF 70%,
+    #FF6B9D 85%,
+    #FFB86C 100%
+  );
+
+  /* Holographic effect */
+  --gradient-holographic: linear-gradient(
+    135deg,
+    #00FFFF 0%,
+    #00FF88 25%,
+    #FFD700 50%,
+    #FF00FF 75%,
+    #00FFFF 100%
+  );
+
+  /* Chrome text gradient */
+  --gradient-chrome: linear-gradient(
+    to bottom,
+    #FFFFFF 0%,
+    #E0F0FF 20%,
+    #80C0E0 40%,
+    #00FFFF 60%,
+    #406080 80%,
+    #203040 100%
+  );
+
+  /* Rarity gradients */
+  --rarity-common-gradient: linear-gradient(135deg, #9090A0 0%, #707080 100%);
+  --rarity-uncommon-gradient: linear-gradient(135deg, #00FF88 0%, #00CC6A 100%);
+  --rarity-rare-gradient: linear-gradient(135deg, #00FFFF 0%, #00CCCC 100%);
+  --rarity-epic-gradient: linear-gradient(135deg, #FF00FF 0%, #CC00CC 100%);
+  --rarity-legendary-gradient: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+
+  /* League gradients */
+  --league-bronze-gradient: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+  --league-silver-gradient: linear-gradient(135deg, #E8E8E8 0%, #A0A0A0 100%);
+  --league-gold-gradient: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  --league-platinum-gradient: linear-gradient(135deg, #E5E4E2 0%, #B0B0B0 100%);
+  --league-diamond-gradient: linear-gradient(135deg, #B9F2FF 0%, #7DD3E8 100%);
+  --league-master-gradient: linear-gradient(135deg, #FF00FF 0%, #8B00FF 100%);
+  --league-gm-gradient: linear-gradient(135deg, #00FFFF 0%, #FF00FF 100%);
+
+  /* =========================================
+     10. GLOW EFFECTS
+     ========================================= */
+  
+  /* Player glows */
+  --glow-player-subtle: 0 0 8px rgba(0, 255, 255, 0.4);
+  --glow-player-medium: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.3);
+  --glow-player-intense: 0 0 10px rgba(0, 255, 255, 0.6), 0 0 20px rgba(0, 255, 255, 0.4), 0 0 40px rgba(0, 255, 255, 0.2);
+  --glow-player-mega: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.3), 0 0 80px rgba(0, 255, 255, 0.2);
+
+  /* Opponent glows */
+  --glow-opponent-subtle: 0 0 8px rgba(255, 0, 255, 0.4);
+  --glow-opponent-medium: 0 0 10px rgba(255, 0, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3);
+  --glow-opponent-intense: 0 0 10px rgba(255, 0, 255, 0.6), 0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2);
+
+  /* Semantic glows */
+  --glow-success: 0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3);
+  --glow-error: 0 0 10px rgba(255, 51, 102, 0.5), 0 0 20px rgba(255, 51, 102, 0.3);
+  --glow-warning: 0 0 10px rgba(255, 184, 0, 0.5), 0 0 20px rgba(255, 184, 0, 0.3);
+  --glow-gold: 0 0 10px rgba(255, 215, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.3);
+
+  /* =========================================
+     11. SHADOWS
+     ========================================= */
+  
+  --shadow-none: none;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.7);
+
+  /* 3D drop shadows */
+  --shadow-3d-cyan: 4px 4px 0 rgba(0, 179, 179, 0.8), 8px 8px 0 rgba(0, 100, 100, 0.6);
+  --shadow-3d-magenta: 4px 4px 0 rgba(179, 0, 179, 0.8), 8px 8px 0 rgba(100, 0, 100, 0.6);
+
+  /* =========================================
+     12. SPACING
+     ========================================= */
+  
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* =========================================
+     13. BORDER RADIUS
+     ========================================= */
+  
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-default: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* =========================================
+     14. Z-INDEX
+     ========================================= */
+  
+  --z-below: -1;
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+
+  /* =========================================
+     15. TIMING/EASING
+     ========================================= */
+  
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in: cubic-bezier(0.32, 0, 0.67, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-glow: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Duration */
+  --duration-instant: 75ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  --duration-dramatic: 800ms;
+  --duration-cinematic: 1200ms;
+
+  /* =========================================
+     16. CONTAINER WIDTHS
+     ========================================= */
+  
+  --container-xs: 320px;
+  --container-sm: 400px;
+  --container-md: 500px;
+  --container-lg: 640px;
+  --container-xl: 800px;
+  --container-game: 500px;
+
+  /* =========================================
+     17. TYPOGRAPHY SCALE
+     ========================================= */
+  
+  --text-xs: clamp(0.625rem, 1.5vw, 0.75rem);
+  --text-sm: clamp(0.75rem, 2vw, 0.875rem);
+  --text-base: clamp(0.875rem, 2.5vw, 1rem);
+  --text-lg: clamp(1rem, 3vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 3.5vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 4vw, 1.5rem);
+  --text-3xl: clamp(1.5rem, 5vw, 2rem);
+  --text-4xl: clamp(2rem, 6vw, 2.5rem);
+  --text-5xl: clamp(2.5rem, 8vw, 3.5rem);
+  --text-6xl: clamp(3rem, 10vw, 4.5rem);
+  
+  /* Specialized */
+  --text-timer: clamp(1.5rem, 5vw, 2rem);
+  --text-cell: clamp(1.25rem, 5vw, 2rem);
+  --text-cell-notes: clamp(0.5rem, 1.5vw, 0.6875rem);
+  --text-price: clamp(1rem, 3vw, 1.25rem);
+  --text-rank: clamp(0.875rem, 2.5vw, 1rem);
+  --text-badge: clamp(0.625rem, 1.5vw, 0.75rem);
+
+  /* =========================================
+     18. SAFE AREAS (Mobile)
+     ========================================= */
+  
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}

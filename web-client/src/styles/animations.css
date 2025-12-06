@@ -1,0 +1,780 @@
+/* ===========================================
+   SudoDuel Animations
+   Synthwave Theme v2.0
+   =========================================== */
+
+/* =========================================
+   1. GLOW ANIMATIONS
+   ========================================= */
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--glow-color, rgba(0, 255, 255, 0.5)), 
+                0 0 20px var(--glow-color, rgba(0, 255, 255, 0.3));
+  }
+  50% {
+    box-shadow: 0 0 15px var(--glow-color, rgba(0, 255, 255, 0.6)), 
+                0 0 30px var(--glow-color, rgba(0, 255, 255, 0.4)),
+                0 0 45px var(--glow-color, rgba(0, 255, 255, 0.2));
+  }
+}
+
+@keyframes glow-pulse-intense {
+  0%, 100% {
+    box-shadow: 0 0 15px var(--glow-color, rgba(0, 255, 255, 0.6)), 
+                0 0 30px var(--glow-color, rgba(0, 255, 255, 0.4));
+  }
+  50% {
+    box-shadow: 0 0 20px var(--glow-color, rgba(0, 255, 255, 0.8)), 
+                0 0 40px var(--glow-color, rgba(0, 255, 255, 0.6)),
+                0 0 60px var(--glow-color, rgba(0, 255, 255, 0.3));
+  }
+}
+
+@keyframes text-glow-pulse {
+  0%, 100% {
+    text-shadow: 0 0 10px var(--glow-color, rgba(0, 255, 255, 0.5)), 
+                 0 0 20px var(--glow-color, rgba(0, 255, 255, 0.3));
+  }
+  50% {
+    text-shadow: 0 0 15px var(--glow-color, rgba(0, 255, 255, 0.7)), 
+                 0 0 30px var(--glow-color, rgba(0, 255, 255, 0.5)),
+                 0 0 45px var(--glow-color, rgba(0, 255, 255, 0.3));
+  }
+}
+
+/* =========================================
+   2. CELL ANIMATIONS (Sudoku Grid)
+   ========================================= */
+
+/* Cell pop for correct entry */
+@keyframes cell-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Cell shake for error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+/* Cell micro-shake (subtle) */
+@keyframes micro-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* Completion flash for row/col/box */
+@keyframes completion-flash {
+  0% { 
+    background-color: rgba(0, 255, 136, 0.4);
+    box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.5);
+  }
+  100% { 
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Almost complete glow pulse */
+@keyframes almost-complete-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.4);
+  }
+}
+
+/* =========================================
+   3. FEEDBACK ANIMATIONS
+   ========================================= */
+
+/* Float up for score feedback */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Float up centered (for cell feedback) */
+@keyframes float-up-centered {
+  0% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -20px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -40px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Score pulse vignette */
+@keyframes score-pulse {
+  0% {
+    box-shadow: inset 0 0 100px 50px rgba(0, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(0, 255, 255, 0);
+  }
+}
+
+@keyframes score-pulse-intense {
+  0% {
+    box-shadow: inset 0 0 150px 80px rgba(0, 255, 255, 0.7);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(0, 255, 255, 0);
+  }
+}
+
+/* =========================================
+   4. SCREEN SHAKE
+   ========================================= */
+
+@keyframes screen-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+  20%, 40%, 60%, 80% { transform: translateX(6px); }
+}
+
+@keyframes screen-shake-subtle {
+  0%, 100% { transform: translateX(0); }
+  25%, 75% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+}
+
+/* =========================================
+   5. GLITCH TEXT EFFECT
+   ========================================= */
+
+@keyframes glitch-text {
+  0% {
+    transform: translate(0);
+    text-shadow: -2px 0 #FF00FF, 2px 0 #00FFFF;
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-3px, 2px);
+    text-shadow: 2px 0 #FF00FF, -2px 0 #00FFFF;
+    opacity: 1;
+  }
+  40% {
+    transform: translate(3px, -1px);
+    text-shadow: -2px 0 #FF00FF, 2px 0 #00FFFF;
+  }
+  60% {
+    transform: translate(-2px, 1px);
+    text-shadow: 2px 0 #FF00FF, -2px 0 #00FFFF;
+  }
+  80%, 100% {
+    transform: translate(0);
+    text-shadow: 0 0 20px #00FFFF, 0 0 40px #00FFFF, 0 0 60px #FF00FF;
+    opacity: 1;
+  }
+}
+
+@keyframes glitch-flicker {
+  0%, 100% { opacity: 1; }
+  5% { opacity: 0.8; }
+  10% { opacity: 1; }
+  15% { opacity: 0.9; }
+  20% { opacity: 1; }
+  55% { opacity: 1; }
+  60% { opacity: 0.85; }
+  65% { opacity: 1; }
+}
+
+/* =========================================
+   6. FADE ANIMATIONS
+   ========================================= */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Opponent scored fade-in tint */
+@keyframes fade-in-tint {
+  0% {
+    background-color: rgba(255, 0, 255, 0);
+  }
+  100% {
+    background-color: rgba(255, 0, 255, 0.12);
+  }
+}
+
+/* =========================================
+   7. SLIDE ANIMATIONS
+   ========================================= */
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-up {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-out-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* =========================================
+   8. SCALE ANIMATIONS
+   ========================================= */
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes scale-in-bounce {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================================
+   9. COUNTDOWN ANIMATIONS
+   ========================================= */
+
+@keyframes countdown-pop {
+  0% {
+    transform: scale(2);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes countdown-exit {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* =========================================
+   10. VICTORY/DEFEAT ANIMATIONS
+   ========================================= */
+
+@keyframes victory-flash {
+  0% {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes defeat-dim {
+  0% {
+    background-color: transparent;
+  }
+  100% {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* =========================================
+   11. STORE/PROGRESSION ANIMATIONS
+   ========================================= */
+
+@keyframes unlock-burst {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+    filter: brightness(2);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.5);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+@keyframes rank-up {
+  0% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.3) rotate(-5deg);
+    filter: brightness(2);
+  }
+  50% {
+    transform: scale(1.3) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(-2deg);
+    filter: brightness(1.5);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+}
+
+@keyframes coin-collect {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes new-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 68, 102, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(255, 68, 102, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* =========================================
+   12. LOADING/SPINNER ANIMATIONS
+   ========================================= */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+/* Dot loading animation */
+@keyframes dot-pulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================================
+   13. TIMER ANIMATIONS
+   ========================================= */
+
+@keyframes timer-warning-pulse {
+  0%, 100% {
+    color: var(--warning);
+    text-shadow: 0 0 10px var(--warning-glow);
+  }
+  50% {
+    color: var(--warning);
+    text-shadow: 0 0 20px var(--warning-glow), 0 0 30px var(--warning-glow);
+  }
+}
+
+@keyframes timer-critical-pulse {
+  0%, 100% {
+    color: var(--error);
+    text-shadow: 0 0 10px var(--error-glow);
+    transform: scale(1);
+  }
+  50% {
+    color: var(--error);
+    text-shadow: 0 0 20px var(--error-glow), 0 0 30px var(--error-glow);
+    transform: scale(1.05);
+  }
+}
+
+/* =========================================
+   14. UTILITY ANIMATION CLASSES
+   ========================================= */
+
+/* Glow pulses */
+.animate-glow-pulse {
+  animation: glow-pulse 2s var(--ease-glow) infinite;
+}
+
+.animate-glow-pulse-intense {
+  animation: glow-pulse-intense 1.5s var(--ease-glow) infinite;
+}
+
+.animate-text-glow-pulse {
+  animation: text-glow-pulse 2s var(--ease-glow) infinite;
+}
+
+/* Cell animations */
+.animate-cell-pop {
+  animation: cell-pop 200ms var(--ease-out-back) forwards;
+}
+
+.animate-shake {
+  animation: shake 150ms ease-out;
+}
+
+.animate-micro-shake {
+  animation: micro-shake 100ms ease-out;
+}
+
+.animate-completion-flash {
+  animation: completion-flash 400ms var(--ease-out) forwards;
+}
+
+.animate-almost-complete {
+  animation: almost-complete-pulse 1.5s var(--ease-glow) infinite;
+}
+
+/* Feedback */
+.animate-float-up {
+  animation: float-up 800ms var(--ease-out) forwards;
+}
+
+.animate-float-up-centered {
+  animation: float-up-centered 800ms var(--ease-out) forwards;
+}
+
+.animate-score-pulse {
+  animation: score-pulse 250ms var(--ease-out) forwards;
+}
+
+.animate-score-pulse-intense {
+  animation: score-pulse-intense 300ms var(--ease-out) forwards;
+}
+
+/* Screen effects */
+.animate-screen-shake {
+  animation: screen-shake 400ms ease-out;
+}
+
+.animate-screen-shake-subtle {
+  animation: screen-shake-subtle 200ms ease-out;
+}
+
+/* Glitch */
+.animate-glitch-text {
+  animation: glitch-text 600ms var(--ease-out) forwards;
+}
+
+.animate-glitch-flicker {
+  animation: glitch-flicker 2s ease-in-out infinite;
+}
+
+/* Fades */
+.animate-fade-in {
+  animation: fade-in 200ms var(--ease-out) forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 200ms var(--ease-out) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 300ms var(--ease-out) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 300ms var(--ease-out) forwards;
+}
+
+/* Slides */
+.animate-slide-in-up {
+  animation: slide-in-up 300ms var(--ease-out) forwards;
+}
+
+.animate-slide-in-down {
+  animation: slide-in-down 300ms var(--ease-out) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 300ms var(--ease-out) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 300ms var(--ease-out) forwards;
+}
+
+/* Scales */
+.animate-scale-in {
+  animation: scale-in 250ms var(--ease-out-back) forwards;
+}
+
+.animate-scale-out {
+  animation: scale-out 200ms var(--ease-out) forwards;
+}
+
+.animate-scale-in-bounce {
+  animation: scale-in-bounce 400ms var(--ease-out) forwards;
+}
+
+/* Countdown */
+.animate-countdown-pop {
+  animation: countdown-pop 800ms var(--ease-out-back) forwards;
+}
+
+.animate-countdown-exit {
+  animation: countdown-exit 200ms var(--ease-out) forwards;
+}
+
+/* Victory/Defeat */
+.animate-victory-flash {
+  animation: victory-flash 200ms var(--ease-out) forwards;
+}
+
+.animate-defeat-dim {
+  animation: defeat-dim 400ms var(--ease-out) forwards;
+}
+
+/* Store */
+.animate-unlock-burst {
+  animation: unlock-burst 500ms var(--ease-out-back) forwards;
+}
+
+.animate-rank-up {
+  animation: rank-up 800ms var(--ease-out-back) forwards;
+}
+
+.animate-coin-collect {
+  animation: coin-collect 600ms var(--ease-out) forwards;
+}
+
+.animate-new-pulse {
+  animation: new-pulse 1.5s var(--ease-glow) infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Loading */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s var(--ease-glow) infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Timer */
+.animate-timer-warning {
+  animation: timer-warning-pulse 1.5s var(--ease-glow) infinite;
+}
+
+.animate-timer-critical {
+  animation: timer-critical-pulse 0.75s var(--ease-glow) infinite;
+}
+
+/* =========================================
+   15. REDUCED MOTION
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-glow-pulse,
+  .animate-glow-pulse-intense,
+  .animate-text-glow-pulse,
+  .animate-almost-complete,
+  .animate-new-pulse,
+  .animate-shimmer,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-timer-warning,
+  .animate-timer-critical,
+  .animate-glitch-flicker {
+    animation: none !important;
+  }
+}
