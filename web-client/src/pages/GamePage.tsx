@@ -32,7 +32,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
-  const { victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
+  const { victory: hapticVictory, bigWin: hapticBigWin, success: hapticSuccess, error: hapticError } = useHaptics();
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -299,9 +299,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
-            // Correct move: grid already shows the number (optimistic was right)
-            // Sound and animation already played optimistically, so don't play again
-            // Just update state and reconcile
+            // Correct move: grid already shows the number (optimistic visual update)
+            // NOW play correct feedback immediately (sound, animation, haptic)
+            // Clear any previous feedback first to avoid conflicts
+            setLastMoveResult(null);
+            playCorrectSound();
+            hapticSuccess();
+            setLastMoveResult({ correct: true, row, col });
             
             // Update streak tracking
             myStreakRef.current += 1;
@@ -319,27 +323,28 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             clearRelatedNotes(row, col, value);
             
             // Grid already updated optimistically, no need to update again
-            // Animation already shown optimistically, no need to update lastMoveResult
-            // Just update state to reflect server's authoritative score/time
+            // Update state to reflect server's authoritative score/time
             setMyState(player_state);
           } else {
-            // Incorrect move: REVERT the optimistic update
-            // Play error sound (we optimistically played correct sound, need to correct it)
+            // Incorrect move: REVERT the optimistic visual update IMMEDIATELY
+            // CRITICAL: Set incorrect feedback FIRST to prevent any correct feedback from showing
+            // React batches state updates, so setting incorrect directly will override any pending correct
+            setLastMoveResult({ correct: false, row, col });
             playIncorrectSound();
+            hapticError();
             
-            // Break streak
-            myStreakRef.current = 0;
-            
-            // Revert grid
+            // Revert grid to remove the incorrectly placed number
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
               newGrid[row][col] = 0;
               return newGrid;
             });
             
+            // Break streak
+            myStreakRef.current = 0;
+            
             // Revert optimistic score update (server's player_state has correct values)
             setMyState(player_state);
-            setLastMoveResult({ correct: false, row, col });
           }
           
           // Update pressure indicators
@@ -773,12 +778,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      // IMMEDIATE FEEDBACK: Play sound, show animation, update visual state ALL AT ONCE
-      // Optimistically assume correct (most moves are correct)
-      playCorrectSound();
-      
-      // Show floating feedback immediately (optimistic "+5s!")
-      setLastMoveResult({ correct: true, row, col });
+      // IMMEDIATE VISUAL FEEDBACK: Update grid immediately for responsiveness
+      // DO NOT play sound/animation/haptic optimistically - wait for server confirmation
+      // This prevents incorrect moves from showing correct feedback first
       
       // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
       if (wasEmpty && !isInitialClue) {
@@ -838,7 +840,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         })
       );
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, playCorrectSound, clearRelatedNotes]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
