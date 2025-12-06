@@ -211,7 +211,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-between px-4 pt-4 pb-4">
+      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-4 pb-4">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
@@ -249,7 +249,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           </div>
         ) : (
           <>
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-sm mb-6">
               <div className="flex gap-3">
                 <button
                   onClick={() => {/* TODO: Premium flow */}}
@@ -277,7 +277,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
+      {!searching && (
+        <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
         <button
           onClick={() => setShowMatchHistory(true)}
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
