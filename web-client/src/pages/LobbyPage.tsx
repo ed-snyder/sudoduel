@@ -211,7 +211,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-12 pb-4">
+      <div className="flex-1 flex flex-col items-center justify-between px-4 pt-4 pb-4">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
@@ -248,34 +248,36 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             </button>
           </div>
         ) : (
-          <div className="w-full max-w-sm space-y-4">
-            <div className="flex gap-3">
-              <button
-                onClick={() => {/* TODO: Premium flow */}}
-                className="flex-1 py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
-              >
-                Upgrade to SudoDuel+
-              </button>
-              <button
-                onClick={() => alert('Coming Soon to SudoDuel+')}
-                className="flex-1 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all flex items-center justify-center"
-              >
-                Daily Challenge
-              </button>
+          <>
+            <div className="w-full max-w-sm">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {/* TODO: Premium flow */}}
+                  className="flex-1 py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
+                >
+                  Upgrade to SudoDuel+
+                </button>
+                <button
+                  onClick={() => alert('Coming Soon to SudoDuel+')}
+                  className="flex-1 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all flex items-center justify-center"
+                >
+                  Daily Challenge
+                </button>
+              </div>
             </div>
 
             <button
               onClick={handleFindMatch}
-              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              className="w-full max-w-sm py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
             >
               Find Match
             </button>
-          </div>
+          </>
         )}
       </div>
 
       {/* Bottom Buttons */}
-      <div className="px-4 pb-6 pt-8 flex gap-3 safe-bottom">
+      <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
         <button
           onClick={() => setShowMatchHistory(true)}
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
