@@ -65,10 +65,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
   
-  // Streak system
-  const [myStreak, setMyStreak] = useState(0); // Renamed from currentStreak
-  const [opponentStreak, setOpponentStreak] = useState(0);
+  // Streak system - only track longest streak for display
   const [longestStreak, setLongestStreak] = useState(0);
+  const myStreakRef = useRef(0);
+  const opponentStreakRef = useRef(0);
   
   // Rematch system
   const [rematchState, setRematchState] = useState<'idle' | 'requested' | 'waiting'>('idle');
@@ -78,7 +78,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   
   // Pressure indicators
   const prevScoreDiffRef = useRef<number>(0);
-  const [showVictoryEffects, setShowVictoryEffects] = useState(false);
   const [showDefeatOverlay, setShowDefeatOverlay] = useState(false);
   const [displayedRating, setDisplayedRating] = useState<number | null>(null);
   const [showScreenShake, setShowScreenShake] = useState(false);
@@ -249,12 +248,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       case 'GAME_START':
         initAudio();
         resetStreak();
-        setMyStreak(0);
-        setOpponentStreak(0);
+        myStreakRef.current = 0;
+        opponentStreakRef.current = 0;
         setLongestStreak(0);
         prevScoreDiffRef.current = 0;
         setDisplayedRating(null); // Reset rating display for new game
-        setShowVictoryEffects(false);
         setShowDefeatOverlay(false);
         setShowScreenShake(false);
         const grid = message.data.initial_grid;
@@ -281,21 +279,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         const isMyMove = myPlayerId != null ? isMyMoveById : isMyMoveBySlot;
 
         if (isMyMove) {
-          // Track score difference for pressure indicators
-          const oldScoreDiff = prevScoreDiffRef.current;
-          
           // Update MY grid and state
           if (correct) {
             // Correct move: grid already shows the number (optimistic was right)
             // DON'T call setMyGrid again - just play sound, clear related notes, update state
             playCorrectSound();
             
-            // Update streak using functional updates to avoid stale closure
-            setMyStreak((prevStreak) => {
-              const newStreak = prevStreak + 1;
-              setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
-              return newStreak;
-            });
+            // Update streak tracking
+            myStreakRef.current += 1;
+            setLongestStreak((prevLongest) => Math.max(prevLongest, myStreakRef.current));
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -313,13 +305,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             // Incorrect move: REVERT the optimistic update
             playIncorrectSound();
             
-            // Break streak with shatter effect
-            setMyStreak((prevStreak) => {
-              if (prevStreak >= 3) {
-                // Streak broken - could add visual shatter effect here
-              }
-              return 0;
-            });
+            // Break streak
+            myStreakRef.current = 0;
             
             setMyGrid((prev) => {
               const newGrid = prev.map((r) => [...r]);
@@ -348,10 +335,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           // Update opponent state only (not their grid - we can't see it!)
           setOpponentState(player_state);
           
-          // Track opponent's scored cells and streak
+          // Track opponent's scored cells
           if (correct) {
-            // Update opponent streak
-            setOpponentStreak((prevStreak) => prevStreak + 1);
+            // Update opponent streak tracking
+            opponentStreakRef.current += 1;
             
             const cellKey = `${row}-${col}`;
             setOpponentScoredCells((prev) => {
@@ -369,7 +356,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             // playDistantTick(); // Uncomment if enabled in settings
           } else {
             // Opponent made incorrect move - reset their streak
-            setOpponentStreak(0);
+            opponentStreakRef.current = 0;
           }
         }
 
@@ -507,7 +494,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         
         // Trigger victory/defeat effects
         if (didWinForEnd) {
-          setShowVictoryEffects(true);
           playVictorySound();
           hapticVictory();
           
