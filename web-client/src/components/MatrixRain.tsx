@@ -40,13 +40,15 @@ export default function MatrixRain() {
       {drops.map((drop) => (
         <span
           key={drop.id}
-          className="absolute font-mono text-white animate-matrix-fall"
+          className="absolute font-display text-white animate-matrix-fall"
           style={{
             left: `${drop.x}%`,
             fontSize: `${drop.size}px`,
             opacity: drop.opacity,
             animationDuration: `${drop.duration}s`,
             animationDelay: `${drop.delay}s`,
+            fontFamily: "'Industry', 'Orbitron', sans-serif",
+            fontWeight: 900,
           }}
         >
           {drop.digit}
