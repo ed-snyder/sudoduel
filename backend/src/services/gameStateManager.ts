@@ -312,6 +312,22 @@ export const GameStateManager = {
     // If ANY forfeit occurred, the forfeiting player ALWAYS loses
     // This check MUST happen FIRST and MUST override EVERYTHING
     // NO EXCEPTIONS - FORFEITING PLAYER NEVER WINS
+    // Also check disconnectedPlayerId as a safety net for disconnect forfeits
+    
+    // If a player disconnected and grace period expired, they should forfeit
+    if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
+      const elapsed = Date.now() - game.disconnectTime;
+      // If grace period expired (15 seconds), treat as forfeit
+      if (elapsed >= 15000) {
+        console.log(`[GameState] Disconnected player ${game.disconnectedPlayerId} exceeded grace period, treating as forfeit`);
+        // Ensure forfeit is marked
+        if (game.forfeitingPlayerId === null) {
+          game.forfeitingPlayerId = game.disconnectedPlayerId;
+          const winner = game.disconnectedPlayerId === p1.playerId ? p2 : p1;
+          game.forfeitWinnerId = winner.playerId;
+        }
+      }
+    }
     
     if (game.forfeitingPlayerId != null) {
       // The forfeiting player ALWAYS loses, opponent ALWAYS wins
@@ -430,13 +446,14 @@ export const GameStateManager = {
     // This is a final safeguard that runs AFTER normal win conditions
     // It ensures that even if forfeitingPlayerId was somehow missed above,
     // the forfeiting player CANNOT win
-    if (game.forfeitingPlayerId != null) {
-      const forfeitingId = game.forfeitingPlayerId;
-      
-      // If winnerId is the forfeiting player, FORCE opponent to win
+    // Also check disconnectedPlayerId as additional safety net
+    const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
+    
+    if (forfeitingId != null) {
+      // If winnerId is the forfeiting player OR null (tied scores), FORCE opponent to win
       if (winnerId === forfeitingId || winnerId === null) {
-        console.error(`[GameState] FINAL SAFETY CHECK: Winner ${winnerId} is forfeiting player or null, FORCING opponent win`);
-        // The forfeiting player loses, opponent wins - NO EXCEPTIONS
+        console.error(`[GameState] FINAL SAFETY CHECK: Winner ${winnerId} is forfeiting/disconnected player ${forfeitingId} or null (tied), FORCING opponent win`);
+        // The forfeiting/disconnected player loses, opponent wins - NO EXCEPTIONS
         if (forfeitingId === p1.playerId) {
           winnerId = p2.playerId;
           resultCode = 2;

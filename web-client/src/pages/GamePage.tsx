@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import { useHaptics } from '../hooks/useHaptics';
@@ -174,6 +174,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       return () => clearTimeout(timer);
     }
   }, [lastMoveResult]);
+
+  // PERFORMANCE: Measure DOM paint time after state updates
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      // Use requestAnimationFrame to measure after paint
+      requestAnimationFrame(() => {
+        performance.mark('dom-paint-complete');
+        const measures = performance.getEntriesByName('number-click-to-state', 'measure');
+        if (measures.length > 0) {
+          performance.measure('state-to-paint', 'number-click-state-update', 'dom-paint-complete');
+          const stateToPaint = performance.getEntriesByName('state-to-paint', 'measure')[0];
+          if (stateToPaint && stateToPaint.duration > 16) {
+            console.warn(`[PERF] State to paint took ${stateToPaint.duration.toFixed(2)}ms (target: <16ms)`);
+          }
+        }
+      });
+    }
+  }, [myGrid, selectedCell]);
 
 
   // Rematch handlers - defined early to avoid hook ordering issues
@@ -590,6 +608,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
 
 
   const handleCellClick = useCallback((row: number, col: number) => {
+    // PERFORMANCE: Mark start of cell click handling
+    if (import.meta.env.DEV) {
+      performance.mark('cell-click-start');
+    }
+
     if (gameStatus !== 'playing' || myState?.is_locked) {
       if (import.meta.env.DEV) {
         console.log(`[GamePage] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
@@ -606,6 +629,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     // If tapping the same cell again, clear selection/highlights
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
       setSelectedCell(null);
+      if (import.meta.env.DEV) {
+        performance.mark('cell-click-state-update');
+        performance.measure('cell-click-to-state', 'cell-click-start', 'cell-click-state-update');
+      }
       return;
     }
 
@@ -613,11 +640,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     // SudokuGrid will handle highlighting based on whether selected cell has a value
     // CRITICAL: This preserves the UX feature where clicking a cell with a number
     // highlights all identical numbers and related cells (row/column/3x3 box)
+    // OPTIMIZED: Removed myGrid from dependencies - we don't need it for selection
     if (import.meta.env.DEV) {
-      console.log(`[GamePage] Selecting cell (${row}, ${col}), current value: ${myGrid[row]?.[col]}, isInitial: ${isInitial}`);
+      console.log(`[GamePage] Selecting cell (${row}, ${col}), isInitial: ${isInitial}`);
     }
     setSelectedCell({ row, col });
-  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, myGrid]);
+    
+    if (import.meta.env.DEV) {
+      performance.mark('cell-click-state-update');
+      performance.measure('cell-click-to-state', 'cell-click-start', 'cell-click-state-update');
+    }
+  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell]);
 
   // Back button removed - forfeit can be accessed via other means if needed
   // const handleBackClick = () => { ... }
@@ -630,6 +663,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   };
 
   const handleNumberClick = useCallback((num: number) => {
+    // PERFORMANCE: Mark start of number click handling
+    if (import.meta.env.DEV) {
+      performance.mark('number-click-start');
+    }
+
     if (!selectedCell || gameStatus !== 'playing') {
       if (import.meta.env.DEV) {
         console.log(`[GamePage] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
@@ -665,6 +703,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         
         return newNotes;
       });
+      
+      if (import.meta.env.DEV) {
+        performance.mark('number-click-state-update');
+        performance.measure('number-click-to-state', 'number-click-start', 'number-click-state-update');
+      }
     } else {
       // Normal mode: place number
       // Prevent placing numbers in initial clue cells
@@ -673,26 +716,46 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       }
       
       const { row, col } = selectedCell;
+      const cellKey = `${row}-${col}`;
       
-      // OPTIMISTIC: Update grid immediately
+      // OPTIMISTIC: Batch all state updates together for single render
+      // React 18+ automatically batches these, but being explicit helps
       setMyGrid((prev) => {
         const newGrid = prev.map((r) => [...r]);
         newGrid[row][col] = num;
         return newGrid;
       });
       
-      // OPTIMISTIC: Clear notes for this cell
-      const cellKey = `${row}-${col}`;
+      // OPTIMISTIC: Clear notes for this cell (batched with grid update)
       setNotes(prev => {
         const newNotes = new Map(prev);
         newNotes.delete(cellKey);
         return newNotes;
       });
       
-      // Clear selection immediately
+      // Clear selection immediately (batched)
       setSelectedCell(null);
       
-      // Then send to server
+      if (import.meta.env.DEV) {
+        performance.mark('number-click-state-update');
+        performance.measure('number-click-to-state', 'number-click-start', 'number-click-state-update');
+      }
+      
+      // DEFER: Clear related notes AFTER visual update (non-blocking)
+      // Use requestIdleCallback with setTimeout fallback to avoid blocking paint
+      // Store in ref to avoid stale closure
+      const clearNotesRef = clearRelatedNotes;
+      const deferClearNotes = () => {
+        clearNotesRef(row, col, num);
+      };
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(deferClearNotes, { timeout: 100 });
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(deferClearNotes, 0);
+      }
+      
+      // Then send to server (non-blocking)
       wsRef.current?.send(
         JSON.stringify({
           type: 'PLACE_NUMBER',
@@ -754,13 +817,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   };
 
   // Clear notes containing a value from the same row, column, and 3x3 box
-  const clearRelatedNotes = (row: number, col: number, value: number) => {
+  // OPTIMIZED: Memoized to avoid recreating function on every render
+  const clearRelatedNotes = useCallback((row: number, col: number, value: number) => {
     setNotes(prev => {
       const newNotes = new Map(prev);
       
       // Get the 3x3 box starting position
       const boxStartRow = Math.floor(row / 3) * 3;
       const boxStartCol = Math.floor(col / 3) * 3;
+      
+      // OPTIMIZED: Pre-calculate bounds to avoid repeated calculations
+      const boxEndRow = boxStartRow + 3;
+      const boxEndCol = boxStartCol + 3;
       
       // Check all cells
       for (let r = 0; r < 9; r++) {
@@ -771,10 +839,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           // Check if cell is in same row, column, or box
           const sameRow = r === row;
           const sameCol = c === col;
-          const sameBox = (
-            r >= boxStartRow && r < boxStartRow + 3 &&
-            c >= boxStartCol && c < boxStartCol + 3
-          );
+          const sameBox = r >= boxStartRow && r < boxEndRow && c >= boxStartCol && c < boxEndCol;
           
           if (sameRow || sameCol || sameBox) {
             const cellKey = `${r}-${c}`;
@@ -794,7 +859,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       
       return newNotes;
     });
-  };
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -810,14 +875,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   // Rating no longer displayed in player info bar (removed)
 
   // Compute digit counts for number pad depletion styling (purely visual)
-  const digitCounts: Record<number, number> = {};
-  myGrid.forEach((row) => {
-    row.forEach((value) => {
-      if (value >= 1 && value <= 9) {
-        digitCounts[value] = (digitCounts[value] || 0) + 1;
-      }
+  // MEMOIZED: Only recalculate when grid changes, not on every render
+  const digitCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    myGrid.forEach((row) => {
+      row.forEach((value) => {
+        if (value >= 1 && value <= 9) {
+          counts[value] = (counts[value] || 0) + 1;
+        }
+      });
     });
-  });
+    return counts;
+  }, [myGrid]);
 
   // Connecting screen
   if (gameStatus === 'connecting') {
@@ -1279,6 +1348,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               <button
                 key={num}
                 onClick={() => handleNumberClick(num)}
+                onTouchStart={(e) => {
+                  // PERFORMANCE: Use touchstart for instant mobile response (eliminates 300ms delay)
+                  if (gameStatus === 'playing' && !myState.is_locked && !depleted) {
+                    e.preventDefault(); // Prevent click event
+                    handleNumberClick(num);
+                  }
+                }}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className={`
                   min-h-[48px] sm:min-h-[56px] rounded-lg transition-colors touch-manipulation font-bold
@@ -1289,7 +1365,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
                     : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
                   }
                 `}
-                style={{ fontSize: 'clamp(1.125rem, 4.5vw, 1.5rem)' }}
+                style={{ 
+                  fontSize: 'clamp(1.125rem, 4.5vw, 1.5rem)',
+                  willChange: 'background-color', // GPU acceleration hint
+                  transitionDuration: '75ms', // Faster transition
+                }}
               >
                 {num}
               </button>

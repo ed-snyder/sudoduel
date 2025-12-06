@@ -178,7 +178,6 @@ function SudokuGrid({
       className={`
         relative grid grid-cols-9 gap-0 border-2 border-gray-700
         ${lockedOut ? 'bg-gray-100' : 'bg-white'}
-        transition-all duration-300
         w-full
       `}
       style={{
@@ -231,6 +230,13 @@ function SudokuGrid({
                 }
               }}
               onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
+              onTouchStart={(e) => {
+                // PERFORMANCE: Use touchstart for instant mobile response (eliminates 300ms delay)
+                if (!lockedOut) {
+                  e.preventDefault(); // Prevent click event
+                  onCellClick(rowIndex, colIndex);
+                }
+              }}
               className={`
                 relative flex items-center justify-center
                 ${borderRight} ${borderBottom}
@@ -253,11 +259,12 @@ function SudokuGrid({
                     ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     : 'cursor-default'
                 }
-                transition-colors duration-150 touch-manipulation
+                transition-colors duration-75 touch-manipulation
+                style={{
+                  aspectRatio: '1 / 1',
+                  willChange: 'background-color', // GPU acceleration hint
+                }}
               `}
-              style={{
-                aspectRatio: '1 / 1',
-              }}
               disabled={lockedOut}
             >
               {hasValue ? (
