@@ -67,6 +67,7 @@ function SudokuGrid({
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
+  const lastProcessedMoveRef = useRef<string | null>(null);
   const isInitialCell = (row: number, col: number) => {
     return initialGrid[row][col] !== 0;
   };
@@ -119,6 +120,15 @@ function SudokuGrid({
     if (!lastMoveResult) return;
 
     const { row, col, correct } = lastMoveResult;
+    // Create unique move ID to prevent duplicate processing
+    const moveId = `${row}-${col}-${correct}`;
+    
+    // Prevent duplicate processing (React StrictMode or rapid state updates)
+    if (lastProcessedMoveRef.current === moveId) {
+      return;
+    }
+    lastProcessedMoveRef.current = moveId;
+    
     const feedbackId = `${row}-${col}-${Date.now()}`;
     
     if (correct) {
@@ -335,9 +345,9 @@ function SudokuGrid({
                 whitespace-nowrap block font-bold
                 ${feedback.correct 
                   ? (feedback.streak && feedback.streak >= 8 
-                      ? 'text-indigo-400 text-2xl font-black'
+                      ? 'text-green-400 text-2xl font-black'
                       : feedback.streak && feedback.streak >= 5
-                      ? 'text-indigo-400 text-xl font-bold'
+                      ? 'text-green-400 text-xl font-bold'
                       : 'text-green-400 text-lg font-semibold')
                   : 'text-red-500 text-lg'
                 }
@@ -345,9 +355,9 @@ function SudokuGrid({
               style={{
                 textShadow: feedback.correct
                   ? (feedback.streak && feedback.streak >= 8
-                      ? '0 0 12px rgba(99, 102, 241, 0.8), 0 0 24px rgba(99, 102, 241, 0.4)'
+                      ? '0 0 12px rgba(16, 185, 129, 0.8), 0 0 24px rgba(16, 185, 129, 0.4)'
                       : feedback.streak && feedback.streak >= 5
-                      ? '0 0 10px rgba(99, 102, 241, 0.6)'
+                      ? '0 0 10px rgba(16, 185, 129, 0.6)'
                       : '0 0 8px rgba(16, 185, 129, 0.6)')
                   : '0 0 8px rgba(239, 68, 68, 0.6)',
               }}

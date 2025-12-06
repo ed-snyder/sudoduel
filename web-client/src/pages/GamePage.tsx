@@ -32,7 +32,51 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
-  const { victory: hapticVictory, bigWin: hapticBigWin, success: hapticSuccess, error: hapticError, vibrate } = useHaptics();
+  const { victory: hapticVictory, bigWin: hapticBigWin, error: hapticError, vibrate } = useHaptics();
+  
+  // Synchronized feedback function - all feedback fires together
+  const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
+    const now = performance.now();
+    if (import.meta.env.DEV) {
+      console.log(`[FEEDBACK] Triggered at ${now}ms for streak ${streak}`);
+    }
+    
+    // 1. Haptic (fires first as it has hardware latency)
+    // Use patterns with rhythm - gaps are as important as vibrations
+    if (streak >= 8) {
+      vibrate([15, 25, 15, 25, 40]); // Triumphant pattern
+    } else if (streak >= 5) {
+      vibrate([10, 20, 30]); // Building crescendo
+    } else if (streak >= 3) {
+      vibrate([8, 40, 12]); // Quick double-tap (heartbeat)
+    } else {
+      vibrate([12, 0, 8]); // Thump with tiny echo
+    }
+    
+    // 2. Sound (no delay)
+    playCorrectSound();
+    
+    // 3. Visual state updates (triggers on next render, but initiated same frame)
+    setLastMoveResult({ correct: true, row, col });
+    setShowScorePulse(streak >= 5 ? 'intense' : 'normal');
+    setTimeout(() => setShowScorePulse('none'), 400);
+    
+    // 4. Cell pop animation
+    setLastScoredCell({ row, col });
+    setTimeout(() => setLastScoredCell(null), 300);
+    
+    // 5. Micro-shake at streak milestones
+    if ([3, 5, 8].includes(streak)) {
+      setShowMicroShake(true);
+      setTimeout(() => setShowMicroShake(false), 150);
+    }
+    
+    // 6. SUPER flash at streak 8
+    if (streak === 8) {
+      setShowSuperFlash(true);
+      setTimeout(() => setShowSuperFlash(false), 600);
+    }
+  }, [playCorrectSound, vibrate]);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -306,44 +350,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         if (isMyMove) {
           // Update MY grid and state
           if (correct) {
-            // Correct move: feedback already played optimistically, now add enhanced effects
+            // Correct move: NOW play synchronized feedback (haptic, sound, visual)
             const newStreak = myStreakRef.current + 1;
             myStreakRef.current = newStreak;
             setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
             
-            // FEATURE 1: Escalating haptic patterns
-            hapticSuccess();
-            if (newStreak >= 8) {
-              vibrate([15, 25, 15, 25, 40]); // Triumphant pattern
-            } else if (newStreak >= 5) {
-              vibrate([10, 20, 30]); // Building intensity
-            } else if (newStreak >= 3) {
-              vibrate([10, 15]); // Double tap
-            }
+            // Trigger all feedback synchronously
+            triggerScoreFeedback(newStreak, row, col);
             
-            // FEATURE 2: Screen edge pulse
-            setShowScorePulse(newStreak >= 5 ? 'intense' : 'normal');
-            setTimeout(() => setShowScorePulse('none'), 400);
-            
-            // FEATURE 3: Cell pop animation
-            setLastScoredCell({ row, col });
-            setTimeout(() => setLastScoredCell(null), 300);
-            
-            // FEATURE 5a: Micro-shake at streak milestones
-            if ([3, 5, 8].includes(newStreak)) {
-              setShowMicroShake(true);
-              setTimeout(() => setShowMicroShake(false), 150);
-            }
-            
-            // FEATURE 5c: SUPER flash at streak 8
-            if (newStreak === 8) {
-              setShowSuperFlash(true);
-              setTimeout(() => setShowSuperFlash(false), 600);
-            }
-            
-            // FEATURE 5d: Completion flash
-            // Grid already updated optimistically, check with current state
-            // Use setTimeout to ensure grid state has updated
+            // Completion flash (deferred check)
             setTimeout(() => {
               setMyGrid((prevGrid) => {
                 checkCompletions(prevGrid, row, col);
@@ -905,12 +920,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      // IMMEDIATE FEEDBACK: Play correct feedback optimistically (most moves are correct)
-      // Sound, animation, and haptic all happen instantly for best UX
-      // If server says incorrect, we'll immediately switch to incorrect feedback
-      playCorrectSound();
-      hapticSuccess();
-      setLastMoveResult({ correct: true, row, col });
+      // OPTIMISTIC: Update UI immediately, but DON'T play feedback yet
+      // Feedback will only play after server confirms the move is correct
+      // This prevents incorrect moves from playing correct feedback first
       
       // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
       if (wasEmpty && !isInitialClue) {
@@ -970,7 +982,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         })
       );
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes, playCorrectSound, hapticSuccess]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, wsRef, clearRelatedNotes]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
