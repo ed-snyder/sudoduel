@@ -114,12 +114,12 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   return (
     <div className="min-h-screen bg-void flex flex-col">
       {/* Header with Logo */}
-      <div className="px-4 pt-6 pb-2 flex flex-col items-center safe-top">
+      <div className="px-4 pt-20 pb-2 flex flex-col items-center safe-top">
         <SudoDuelLogo size="lg" />
       </div>
       
       {/* Player Card */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-4">
         <div className="bg-surface rounded-xl p-4 border border-grid-line">
           <div className="flex items-center gap-4">
             {/* Avatar - Tappable */}
@@ -166,7 +166,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Difficulty Selection */}
-      <div className="px-4 py-2">
+      <div className="px-4 py-3">
         <div className="flex gap-2">
           {difficulties.map((diff) => (
             <button
@@ -193,7 +193,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Stats for Selected Difficulty */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-4">
         <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-muted font-body text-sm">Rating</span>
@@ -211,7 +211,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-4">
+      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-8 pb-4">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
