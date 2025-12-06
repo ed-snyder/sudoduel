@@ -354,18 +354,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           // Update MY grid and state
           if (correct) {
             // Correct move: Feedback already played optimistically via local validation
+            // Completion flash already triggered locally - do NOT re-trigger to avoid delay
             // Just sync state with server's authoritative values
             const newStreak = myStreakRef.current + 1;
             myStreakRef.current = newStreak;
             setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
-            
-            // Completion flash (deferred check)
-            setTimeout(() => {
-              setMyGrid((prevGrid) => {
-                checkCompletions(prevGrid, row, col);
-                return prevGrid; // Return unchanged
-              });
-            }, 0);
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -382,13 +375,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             // Update state to reflect server's authoritative score/time
             setMyState(player_state);
           } else {
-            // Incorrect move: Server says incorrect (should match our local validation)
-            // If we somehow played correct feedback optimistically, override it
-            // This should be rare since we validate locally, but handle edge cases
-            setLastMoveResult({ correct: false, row, col });
-            playIncorrectSound();
-            hapticError();
-            myStreakRef.current = 0; // Reset streak
+            // Incorrect move: Server confirms incorrect (matches our local validation)
+            // Error feedback already played locally - do NOT re-trigger to avoid duplicate flash
+            // Only revert grid and sync state
             
             // Revert grid to remove the incorrectly placed number
             setMyGrid((prev) => {
@@ -397,7 +386,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               return newGrid;
             });
             
-            // Break streak
+            // Reset streak (already done locally, but ensure consistency)
             myStreakRef.current = 0;
             
             // Revert optimistic score update (server's player_state has correct values)
@@ -947,6 +936,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         }
       } else {
         // INSTANT ERROR FEEDBACK: Incorrect move
+        if (import.meta.env.DEV) {
+          console.log(`[ERROR] Local validation triggered at ${performance.now()}`);
+        }
         setLastMoveResult({ correct: false, row, col });
         playIncorrectSound();
         hapticError();
@@ -957,11 +949,21 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       
       // OPTIMISTIC: Update grid only for correct moves (we know it's correct locally)
       if (isCorrect) {
-        setMyGrid((prev) => {
-          const newGrid = prev.map((r) => [...r]);
-          newGrid[row][col] = num;
-          return newGrid;
-        });
+        // Create new grid with the number placed
+        const newGrid = myGrid.map((r) => [...r]);
+        newGrid[row][col] = num;
+        setMyGrid(newGrid);
+        
+        // IMMEDIATELY check for completions using the NEW grid state (not stale myGrid)
+        // This ensures the flash happens instantly, not after server response
+        if (import.meta.env.DEV) {
+          const completeTime = performance.now();
+          console.log(`[COMPLETE] Number placed at ${completeTime}`);
+        }
+        checkCompletions(newGrid, row, col);
+        if (import.meta.env.DEV) {
+          console.log(`[COMPLETE] Completion check triggered at ${performance.now()}`);
+        }
         
         // OPTIMISTIC: Clear notes for this cell (batched with grid update)
         setNotes(prev => {
