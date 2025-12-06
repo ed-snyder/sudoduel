@@ -251,17 +251,41 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           <div className="w-full max-w-sm space-y-4">
             <button
               onClick={() => {/* TODO: Premium flow */}}
-              className="w-full py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center gap-2"
+              className="w-full max-w-xs mx-auto py-3 bg-transparent border-2 border-player rounded-lg hover:bg-player/20 transition-all relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0,255,255,0.1) 0%, rgba(139,0,255,0.1) 100%)',
+              }}
             >
-              <span>👑</span>
-              <span>Upgrade to SudoDuel+</span>
+              <span 
+                className="font-display font-black text-lg relative z-10 animate-logo-shimmer"
+                style={{
+                  background: 'linear-gradient(135deg, #00B3B3 0%, #00CCCC 25%, #00B3B3 50%, #008080 75%, #00B3B3 100%)',
+                  backgroundSize: '200% 200%',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Upgrade to SudoDuel+
+              </span>
             </button>
 
             <button
               onClick={handleFindMatch}
-              className="w-full py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              className="w-full py-4 bg-transparent border-2 border-opponent text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-opponent/20 active:scale-[0.98] transition-all relative"
+              style={{
+                boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2)',
+              }}
             >
-              Find Match
+              <span 
+                className="text-opponent relative z-10"
+                style={{
+                  WebkitTextStroke: '1px #FF00FF',
+                  textShadow: '0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(255, 0, 255, 0.5)',
+                }}
+              >
+                Find Match
+              </span>
             </button>
           </div>
         )}
@@ -271,21 +295,55 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       <div className="px-4 pb-6 pt-8 flex gap-3 safe-bottom">
         <button
           onClick={() => setShowMatchHistory(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
+          style={{
+            boxShadow: '0 0 15px rgba(255, 0, 255, 0.3), 0 0 30px rgba(255, 0, 255, 0.15)',
+          }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            className="w-5 h-5" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{
+              filter: 'drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))',
+            }}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          History
+          <span
+            style={{
+              textShadow: '0 0 8px rgba(255, 0, 255, 0.6)',
+            }}
+          >
+            History
+          </span>
         </button>
         <button
           onClick={() => setShowStats(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
+          style={{
+            boxShadow: '0 0 15px rgba(255, 0, 255, 0.3), 0 0 30px rgba(255, 0, 255, 0.15)',
+          }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            className="w-5 h-5" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{
+              filter: 'drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))',
+            }}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          Stats
+          <span
+            style={{
+              textShadow: '0 0 8px rgba(255, 0, 255, 0.6)',
+            }}
+          >
+            Stats
+          </span>
         </button>
       </div>
 

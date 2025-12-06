@@ -87,7 +87,12 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-surface border-2 border-opponent rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-scale-in">
+      <div 
+        className="bg-surface border-2 border-opponent rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-scale-in"
+        style={{ 
+          boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2), 0 0 60px rgba(255, 0, 255, 0.1)'
+        }}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-grid-line flex items-center justify-between">
           <h2 className="text-xl font-display font-black text-primary tracking-wide">STATISTICS</h2>

@@ -34,7 +34,12 @@ export default function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSa
 
   return (
     <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-end justify-center z-50 p-4 pb-20 animate-fade-in">
-      <div className="bg-surface border border-grid-line rounded-xl w-full max-w-sm shadow-2xl animate-scale-in">
+      <div 
+        className="bg-surface border border-grid-line rounded-xl w-full max-w-sm shadow-2xl animate-scale-in"
+        style={{ 
+          boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2), 0 0 60px rgba(255, 0, 255, 0.1)'
+        }}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-grid-line flex items-center justify-between">
           <h2 className="text-lg font-heading font-semibold text-primary tracking-wide">CHOOSE AVATAR</h2>
