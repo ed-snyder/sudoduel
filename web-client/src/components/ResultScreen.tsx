@@ -122,6 +122,7 @@ export default function ResultScreen({
   const [breathePhase, setBreathePhase] = useState(0);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [showOpponentModal, setShowOpponentModal] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
   const hasTriggeredEffects = useRef(false);
@@ -601,17 +602,32 @@ export default function ResultScreen({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8 relative z-30">
-        {/* Result Title - Slam in effect */}
+        {/* Result Title - Fixed fill rendering */}
         <div 
           className={`relative mb-3 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
         >
-          {/* Outer glow layer */}
+          {/* Shadow/depth layer */}
           <span
-            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
+            className="absolute text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
-              color: 'transparent',
-              WebkitTextStroke: `8px ${glowColor}`,
+              color: glowColor,
+              filter: 'blur(15px)',
+              opacity: 0.5,
+              top: '4px',
+              left: '4px',
+            }}
+            aria-hidden="true"
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+
+          {/* Outer glow */}
+          <span
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            style={{
+              ...titleStyle,
+              color: glowColor,
               filter: 'blur(12px)',
               opacity: 0.6,
             }}
@@ -620,52 +636,50 @@ export default function ResultScreen({
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Inner glow layer */}
+          {/* Inner glow */}
           <span
-            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
-              color: 'transparent',
-              WebkitTextStroke: `5px ${glowColor}`,
-              filter: 'blur(4px)',
-              opacity: 0.8,
+              color: glowColor,
+              filter: 'blur(5px)',
+              opacity: 0.7,
             }}
             aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* White stroke layer */}
+          {/* Main fill - solid color, no gradient clipping issues */}
           <span
-            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
+            className="relative text-5xl sm:text-6xl select-none"
             style={{
               ...titleStyle,
-              color: 'transparent',
-              WebkitTextStroke: '2.5px rgba(255,255,255,0.95)',
+              color: fillColor,
+              textShadow: `
+                0 0 2px ${fillColorLight},
+                0 0 4px ${fillColor},
+                1px 1px 0 rgba(255,255,255,0.3),
+                -1px -1px 0 ${fillColorDark}
+              `,
             }}
-            aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Fill gradient */}
+          {/* Shimmer overlay */}
           <span
-            className="relative text-8xl sm:text-9xl select-none"
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
-              background: isDraw 
-                ? 'linear-gradient(135deg, #8B8B8B 0%, #FFFFFF 50%, #8B8B8B 100%)'
-                : `linear-gradient(135deg, ${fillColor} 0%, ${fillColorLight} 25%, ${fillColor} 50%, ${fillColorDark} 75%, ${fillColor} 100%)`,
+              background: `linear-gradient(135deg, transparent 30%, ${fillColorLight}40 50%, transparent 70%)`,
               backgroundSize: '200% 200%',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: 'logo-shimmer 3s ease-in-out infinite',
-              WebkitFontSmoothing: 'antialiased',
-              textRendering: 'optimizeLegibility',
-              backfaceVisibility: 'hidden',
-              transform: 'translateZ(0)',
             }}
+            aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
@@ -700,14 +714,26 @@ export default function ResultScreen({
           </p>
         )}
 
-        {/* Score comparison */}
-        <div className="flex items-center gap-6 mb-6">
-          <div className="text-center">
+        {/* Score comparison with name boxes */}
+        <div className="flex items-center gap-4 mb-6">
+          {/* Your score box */}
+          <div 
+            className="flex flex-col items-center px-5 py-3 rounded-lg"
+            style={{
+              background: 'rgba(0,255,255,0.08)',
+              border: '2px solid rgba(0,255,255,0.4)',
+              boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
+              minWidth: '120px',
+            }}
+          >
             <span 
-              className="text-xs font-body uppercase tracking-widest block mb-2"
-              style={{ color: 'rgba(0,255,255,0.7)' }}
+              className="text-xs font-body uppercase tracking-widest mb-2 truncate max-w-[110px]"
+              style={{ color: 'rgba(0,255,255,0.9)' }}
+              title={myResult.displayName || 'You'}
             >
-              {myDisplayName}
+              {(myResult.displayName || 'You').length > 12 
+                ? (myResult.displayName || 'You').slice(0, 12) + '…' 
+                : (myResult.displayName || 'You')}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-player"
@@ -718,19 +744,29 @@ export default function ResultScreen({
           </div>
           
           <span 
-            className="text-2xl font-heading font-bold text-primary mt-4"
+            className="text-2xl font-heading font-bold text-primary"
             style={{ textShadow: '0 0 10px rgba(139,0,255,0.4)' }}
           >
             —
           </span>
           
-          <div className="text-center">
+          {/* Opponent score box - clickable */}
+          <button
+            onClick={() => setShowOpponentModal(true)}
+            className="flex flex-col items-center px-5 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: 'rgba(255,0,255,0.08)',
+              border: '2px solid rgba(255,0,255,0.4)',
+              boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
+              minWidth: '120px',
+            }}
+          >
             <span 
-              className="text-xs font-body uppercase tracking-widest block mb-2 truncate max-w-[100px]"
-              style={{ color: 'rgba(255,0,255,0.7)' }}
+              className="text-xs font-body uppercase tracking-widest mb-2 truncate max-w-[110px]"
+              style={{ color: 'rgba(255,0,255,0.9)' }}
               title={opponentName}
             >
-              {opponentName.length > 10 ? opponentName.slice(0, 10) + '…' : opponentName}
+              {opponentName.length > 12 ? opponentName.slice(0, 12) + '…' : opponentName}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-opponent"
@@ -738,7 +774,12 @@ export default function ResultScreen({
             >
               {opponentResult.cellsCompleted}
             </span>
-          </div>
+            <span 
+              className="text-[10px] font-body text-muted mt-1 opacity-60"
+            >
+              tap for stats
+            </span>
+          </button>
         </div>
 
         {/* Stats row */}
@@ -879,15 +920,15 @@ export default function ResultScreen({
                 {rematchState === 'waiting' && '⚔️ Accept Rematch'}
               </button>
 
-              {/* Find New Match - Solid secondary */}
+              {/* Find New Match - Solid secondary with matching border thickness */}
               <button
-                onClick={() => { handleButtonPress(); handleFindNewMatch(); }}
+                onClick={() => { handleButtonPress(); onBackToLobby(); }}
                 className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
                 style={{
                   background: 'rgb(20, 12, 30)',
-                  border: '5px solid rgba(139,0,255,0.9)',
-                  color: 'rgba(255,255,255,1)',
-                  boxShadow: '0 0 20px rgba(139,0,255,0.5), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  border: '3px solid rgba(139,0,255,0.5)',
+                  color: 'rgba(255,255,255,0.8)',
+                  boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               >
                 Find New Match
@@ -896,6 +937,146 @@ export default function ResultScreen({
           )}
         </div>
       </div>
+
+      {/* Opponent Stats Modal */}
+      {showOpponentModal && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowOpponentModal(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+          
+          {/* Modal */}
+          <div 
+            className="relative bg-surface border-2 border-opponent/50 rounded-xl p-6 max-w-sm w-full animate-scale-in"
+            style={{
+              boxShadow: '0 0 30px rgba(255,0,255,0.2), 0 10px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowOpponentModal(false)}
+              className="absolute top-4 right-4 text-muted hover:text-opponent transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Opponent Info */}
+            <div className="flex flex-col items-center">
+              {/* Avatar */}
+              <div 
+                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-4"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,0,255,0.3) 0%, rgba(139,0,255,0.3) 100%)',
+                  border: '3px solid rgba(255,0,255,0.5)',
+                  boxShadow: '0 0 20px rgba(255,0,255,0.3)',
+                }}
+              >
+                {opponentName.charAt(0).toUpperCase()}
+              </div>
+
+              {/* Name */}
+              <h3 
+                className="font-heading font-bold text-xl text-opponent mb-1 text-center"
+                style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}
+              >
+                {opponentName}
+              </h3>
+
+              {/* Rating */}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-muted text-sm font-body">Rating:</span>
+                <span 
+                  className="font-mono font-bold text-lg text-primary"
+                  style={{ textShadow: '0 0 8px rgba(139,0,255,0.3)' }}
+                >
+                  {opponentResult.rating_after || opponentResult.rating_before || '—'}
+                </span>
+              </div>
+
+              {/* Head to Head Stats */}
+              <div 
+                className="w-full rounded-lg p-4"
+                style={{
+                  background: 'rgba(30,15,45,0.6)',
+                  border: '1px solid rgba(139,0,255,0.3)',
+                }}
+              >
+                <p className="text-xs text-muted font-body uppercase tracking-widest text-center mb-3">
+                  Head to Head
+                </p>
+                
+                <div className="flex justify-around">
+                  <div className="text-center">
+                    <span 
+                      className="block text-2xl font-mono font-bold text-player"
+                      style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}
+                    >
+                      —
+                    </span>
+                    <span className="text-xs text-muted font-body uppercase">Wins</span>
+                  </div>
+                  
+                  <div 
+                    className="w-px"
+                    style={{ background: 'rgba(139,0,255,0.3)' }}
+                  />
+                  
+                  <div className="text-center">
+                    <span 
+                      className="block text-2xl font-mono font-bold text-opponent"
+                      style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}
+                    >
+                      —
+                    </span>
+                    <span className="text-xs text-muted font-body uppercase">Losses</span>
+                  </div>
+                  
+                  <div 
+                    className="w-px"
+                    style={{ background: 'rgba(139,0,255,0.3)' }}
+                  />
+                  
+                  <div className="text-center">
+                    <span 
+                      className="block text-2xl font-mono font-bold text-secondary"
+                      style={{ textShadow: '0 0 10px rgba(139,0,255,0.3)' }}
+                    >
+                      —
+                    </span>
+                    <span className="text-xs text-muted font-body uppercase">Draws</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted text-center mt-3 opacity-60">
+                  Head-to-head stats coming soon
+                </p>
+              </div>
+
+              {/* Play Again */}
+              <button
+                onClick={() => {
+                  setShowOpponentModal(false);
+                  onRematch();
+                }}
+                className="w-full mt-4 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                style={{
+                  background: 'rgb(20, 12, 30)',
+                  border: '2px solid rgba(255,0,255,0.5)',
+                  color: '#FF00FF',
+                  boxShadow: '0 0 15px rgba(255,0,255,0.2)',
+                }}
+              >
+                Challenge Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
