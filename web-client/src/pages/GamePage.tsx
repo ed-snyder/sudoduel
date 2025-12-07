@@ -1820,9 +1820,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       {/* Spacer to maintain layout flow for other elements */}
       <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
 
-      {/* Number Pad (1-9) - Full width, equal spacing */}
-      <div className="px-3 py-2" style={{ background: 'transparent' }}>
-        <div className="flex justify-between gap-1.5 max-w-md mx-auto">
+      {/* Number Pad - closer to grid */}
+      <div className="px-3 pt-3 pb-2">
+        <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
             const depleted = count >= 9;
@@ -1831,14 +1831,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 key={num}
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className="flex-1 aspect-square rounded-xl transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+                className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
                 style={{
-                  fontSize: 'clamp(1.25rem, 5vw, 1.75rem)',
+                  fontSize: 'clamp(1rem, 4vw, 1.5rem)',
                   background: depleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
                   border: depleted ? '2px solid rgba(139, 0, 255, 0.2)' : '2px solid rgba(139, 0, 255, 0.6)',
                   color: depleted ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.95)',
                   boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
-                  minHeight: '48px',
+                  minHeight: '44px',
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
@@ -1849,82 +1849,103 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         </div>
       </div>
 
-      {/* Tool Buttons - No forfeit, bigger buttons, full width */}
-      <div className="px-3 py-3 pb-safe" style={{ background: 'transparent' }}>
-        <div className="flex justify-center gap-3 max-w-md mx-auto">
-          {/* Erase Button */}
-          <button
-            onClick={handleErase}
-            disabled={!selectedCell || gameStatus !== 'playing' || myState.is_locked}
-            className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-40"
-            style={{
-              background: 'rgba(20, 12, 30, 0.8)',
-              border: '2px solid rgba(139, 0, 255, 0.5)',
-              color: 'rgba(255, 255, 255, 0.9)',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            Erase
-          </button>
-
-          {/* Notes Button */}
-          <button
-            onClick={handleToggleNotes}
-            className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
-            style={{
-              background: notesMode ? 'rgba(0, 255, 255, 0.2)' : 'rgba(20, 12, 30, 0.8)',
-              border: notesMode ? '2px solid #00FFFF' : '2px solid rgba(139, 0, 255, 0.5)',
-              color: notesMode ? '#00FFFF' : 'rgba(255, 255, 255, 0.9)',
-              boxShadow: notesMode ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            {notesMode ? 'Notes ON' : 'Notes'}
-          </button>
-
-          {/* Emote Button - horizontal emotes */}
-          <button
-            onClick={() => setShowEmotePicker(!showEmotePicker)}
-            className="flex-1 py-4 rounded-xl transition-all touch-manipulation flex items-center justify-center gap-0.5"
-            style={{
-              background: 'rgba(20, 12, 30, 0.8)',
-              border: '2px solid rgba(139, 0, 255, 0.5)',
-              fontSize: '1.25rem',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            <span style={{ lineHeight: 1 }}>😊</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Emote Picker - horizontal layout */}
-      {showEmotePicker && (
-        <div 
-          className="absolute left-0 right-0 flex items-center justify-center gap-3 px-4 py-3"
-          style={{
-            bottom: '140px',
-            background: 'rgba(20, 12, 30, 0.95)',
-            borderTop: '1px solid rgba(139, 0, 255, 0.3)',
-            borderBottom: '1px solid rgba(139, 0, 255, 0.3)',
-          }}
-        >
-          {emotes.map((emote, index) => (
+      {/* Toolbar OR Emoji Picker - they swap, same position */}
+      <div className="px-3 py-2 pb-safe">
+        {!showEmotePicker ? (
+          <>
+            {/* Normal Toolbar */}
+            <div className="flex justify-center gap-3 max-w-md mx-auto">
+            {/* Erase Button */}
             <button
-              key={index}
-              onClick={() => handleSelectEmote(emote)}
-              className="text-3xl p-3 rounded-xl transition-all active:scale-95"
+              onClick={handleErase}
+              disabled={!selectedCell || gameStatus !== 'playing' || myState.is_locked}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-40"
               style={{
-                background: 'rgba(139, 0, 255, 0.2)',
-                border: '1px solid rgba(139, 0, 255, 0.4)',
+                background: 'rgba(20, 12, 30, 0.8)',
+                border: '2px solid rgba(139, 0, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {emote}
+              Erase
             </button>
-          ))}
-        </div>
-      )}
+
+            {/* Notes Button */}
+            <button
+              onClick={handleToggleNotes}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
+              style={{
+                background: notesMode ? 'rgba(0, 255, 255, 0.2)' : 'rgba(20, 12, 30, 0.8)',
+                border: notesMode ? '2px solid #00FFFF' : '2px solid rgba(139, 0, 255, 0.5)',
+                color: notesMode ? '#00FFFF' : 'rgba(255, 255, 255, 0.9)',
+                boxShadow: notesMode ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {notesMode ? 'Notes ON' : 'Notes'}
+            </button>
+
+            {/* Emote Button */}
+            <button
+              onClick={() => setShowEmotePicker(true)}
+              className="flex-1 py-4 rounded-xl transition-all touch-manipulation flex items-center justify-center"
+              style={{
+                background: 'rgba(20, 12, 30, 0.8)',
+                border: '2px solid rgba(139, 0, 255, 0.5)',
+                fontSize: '1.5rem',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              😊
+            </button>
+          </div>
+          </>
+        ) : (
+          <>
+            {/* Emoji Picker - replaces toolbar */}
+            <div className="flex justify-center gap-3 max-w-md mx-auto">
+            {emotes.map((emote, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  handleSelectEmote(emote);
+                  setShowEmotePicker(false);
+                }}
+                className="flex-1 py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+                style={{
+                  background: 'rgba(139, 0, 255, 0.2)',
+                  border: '2px solid rgba(139, 0, 255, 0.5)',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <span style={{ 
+                  fontSize: '1.75rem', 
+                  lineHeight: 1,
+                  display: 'inline-flex',
+                  flexDirection: 'row',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {emote}
+                </span>
+              </button>
+            ))}
+            {/* Close button */}
+            <button
+              onClick={() => setShowEmotePicker(false)}
+              className="py-3 px-4 rounded-xl transition-all touch-manipulation flex items-center justify-center"
+              style={{
+                background: 'rgba(255, 51, 102, 0.2)',
+                border: '2px solid rgba(255, 51, 102, 0.5)',
+                color: '#FF3366',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          </>
+        )}
+      </div>
 
       {/* Forfeit confirmation modal */}
       <ForfeitModal
