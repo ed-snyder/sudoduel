@@ -620,6 +620,10 @@ export default function ResultScreen({
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: 'logo-shimmer 3s ease-in-out infinite',
+              WebkitFontSmoothing: 'antialiased',
+              textRendering: 'optimizeLegibility',
+              backfaceVisibility: 'hidden',
+              transform: 'translateZ(0)',
             }}
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
