@@ -763,6 +763,7 @@ export default function ResultScreen({
 
         {/* Score comparison with equal-sized name boxes */}
         <div className="flex items-center justify-center gap-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
+          {/* DEBUG: Score boxes should show full names */}
           {/* Your score box */}
           <div 
             className="flex flex-col items-center justify-center rounded-lg"

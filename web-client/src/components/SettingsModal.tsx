@@ -4,11 +4,16 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
+  user?: { display_name?: string } | null;
+  refreshUser?: () => Promise<void>;
 }
 
-export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, onLogout, user, refreshUser }: SettingsModalProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [displayName, setDisplayName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -19,6 +24,13 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen && user?.display_name) {
+      setDisplayName(user.display_name);
+      setNameSaved(false);
+    }
+  }, [isOpen, user?.display_name]);
+
   const handleSoundToggle = (enabled: boolean) => {
     setSoundEnabled(enabled);
     localStorage.setItem('soundEnabled', enabled.toString());
@@ -27,6 +39,27 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
   const handleHapticToggle = (enabled: boolean) => {
     setHapticEnabled(enabled);
     localStorage.setItem('hapticEnabled', enabled.toString());
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!displayName.trim() || displayName === user?.display_name) return;
+    
+    setIsSavingName(true);
+    try {
+      const { api } = await import('../config');
+      await api.patch('/api/player/profile', { display_name: displayName.trim() });
+      
+      setNameSaved(true);
+      // Refresh user data
+      if (refreshUser) {
+        await refreshUser();
+      }
+      setTimeout(() => setNameSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to update display name:', error);
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -54,6 +87,34 @@ export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsMod
 
         {/* Content */}
         <div className="px-5 py-5 space-y-6">
+          {/* Display Name */}
+          <div className="p-4 border-b border-grid-line">
+            <label className="block text-sm text-muted font-body mb-2">Display Name</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
+                maxLength={20}
+                className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-primary font-body focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all"
+                placeholder="Enter name..."
+              />
+              <button
+                onClick={handleSaveDisplayName}
+                disabled={isSavingName || !displayName.trim() || displayName === user?.display_name}
+                className="px-4 py-2 rounded-lg font-body font-semibold text-sm transition-all disabled:opacity-40"
+                style={{
+                  background: nameSaved ? 'rgba(0,255,136,0.2)' : 'rgb(15, 10, 25)',
+                  border: nameSaved ? '2px solid #00FF88' : '2px solid rgba(0,255,255,0.5)',
+                  color: nameSaved ? '#00FF88' : '#00FFFF',
+                }}
+              >
+                {isSavingName ? '...' : nameSaved ? '✓' : 'Save'}
+              </button>
+            </div>
+            <p className="text-xs text-muted font-body mt-1">Max 20 characters</p>
+          </div>
+
           {/* Toggles */}
           <div className="space-y-4">
             {/* Sound Effects */}

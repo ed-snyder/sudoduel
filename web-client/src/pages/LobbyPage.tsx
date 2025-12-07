@@ -5,6 +5,8 @@ import MatchHistoryModal from '../components/MatchHistoryModal';
 import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
 import AvatarPickerModal from '../components/AvatarPickerModal';
+import EmoteCustomizerModal from '../components/EmoteCustomizerModal';
+import FriendsListModal from '../components/FriendsListModal';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
 
@@ -15,13 +17,15 @@ interface LobbyPageProps {
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
 export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showEmoteCustomizer, setShowEmoteCustomizer] = useState(false);
+  const [showFriendsList, setShowFriendsList] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [avatar, setAvatar] = useState(() => {
     return localStorage.getItem('userAvatar') || '😎';
@@ -121,55 +125,74 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         <SudoDuelLogo size="xl" />
       </div>
       
-      {/* Player Card */}
-      <div className="px-4 py-6 relative z-20">
-        <div 
-          className="bg-surface rounded-xl p-4 border border-grid-line"
+      {/* Top Bar with Friends & Emotes */}
+      <div className="flex items-center justify-between px-4 py-2 relative z-20">
+        {/* Friends Button */}
+        <button
+          onClick={() => setShowFriendsList(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-player/10"
           style={{
-            boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2), 0 0 60px rgba(255, 0, 255, 0.1)',
+            border: '1px solid rgba(139,0,255,0.3)',
           }}
         >
-          <div className="flex items-center gap-4">
-            {/* Avatar - Tappable */}
-            <button
-              onClick={() => setShowAvatarPicker(true)}
-              className="relative group"
+          <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          <span className="text-sm font-body text-secondary">Friends</span>
+        </button>
+
+        {/* Emotes Button */}
+        <button
+          onClick={() => setShowEmoteCustomizer(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-player/10"
+          style={{
+            border: '1px solid rgba(139,0,255,0.3)',
+          }}
+        >
+          <span className="text-lg">😂</span>
+          <span className="text-sm font-body text-secondary">Emotes</span>
+        </button>
+      </div>
+
+      {/* Player Card - Remove rating text */}
+      <div className="px-4 py-2 relative z-20">
+        <div className="flex items-center gap-4">
+          {/* Avatar */}
+          <button
+            onClick={() => setShowAvatarPicker(true)}
+            className="relative group"
+          >
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center text-3xl border-2 border-player transition-all group-hover:shadow-glow-player"
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(0,255,255,0.2) 0%, rgba(139,0,255,0.2) 100%)',
+                boxShadow: 'inset 0 0 15px rgba(0,255,255,0.3)'
+              }}
             >
-              <div 
-                className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-player text-2xl font-heading font-bold transition-all group-hover:shadow-glow-player"
-                style={{ 
-                  background: 'linear-gradient(135deg, rgba(0,255,255,0.2) 0%, rgba(139,0,255,0.2) 100%)',
-                  boxShadow: 'inset 0 0 15px rgba(0,255,255,0.3)'
-                }}
-              >
-                {avatar}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-player rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <svg className="w-3 h-3 text-void" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-          </div>
-            </button>
-            
-            {/* Info */}
-          <div className="flex-1">
-              <div className="font-black text-primary font-display text-lg">{user?.display_name || 'Player'}</div>
-              <div className="text-sm text-secondary font-display">
-                Rating: <span className="font-display text-player">{Math.round(user?.rating || 1500)}</span>
-              </div>
+              {avatar}
             </div>
-            
-            {/* Settings Button */}
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-player rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg className="w-3 h-3 text-void" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </div>
+          </button>
+          
+          {/* Info - No rating */}
+          <div className="flex-1">
+            <div className="font-black text-primary font-display text-lg">{user?.display_name || 'Player'}</div>
+          </div>
+          
+          {/* Settings Button */}
           <button 
             onClick={() => setShowSettings(true)}
-              className="text-muted hover:text-player transition-colors p-2"
+            className="text-muted hover:text-player transition-colors p-2"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
-          </div>
         </div>
       </div>
 
@@ -364,6 +387,19 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         onLogout={logout}
+        user={user}
+        refreshUser={refreshUser}
+      />
+      {/* Emote Customizer Modal */}
+      <EmoteCustomizerModal
+        isOpen={showEmoteCustomizer}
+        onClose={() => setShowEmoteCustomizer(false)}
+        isPremium={isPremium}
+      />
+      {/* Friends List Modal */}
+      <FriendsListModal
+        isOpen={showFriendsList}
+        onClose={() => setShowFriendsList(false)}
       />
     </div>
   );

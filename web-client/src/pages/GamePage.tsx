@@ -10,7 +10,7 @@ import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 
-const EMOTES = ['🖕', '🍆🤏', '🤣🫵', '🍑'];
+const DEFAULT_EMOTES = ['😂', '😢', '😍', '💩'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
 const EMOTE_PICKER_DURATION = 3000; // 3 seconds
 
@@ -92,6 +92,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [myTimeRemaining, setMyTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [gameResult, setGameResult] = useState<any>(null);
+  const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
+  
+  // Load custom emotes from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('customEmotes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 4) {
+          setEmotes(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load custom emotes');
+    }
+  }, []);
+  
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
@@ -1732,7 +1749,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             top: 'auto',
           }}
         >
-          {EMOTES.map((emote) => (
+          {emotes.map((emote) => (
             <button
               key={emote}
               onClick={() => handleSelectEmote(emote)}

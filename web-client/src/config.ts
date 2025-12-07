@@ -151,6 +151,33 @@ export const api = {
       throw error;
     }
   },
+  
+  patch: async <T>(path: string, body: unknown, token?: string): Promise<T> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const authToken = token || getToken();
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    
+    try {
+      const response = await fetch(`${API_URL}${path}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
+        throw new Error(error.error || `API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors (backend not running, CORS, etc.)
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${API_URL}. Make sure the backend is running.`);
+      }
+      throw error;
+    }
+  },
 };
 
 // ===========================================
