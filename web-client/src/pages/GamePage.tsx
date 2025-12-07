@@ -1345,7 +1345,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
     const opponentResultData = {
       playerId: opponentResult.playerId || 0,
-      displayName: opponentResult.displayName,
+      displayName: opponentResult.displayName || opponentName,
       score: opponentScore,
       cellsCompleted: opponentScore,
       mistakes: opponentResult.mistakes || 0,
