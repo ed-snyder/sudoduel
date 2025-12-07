@@ -125,6 +125,9 @@ export default function ResultScreen({
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
   const hasTriggeredEffects = useRef(false);
+  const ratingAnimationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ratingAnimationStartedRef = useRef(false);
+  const ratingAnimationStepsRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ratingChange = myResult.rating_change || 0;
   const opponentName = opponentResult.displayName || 'Opponent';
@@ -212,6 +215,11 @@ export default function ResultScreen({
 
   // Rating slot machine roll with haptics and sound
   useEffect(() => {
+    // Prevent multiple runs
+    if (ratingAnimationStartedRef.current) {
+      return;
+    }
+
     const startRating = myResult.rating_before;
     const endRating = myResult.rating_after;
     const diff = endRating - startRating;
@@ -231,9 +239,14 @@ export default function ResultScreen({
       return;
     }
 
+    // Mark as started to prevent re-runs
+    ratingAnimationStartedRef.current = true;
+
     // Wait for slam animation to complete (0.8s)
     console.log('🎰 Starting rating animation in 800ms...');
-    const startTimeout = setTimeout(() => {
+    let animationTimeout: ReturnType<typeof setTimeout> | null = null;
+    
+    ratingAnimationRef.current = setTimeout(() => {
       console.log('🎰 Rating animation starting now!');
       
       const steps = Math.max(30, Math.min(Math.abs(diff), 50));
@@ -273,9 +286,10 @@ export default function ResultScreen({
           setRatingLanded(true);
           vibrate([30, 15, 30]);
           playFinalSound(diff > 0);
+          animationTimeout = null;
         } else {
           // Schedule next step with variable timing
-          setTimeout(animate, currentInterval);
+          animationTimeout = setTimeout(animate, currentInterval);
         }
       };
 
@@ -284,9 +298,18 @@ export default function ResultScreen({
     }, 800);
 
     return () => {
-      clearTimeout(startTimeout);
+      if (ratingAnimationRef.current) {
+        clearTimeout(ratingAnimationRef.current);
+        ratingAnimationRef.current = null;
+      }
+      if (ratingAnimationStepsRef.current) {
+        clearTimeout(ratingAnimationStepsRef.current);
+        ratingAnimationStepsRef.current = null;
+      }
+      // Note: Don't reset ratingAnimationStartedRef here - we want it to stay true
+      // so the animation doesn't restart if component re-renders
     };
-  }, [myResult.rating_before, myResult.rating_after, vibrate]);
+  }, [myResult.rating_before, myResult.rating_after]);
 
   // Matchmaking functions
   const stopPolling = useCallback(() => {
