@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface PlayerResult {
   playerId: number;
@@ -108,6 +109,7 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
+  const { user } = useAuth();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
@@ -130,7 +132,7 @@ export default function ResultScreen({
 
   const ratingChange = myResult.rating_change || 0;
   const opponentName = opponentResult.displayName || 'Opponent';
-  const myName = myResult.displayName || 'Player';
+  const myName = myResult.displayName || user?.display_name || 'Player';
   const isBigWin = didWin && ratingChange >= 25;
 
   // Generate geometric particles
@@ -369,29 +371,35 @@ export default function ResultScreen({
     setIsFindingMatch(true);
     
     try {
-      // Import and use matchmaking API
       const { matchmakingAPI } = await import('../services/api');
       const result = await matchmakingAPI.join() as { status: string; match_id?: number };
       
       if (result.status === 'matched' && result.match_id) {
-        // Navigate to new game
+        // Navigate to new game using the router or window location
         window.location.href = `/game/${result.match_id}`;
-      } else if (result.status === 'queued') {
-        // Poll for match
-        const pollInterval = setInterval(async () => {
+        return;
+      }
+      
+      if (result.status === 'queued') {
+        // Start polling for match
+        const pollForMatch = async () => {
           try {
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
             if (status.status === 'matched' && status.match_id) {
-              clearInterval(pollInterval);
               window.location.href = `/game/${status.match_id}`;
+              return;
+            }
+            // Continue polling if still queued
+            if (status.status === 'queued' && isFindingMatch) {
+              setTimeout(pollForMatch, 1000);
             }
           } catch (err) {
             console.error('Polling error:', err);
+            setIsFindingMatch(false);
           }
-        }, 1000);
+        };
         
-        // Store interval for cleanup
-        (window as any).__matchPollInterval = pollInterval;
+        pollForMatch();
       }
     } catch (error) {
       console.error('Failed to find match:', error);
@@ -401,18 +409,14 @@ export default function ResultScreen({
 
   const handleCancelSearch = async () => {
     handleButtonPress();
+    setIsFindingMatch(false);
+    
     try {
       const { matchmakingAPI } = await import('../services/api');
       await matchmakingAPI.leave();
-      
-      // Clear polling interval if exists
-      if ((window as any).__matchPollInterval) {
-        clearInterval((window as any).__matchPollInterval);
-      }
     } catch (error) {
       console.error('Failed to cancel search:', error);
     }
-    setIsFindingMatch(false);
   };
 
   useEffect(() => {
@@ -693,12 +697,13 @@ export default function ResultScreen({
         <div className="flex items-center gap-4 mb-6">
           {/* Your score box */}
           <div 
-            className="flex flex-col items-center px-4 py-3 rounded-lg"
+            className="flex flex-col items-center justify-center px-4 py-3 rounded-lg"
             style={{
               background: 'rgba(0,255,255,0.08)',
               border: '2px solid rgba(0,255,255,0.4)',
               boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
               width: '140px',
+              height: '140px',
             }}
           >
             <span 
@@ -726,12 +731,13 @@ export default function ResultScreen({
           {/* Opponent score box - clickable */}
           <button
             onClick={() => setShowOpponentModal(true)}
-            className="flex flex-col items-center px-4 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
+            className="flex flex-col items-center justify-center px-4 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
             style={{
               background: 'rgba(255,0,255,0.08)',
               border: '2px solid rgba(255,0,255,0.4)',
               boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
               width: '140px',
+              height: '140px',
             }}
           >
             <span 
