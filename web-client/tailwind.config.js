@@ -226,8 +226,8 @@ export default {
         'matrix-fall': 'matrix-fall 15s linear infinite',
         
         // Background effects
-        'shooting-star': 'shooting-star 1s ease-out forwards',
-        'grid-pulse-3d': 'grid-pulse-3d 3.5s ease-in forwards',
+        'comet-streak': 'comet-streak 2s linear forwards',
+        'grid-flash': 'grid-flash 0.6s ease-out forwards',
         'pulse-slow': 'pulse-slow 8s ease-in-out infinite',
       },
       
@@ -306,20 +306,20 @@ export default {
           '90%': { opacity: '0.3' },
           '100%': { transform: 'translateY(100vh)', opacity: '0' },
         },
-        'shooting-star': {
-          '0%': { transform: 'translate(0, 0)', opacity: '1' },
-          '70%': { opacity: '1' },
-          '100%': { transform: 'translate(200px, 120px)', opacity: '0' },
+        'comet-streak': {
+          '0%': { transform: 'translateX(0) translateY(0)', opacity: '0' },
+          '5%': { opacity: '1' },
+          '90%': { opacity: '1' },
+          '100%': { transform: 'translateX(120vw) translateY(30vh)', opacity: '0' },
         },
-        'grid-pulse-3d': {
-          '0%': { top: '0%', transform: 'rotateX(75deg) scaleX(0.3)', opacity: '0' },
-          '10%': { opacity: '1' },
-          '80%': { opacity: '0.8' },
-          '100%': { top: '100%', transform: 'rotateX(75deg) scaleX(1.5)', opacity: '0' },
+        'grid-flash': {
+          '0%': { opacity: '0' },
+          '30%': { opacity: '1' },
+          '100%': { opacity: '0' },
         },
         'pulse-slow': {
-          '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },
-          '50%': { opacity: '0.8', transform: 'scale(1.1)' },
+          '0%, 100%': { opacity: '0.3', transform: 'scale(1)' },
+          '50%': { opacity: '0.6', transform: 'scale(1.15)' },
         },
       },
       

@@ -805,58 +805,54 @@
    17. BACKGROUND EFFECTS ANIMATIONS
    ========================================= */
 
-/* Shooting star animation */
-@keyframes shooting-star {
+/* Comet streaking across entire screen */
+@keyframes comet-streak {
   0% {
-    transform: translate(0, 0);
+    transform: translateX(0) translateY(0);
+    opacity: 0;
+  }
+  5% {
     opacity: 1;
   }
-  70% {
+  90% {
     opacity: 1;
   }
   100% {
-    transform: translate(200px, 120px);
+    transform: translateX(120vw) translateY(30vh);
     opacity: 0;
   }
 }
 
-.animate-shooting-star {
-  animation: shooting-star var(--star-duration, 1s) ease-out forwards;
+.animate-comet-streak {
+  animation: comet-streak var(--comet-duration, 2s) linear forwards;
 }
 
-/* 3D Grid pulse - travels from horizon toward viewer */
-@keyframes grid-pulse-3d {
+/* Grid flash pulse */
+@keyframes grid-flash {
   0% {
-    top: 0%;
-    transform: rotateX(75deg) scaleX(0.3);
     opacity: 0;
   }
-  10% {
+  30% {
     opacity: 1;
   }
-  80% {
-    opacity: 0.8;
-  }
   100% {
-    top: 100%;
-    transform: rotateX(75deg) scaleX(1.5);
     opacity: 0;
   }
 }
 
-.animate-grid-pulse-3d {
-  animation: grid-pulse-3d 3.5s ease-in forwards;
+.animate-grid-flash {
+  animation: grid-flash 0.6s ease-out forwards;
 }
 
 /* Slow ambient pulse for glow spots */
 @keyframes pulse-slow {
   0%, 100% {
-    opacity: 0.5;
+    opacity: 0.3;
     transform: scale(1);
   }
   50% {
-    opacity: 0.8;
-    transform: scale(1.1);
+    opacity: 0.6;
+    transform: scale(1.15);
   }
 }
 

@@ -1,51 +1,69 @@
 import { useEffect, useState } from 'react';
 
-interface ShootingStar {
+interface Comet {
   id: number;
-  x: number;
-  y: number;
-  angle: number;
+  startX: number;
+  startY: number;
   duration: number;
   color: 'cyan' | 'magenta';
-}
-
-interface GridPulse {
-  id: number;
+  size: 'sm' | 'md' | 'lg';
 }
 
 export default function BackgroundEffects() {
-  const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
-  const [gridPulses, setGridPulses] = useState<GridPulse[]>([]);
+  const [comets, setComets] = useState<Comet[]>([]);
+  const [gridPulse, setGridPulse] = useState(false);
 
-  // Spawn shooting stars periodically
+  // Spawn comets frequently
   useEffect(() => {
-    const spawnStar = () => {
-      const newStar: ShootingStar = {
-        id: Date.now(),
-        x: Math.random() * 100,
-        y: Math.random() * 30,
-        angle: 15 + Math.random() * 30,
-        duration: 0.8 + Math.random() * 0.4,
-        color: Math.random() > 0.5 ? 'cyan' : 'magenta',
-      };
-      
-      setShootingStars(prev => [...prev, newStar]);
-      
-      setTimeout(() => {
-        setShootingStars(prev => prev.filter(s => s.id !== newStar.id));
-      }, 2000);
-    };
     let timeoutId: ReturnType<typeof setTimeout>;
     
+    const spawnComet = () => {
+      const newComet: Comet = {
+        id: Date.now() + Math.random(),
+        startX: -10 + Math.random() * 60, // Start from left side or middle
+        startY: Math.random() * 70, // Anywhere in top 70%
+        duration: 1.5 + Math.random() * 1, // 1.5-2.5s to cross screen
+        color: Math.random() > 0.4 ? 'cyan' : 'magenta',
+        size: Math.random() > 0.7 ? 'lg' : Math.random() > 0.4 ? 'md' : 'sm',
+      };
+      
+      setComets(prev => [...prev, newComet]);
+      
+      setTimeout(() => {
+        setComets(prev => prev.filter(c => c.id !== newComet.id));
+      }, 3000);
+    };
     const scheduleNext = () => {
-      const delay = 4000 + Math.random() * 4000;
+      const delay = 800 + Math.random() * 1200; // Every 0.8-2 seconds
       timeoutId = setTimeout(() => {
-        spawnStar();
+        spawnComet();
         scheduleNext();
       }, delay);
     };
+    // Start spawning immediately
+    spawnComet();
+    scheduleNext();
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Grid pulse every 4-7 seconds
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    
+    const triggerPulse = () => {
+      setGridPulse(true);
+      setTimeout(() => setGridPulse(false), 600);
+    };
+    const scheduleNext = () => {
+      const delay = 4000 + Math.random() * 3000;
+      timeoutId = setTimeout(() => {
+        triggerPulse();
+        scheduleNext();
+      }, delay);
+    };
+    // First pulse after 2 seconds
     const initialTimeout = setTimeout(() => {
-      spawnStar();
+      triggerPulse();
       scheduleNext();
     }, 2000);
     return () => {
@@ -54,173 +72,81 @@ export default function BackgroundEffects() {
     };
   }, []);
 
-  // Grid pulses traveling toward viewer
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    
-    const spawnPulse = () => {
-      const newPulse: GridPulse = { id: Date.now() };
-      setGridPulses(prev => [...prev, newPulse]);
-      
-      // Remove after animation completes
-      setTimeout(() => {
-        setGridPulses(prev => prev.filter(p => p.id !== newPulse.id));
-      }, 4000);
-    };
-    const scheduleNext = () => {
-      const delay = 2000 + Math.random() * 2000;
-      timeoutId = setTimeout(() => {
-        spawnPulse();
-        scheduleNext();
-      }, delay);
-    };
-    // First pulse after 1 second
-    const initialTimeout = setTimeout(() => {
-      spawnPulse();
-      scheduleNext();
-    }, 1000);
-    return () => {
-      clearTimeout(initialTimeout);
-      clearTimeout(timeoutId);
-    };
-  }, []);
+  const cometSizes = {
+    sm: { width: 'w-24', height: 'h-[1px]', glow: 4 },
+    md: { width: 'w-40', height: 'h-[2px]', glow: 6 },
+    lg: { width: 'w-56', height: 'h-[2px]', glow: 8 },
+  };
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
       
-      {/* Sun/glow behind horizon */}
+      {/* Full screen 2D grid */}
       <div 
-        className="absolute left-1/2 -translate-x-1/2"
+        className="absolute inset-0 transition-opacity duration-300"
         style={{
-          top: '52%',
-          width: '300px',
-          height: '150px',
-          background: 'radial-gradient(ellipse at center bottom, rgba(255,0,255,0.3) 0%, rgba(139,0,255,0.15) 40%, transparent 70%)',
-          filter: 'blur(20px)',
+          backgroundImage: `
+            linear-gradient(rgba(139,0,255,${gridPulse ? '0.4' : '0.15'}) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139,0,255,${gridPulse ? '0.4' : '0.15'}) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          boxShadow: gridPulse ? 'inset 0 0 100px rgba(255,0,255,0.15)' : 'none',
         }}
       />
-      {/* Horizon glow line */}
-      <div 
-        className="absolute left-0 right-0 h-[2px]"
-        style={{
-          top: '60%',
-          background: 'linear-gradient(90deg, transparent 5%, rgba(255,0,255,0.6) 30%, rgba(0,255,255,0.8) 50%, rgba(255,0,255,0.6) 70%, transparent 95%)',
-          boxShadow: '0 0 30px 10px rgba(255,0,255,0.4), 0 0 60px 20px rgba(0,255,255,0.2)',
-        }}
-      />
-      {/* 3D Perspective Grid Floor */}
-      <div 
-        className="absolute left-0 right-0 bottom-0 overflow-hidden"
-        style={{
-          top: '60%',
-          perspective: '400px',
-          perspectiveOrigin: '50% 0%',
-        }}
-      >
-        {/* Grid surface */}
-        <div
-          className="absolute inset-0"
+      {/* Grid pulse flash overlay */}
+      {gridPulse && (
+        <div 
+          className="absolute inset-0 animate-grid-flash"
           style={{
-            background: `
-              repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent 58px,
-                rgba(139,0,255,0.4) 58px,
-                rgba(139,0,255,0.4) 60px
-              ),
-              repeating-linear-gradient(
-                0deg,
-                transparent 0px,
-                transparent 38px,
-                rgba(139,0,255,0.3) 38px,
-                rgba(139,0,255,0.3) 40px
-              )
-            `,
-            transform: 'rotateX(75deg)',
-            transformOrigin: 'top center',
+            background: 'radial-gradient(ellipse at center, rgba(255,0,255,0.1) 0%, transparent 70%)',
           }}
         />
-        {/* Animated grid pulses traveling toward viewer */}
-        {gridPulses.map((pulse) => (
-          <div
-            key={pulse.id}
-            className="absolute left-0 right-0 h-[3px] animate-grid-pulse-3d"
-            style={{
-              background: 'linear-gradient(90deg, transparent 10%, rgba(0,255,255,0.8) 30%, rgba(255,255,255,0.9) 50%, rgba(0,255,255,0.8) 70%, transparent 90%)',
-              boxShadow: '0 0 20px 4px rgba(0,255,255,0.6), 0 0 40px 8px rgba(0,255,255,0.3)',
-              transformOrigin: 'top center',
-            }}
-          />
-        ))}
-      </div>
-      {/* Vertical grid lines with perspective (overlay for extra depth) */}
-      <div 
-        className="absolute left-0 right-0 bottom-0 overflow-hidden opacity-30"
-        style={{
-          top: '60%',
-        }}
-      >
-        {[...Array(11)].map((_, i) => {
-          const position = (i - 5) * 10 + 50; // -50% to 50% from center
-          const spread = Math.abs(i - 5) * 2; // Lines spread more at edges
-          return (
-            <div
-              key={i}
-              className="absolute bottom-0 w-[1px]"
-              style={{
-                left: `${position + spread * (i > 5 ? 1 : -1)}%`,
-                height: '100%',
-                background: `linear-gradient(to bottom, rgba(139,0,255,0.6) 0%, rgba(139,0,255,0.2) 100%)`,
-                transform: `perspective(200px) rotateY(${(i - 5) * 3}deg)`,
-              }}
-            />
-          );
-        })}
-      </div>
-      {/* Shooting Stars (in the sky area) */}
-      {shootingStars.map((star) => (
+      )}
+      {/* Comets streaking across */}
+      {comets.map((comet) => (
         <div
-          key={star.id}
-          className="absolute animate-shooting-star"
+          key={comet.id}
+          className="absolute animate-comet-streak"
           style={{
-            left: `${star.x}%`,
-            top: `${star.y}%`,
-            '--star-angle': `${star.angle}deg`,
-            '--star-duration': `${star.duration}s`,
+            left: `${comet.startX}%`,
+            top: `${comet.startY}%`,
+            '--comet-duration': `${comet.duration}s`,
           } as React.CSSProperties}
         >
+          {/* Comet head */}
           <div 
-            className="w-1 h-1 rounded-full"
+            className="absolute right-0 w-2 h-2 rounded-full"
             style={{
-              background: star.color === 'cyan' ? '#00FFFF' : '#FF00FF',
-              boxShadow: `0 0 6px 2px ${star.color === 'cyan' ? 'rgba(0,255,255,0.8)' : 'rgba(255,0,255,0.8)'}`,
+              background: comet.color === 'cyan' ? '#00FFFF' : '#FF00FF',
+              boxShadow: `0 0 ${cometSizes[comet.size].glow}px ${cometSizes[comet.size].glow}px ${comet.color === 'cyan' ? 'rgba(0,255,255,0.9)' : 'rgba(255,0,255,0.9)'}`,
             }}
           />
+          {/* Comet tail */}
           <div 
-            className="absolute top-0 right-full w-20 h-[2px] origin-right"
+            className={`${cometSizes[comet.size].width} ${cometSizes[comet.size].height} rounded-full`}
             style={{
-              background: `linear-gradient(to left, ${star.color === 'cyan' ? 'rgba(0,255,255,0.8)' : 'rgba(255,0,255,0.8)'}, transparent)`,
+              background: `linear-gradient(to right, transparent, ${comet.color === 'cyan' ? 'rgba(0,255,255,0.8)' : 'rgba(255,0,255,0.8)'})`,
+              boxShadow: `0 0 ${cometSizes[comet.size].glow}px ${comet.color === 'cyan' ? 'rgba(0,255,255,0.5)' : 'rgba(255,0,255,0.5)'}`,
             }}
           />
         </div>
       ))}
-      {/* Ambient glow in sky */}
+      {/* Subtle ambient glows */}
       <div 
-        className="absolute w-96 h-64 rounded-full animate-pulse-slow"
+        className="absolute w-96 h-96 rounded-full animate-pulse-slow opacity-50"
         style={{
-          top: '5%',
-          left: '5%',
-          background: 'radial-gradient(circle, rgba(139,0,255,0.06) 0%, transparent 70%)',
+          top: '10%',
+          left: '-10%',
+          background: 'radial-gradient(circle, rgba(139,0,255,0.1) 0%, transparent 60%)',
         }}
       />
       <div 
-        className="absolute w-64 h-48 rounded-full animate-pulse-slow"
+        className="absolute w-80 h-80 rounded-full animate-pulse-slow opacity-50"
         style={{
-          top: '10%',
-          right: '10%',
-          background: 'radial-gradient(circle, rgba(0,255,255,0.05) 0%, transparent 70%)',
-          animationDelay: '3s',
+          bottom: '20%',
+          right: '-5%',
+          background: 'radial-gradient(circle, rgba(0,255,255,0.08) 0%, transparent 60%)',
+          animationDelay: '4s',
         }}
       />
     </div>
