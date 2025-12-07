@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,6 +28,75 @@ interface ResultScreenProps {
   rematchCountdown?: number;
 }
 
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+  velocityX: number;
+  velocityY: number;
+  type: 'diamond' | 'square' | 'triangle' | 'line';
+  color: string;
+  delay: number;
+}
+
+// Audio context for pitch-shifting sounds
+let audioContext: AudioContext | null = null;
+
+const playRatingTick = (isGain: boolean, progress: number) => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    // Base frequency shifts based on win/loss and progress
+    const baseFreq = isGain ? 400 : 300;
+    const freqShift = isGain ? progress * 200 : -progress * 100;
+    oscillator.frequency.value = baseFreq + freqShift;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.value = 0.08;
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch (e) {
+    // Audio not available
+  }
+};
+
+const playFinalSound = (isGain: boolean) => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.frequency.value = isGain ? 800 : 200;
+    oscillator.type = isGain ? 'sine' : 'triangle';
+    
+    gainNode.gain.value = 0.12;
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (e) {
+    // Audio not available
+  }
+};
+
 export default function ResultScreen({
   didWin,
   isDraw,
@@ -40,58 +110,157 @@ export default function ResultScreen({
   rematchCountdown = 0,
 }: ResultScreenProps) {
   const { user } = useAuth();
+  const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
+  
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
-  const [showContent, setShowContent] = useState(false);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [showFlash, setShowFlash] = useState(true);
+  const [showTitle, setShowTitle] = useState(false);
+  const [screenShake, setScreenShake] = useState<'none' | 'normal' | 'big'>('none');
+  const [ratingLanded, setRatingLanded] = useState(false);
+  const [gridHue, setGridHue] = useState(0);
+  const [breathePhase, setBreathePhase] = useState(0);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
+  const hasTriggeredEffects = useRef(false);
 
   const ratingChange = myResult.rating_change || 0;
-  const cellDifference = opponentResult.cellsCompleted - myResult.cellsCompleted;
-  const wasClose = !didWin && !isDraw && cellDifference <= 5 && cellDifference > 0;
+  const opponentName = opponentResult.displayName || 'Opponent';
+  const myDisplayName = myResult.displayName || user?.display_name || 'You';
+  const isBigWin = didWin && ratingChange >= 25;
 
-  // Get display names - use actual user names, fallback to displayName from results, then generic fallback
-  const myDisplayName = myResult.displayName || user?.display_name || 'Player';
-  const opponentDisplayName = opponentResult.displayName || 'Opponent';
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowContent(true), 100);
-    return () => {
-      clearTimeout(timer);
-      stopPolling();
-    };
+  // Generate geometric particles
+  const generateParticles = useCallback((isVictory: boolean): Particle[] => {
+    const count = isVictory ? 45 : 25;
+    const newParticles: Particle[] = [];
+    const colors = isVictory 
+      ? ['#00FFFF', '#7FFFFF', '#FFFFFF', '#FF00FF', '#00FFFF']
+      : ['#FF00FF', '#FF7FFF', '#8B00FF', '#FF00FF'];
+    const types: Particle['type'][] = ['diamond', 'square', 'triangle', 'line'];
+    
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+      const velocity = isVictory ? 8 + Math.random() * 12 : 2 + Math.random() * 4;
+      
+      newParticles.push({
+        id: i,
+        x: 50,
+        y: isVictory ? 35 : 0,
+        size: 4 + Math.random() * 8,
+        rotation: Math.random() * 360,
+        velocityX: Math.cos(angle) * velocity * (isVictory ? 1 : 0.3),
+        velocityY: isVictory ? Math.sin(angle) * velocity - 5 : Math.random() * 3 + 1,
+        type: types[Math.floor(Math.random() * types.length)],
+        color: colors[Math.floor(Math.random() * colors.length)],
+        delay: Math.random() * 200,
+      });
+    }
+    return newParticles;
   }, []);
 
-  const stopPolling = () => {
+  // Initial effects - ALL INSTANT
+  useEffect(() => {
+    if (hasTriggeredEffects.current) return;
+    hasTriggeredEffects.current = true;
+
+    // Flash
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 150);
+
+    // Haptic + shake IMMEDIATELY
+    if (didWin && !isDraw) {
+      if (isBigWin) {
+        hapticBigWin();
+        setScreenShake('big');
+      } else {
+        hapticVictory();
+        setScreenShake('normal');
+      }
+    } else if (!isDraw) {
+      vibrate([50, 30, 50]);
+    }
+
+    // Clear shake
+    setTimeout(() => setScreenShake('none'), isBigWin ? 500 : 300);
+
+    // Title slam-in IMMEDIATE
+    setShowTitle(true);
+
+    // Particles IMMEDIATE
+    setParticles(generateParticles(didWin && !isDraw));
+  }, [didWin, isDraw, isBigWin, hapticVictory, hapticBigWin, vibrate, generateParticles]);
+
+  // Grid breathing animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBreathePhase(prev => (prev + 1) % 360);
+      
+      // Hue shifts: victory goes cyan (180), defeat goes magenta (300)
+      const targetHue = didWin ? 180 : isDraw ? 270 : 300;
+      const oscillation = Math.sin(Date.now() / 2000) * 15;
+      setGridHue(targetHue + oscillation);
+    }, 50);
+    
+    return () => clearInterval(interval);
+  }, [didWin, isDraw]);
+
+  // Rating slot machine roll with haptics and sound
+  useEffect(() => {
+    const startRating = myResult.rating_before;
+    const endRating = myResult.rating_after;
+    const diff = endRating - startRating;
+    
+    if (diff === 0) {
+      setDisplayedRating(endRating);
+      setRatingLanded(true);
+      return;
+    }
+
+    const duration = 1500;
+    const steps = Math.min(Math.abs(diff), 40);
+    const stepDuration = duration / steps;
+    let currentStep = 0;
+
+    const interval = setInterval(() => {
+      currentStep++;
+      const progress = currentStep / steps;
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const newRating = Math.round(startRating + diff * easeOut);
+      
+      setDisplayedRating(newRating);
+      
+      // Haptic tick
+      if (currentStep % 3 === 0) {
+        vibrate([5]);
+      }
+      
+      // Sound tick
+      playRatingTick(diff > 0, progress);
+      
+      if (currentStep >= steps) {
+        clearInterval(interval);
+        setDisplayedRating(endRating);
+        setRatingLanded(true);
+        vibrate([20, 10, 20]);
+        playFinalSound(diff > 0);
+      }
+    }, stepDuration);
+
+    return () => clearInterval(interval);
+  }, [myResult.rating_before, myResult.rating_after, vibrate]);
+
+  // Matchmaking functions
+  const stopPolling = useCallback(() => {
     if (pollingRef.current) {
       clearTimeout(pollingRef.current);
       pollingRef.current = null;
     }
     attemptsRef.current = 0;
-  };
+  }, []);
 
-  const handleFindNewMatch = async () => {
-    setSearchError('');
-    setSearching(true);
-    attemptsRef.current = 0;
-
-    try {
-      const response = await matchmakingAPI.join() as { status: string; match_id?: number };
-      
-      if (response.status === 'matched') {
-        stopPolling();
-        onFindNewMatch(response.match_id!);
-      } else {
-        pollForMatch();
-      }
-    } catch (err: any) {
-      setSearchError(err.message);
-      setSearching(false);
-    }
-  };
-
-  const pollForMatch = () => {
+  const pollForMatch = useCallback(() => {
     pollingRef.current = setTimeout(async () => {
       attemptsRef.current++;
       
@@ -122,43 +291,41 @@ export default function ResultScreen({
         stopPolling();
       }
     }, 1000);
-  };
+  }, [onFindNewMatch, stopPolling]);
 
-  const handleCancelSearch = async () => {
+  const handleFindNewMatch = useCallback(async () => {
+    setSearchError('');
+    setSearching(true);
+    attemptsRef.current = 0;
+
+    try {
+      const response = await matchmakingAPI.join() as { status: string; match_id?: number };
+      
+      if (response.status === 'matched') {
+        stopPolling();
+        onFindNewMatch(response.match_id!);
+      } else {
+        pollForMatch();
+      }
+    } catch (err: any) {
+      setSearchError(err.message);
+      setSearching(false);
+    }
+  }, [onFindNewMatch, pollForMatch, stopPolling]);
+
+  const handleCancelSearch = useCallback(async () => {
     stopPolling();
     try {
       await matchmakingAPI.leave();
     } catch (err) {}
     setSearching(false);
-  };
+  }, [stopPolling]);
 
-  // Animated rating counter
   useEffect(() => {
-    if (!showContent) return;
-    
-    const startRating = myResult.rating_before;
-    const endRating = myResult.rating_after;
-    const duration = 1200;
-    const steps = 25;
-    const stepDuration = duration / steps;
-    const ratingDiff = endRating - startRating;
-    
-    let currentStep = 0;
-    
-    const interval = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setDisplayedRating(Math.round(startRating + ratingDiff * easeOut));
-      
-      if (currentStep >= steps) {
-        clearInterval(interval);
-        setDisplayedRating(endRating);
-      }
-    }, stepDuration);
-    
-    return () => clearInterval(interval);
-  }, [showContent, myResult.rating_before, myResult.rating_after]);
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -167,11 +334,21 @@ export default function ResultScreen({
   };
 
   const getReasonText = () => {
-    if (reason === 'FORFEIT') return didWin ? `${opponentDisplayName} forfeited` : `${myDisplayName} forfeited`;
-    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : `${opponentDisplayName} solved it`;
+    if (reason === 'FORFEIT') return didWin ? `${opponentName} forfeited` : `${myDisplayName} forfeited`;
+    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : `${opponentName} solved it`;
     if (reason === 'TIMEOUT_SCORE') return didWin ? 'Higher score' : 'Lower score';
     if (reason === 'DRAW') return 'Equal scores';
     return '';
+  };
+
+  const getFlavorText = () => {
+    if (isDraw) return '';
+    if (didWin) {
+      if (isBigWin) return '🔥 DOMINATED!';
+      if (ratingChange >= 15) return 'Crushed it!';
+      return 'Well played!';
+    }
+    return 'Next time...';
   };
 
   // Colors based on win/loss
@@ -179,7 +356,6 @@ export default function ResultScreen({
   const fillColorLight = didWin ? '#7FFFFF' : '#FF7FFF';
   const fillColorDark = didWin ? '#00B3B3' : '#B300B3';
   const glowColor = didWin ? '#FF00FF' : '#00FFFF';
-  const glowColorRgba = didWin ? 'rgba(255,0,255,' : 'rgba(0,255,255,';
 
   const titleStyle = {
     fontFamily: "'Industry', 'Orbitron', sans-serif",
@@ -188,64 +364,174 @@ export default function ResultScreen({
     letterSpacing: '-0.02em',
   };
 
+  const breatheScale = 1 + Math.sin(breathePhase * Math.PI / 180) * 0.02;
+  const breatheOpacity = 0.15 + Math.sin(breathePhase * Math.PI / 180) * 0.05;
+
+  const handleButtonPress = () => {
+    vibrate([10]);
+  };
+
   return (
-    <div className="fixed inset-0 bg-void flex flex-col z-50">
-      {/* Background grid */}
+    <div 
+      className={`fixed inset-0 bg-void flex flex-col z-50 overflow-hidden ${
+        screenShake === 'big' ? 'animate-shake-big' : screenShake === 'normal' ? 'animate-shake' : ''
+      }`}
+    >
+      {/* Flash overlay */}
+      {showFlash && (
+        <div 
+          className="absolute inset-0 z-50 pointer-events-none"
+          style={{
+            background: didWin 
+              ? 'radial-gradient(circle, rgba(0,255,255,0.6) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(255,0,255,0.4) 0%, transparent 70%)',
+          }}
+        />
+      )}
+
+      {/* Breathing grid background */}
       <div 
-        className="absolute inset-0 opacity-15 pointer-events-none"
+        className="absolute inset-0 pointer-events-none transition-all duration-300"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(139,0,255,0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139,0,255,0.4) 1px, transparent 1px)
+            linear-gradient(hsla(${gridHue}, 100%, 50%, ${breatheOpacity}) 1px, transparent 1px),
+            linear-gradient(90deg, hsla(${gridHue}, 100%, 50%, ${breatheOpacity}) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
+          transform: `scale(${breatheScale})`,
         }}
       />
 
-      {/* Ambient glow */}
+      {/* Ambient glow - breathing */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none transition-all duration-500"
         style={{
           background: didWin 
-            ? 'radial-gradient(circle at center 30%, rgba(0,255,255,0.1) 0%, transparent 50%)'
-            : 'radial-gradient(circle at center 30%, rgba(255,0,255,0.08) 0%, transparent 50%)',
+            ? `radial-gradient(circle at center 30%, rgba(0,255,255,${0.1 + Math.sin(breathePhase * Math.PI / 180) * 0.05}) 0%, transparent 50%)`
+            : `radial-gradient(circle at center 30%, rgba(255,0,255,${0.08 + Math.sin(breathePhase * Math.PI / 180) * 0.04}) 0%, transparent 50%)`,
         }}
       />
 
-      {/* Back Button - Top Left */}
-      <div className="relative z-10 pt-16 px-4">
+      {/* Geometric Particles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {particles.map((particle) => (
+          <div
+            key={particle.id}
+            className={didWin && !isDraw ? 'animate-particle-burst' : 'animate-particle-fall'}
+            style={{
+              position: 'absolute',
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              '--vx': particle.velocityX,
+              '--vy': particle.velocityY,
+              '--rotation': `${particle.rotation}deg`,
+              '--size': `${particle.size}px`,
+              '--delay': `${particle.delay}ms`,
+              animationDelay: `${particle.delay}ms`,
+            } as React.CSSProperties}
+          >
+            {particle.type === 'diamond' && (
+              <div 
+                style={{
+                  width: particle.size,
+                  height: particle.size,
+                  background: particle.color,
+                  transform: 'rotate(45deg)',
+                  boxShadow: `0 0 ${particle.size}px ${particle.color}`,
+                }}
+              />
+            )}
+            {particle.type === 'square' && (
+              <div 
+                style={{
+                  width: particle.size,
+                  height: particle.size,
+                  background: particle.color,
+                  boxShadow: `0 0 ${particle.size}px ${particle.color}`,
+                }}
+              />
+            )}
+            {particle.type === 'triangle' && (
+              <div 
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: `${particle.size / 2}px solid transparent`,
+                  borderRight: `${particle.size / 2}px solid transparent`,
+                  borderBottom: `${particle.size}px solid ${particle.color}`,
+                  filter: `drop-shadow(0 0 ${particle.size / 2}px ${particle.color})`,
+                }}
+              />
+            )}
+            {particle.type === 'line' && (
+              <div 
+                style={{
+                  width: particle.size * 2,
+                  height: 2,
+                  background: particle.color,
+                  boxShadow: `0 0 ${particle.size}px ${particle.color}`,
+                }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Floating sparkles around title (victory only) */}
+      {didWin && !isDraw && (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-sparkle"
+              style={{
+                left: `${20 + Math.random() * 60}%`,
+                top: `${20 + Math.random() * 25}%`,
+                animationDelay: `${i * 150}ms`,
+              }}
+            >
+              <div 
+                className="w-1 h-1 bg-white rounded-full"
+                style={{ boxShadow: '0 0 6px #FFFFFF, 0 0 12px #00FFFF' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Back Button */}
+      <div className="relative z-10 pt-14 pl-4 safe-top">
         <button
-          onClick={onBackToLobby}
-          className="flex items-center gap-2 text-muted hover:text-player transition-colors group"
+          onClick={() => { handleButtonPress(); onBackToLobby(); }}
+          className="flex items-center gap-2 text-secondary hover:text-player transition-colors group"
         >
           <svg 
-            className="w-6 h-6 group-hover:scale-110 transition-transform" 
+            className="w-5 h-5 group-hover:scale-110 transition-transform" 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
+            strokeWidth={2.5}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          <span className="font-body text-sm uppercase tracking-wider">Lobby</span>
+          <span className="font-body font-medium text-sm uppercase tracking-wider">Lobby</span>
         </button>
       </div>
 
       {/* Main Content */}
-      <div 
-        className={`flex-1 flex flex-col items-center justify-center px-6 pb-8 transition-all duration-500 ${
-          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
-      >
-        {/* Result Title - Logo style effect */}
-        <div className="relative mb-2">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8">
+        {/* Result Title - Slam in effect */}
+        <div 
+          className={`relative mb-3 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
+        >
           {/* Outer glow layer */}
           <span
-            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
-              WebkitTextStroke: `6px ${glowColor}`,
-              filter: 'blur(8px)',
+              WebkitTextStroke: `8px ${glowColor}`,
+              filter: 'blur(12px)',
               opacity: 0.6,
             }}
             aria-hidden="true"
@@ -255,12 +541,12 @@ export default function ResultScreen({
 
           {/* Inner glow layer */}
           <span
-            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
-              WebkitTextStroke: `4px ${glowColor}`,
-              filter: 'blur(3px)',
+              WebkitTextStroke: `5px ${glowColor}`,
+              filter: 'blur(4px)',
               opacity: 0.8,
             }}
             aria-hidden="true"
@@ -270,20 +556,20 @@ export default function ResultScreen({
 
           {/* White stroke layer */}
           <span
-            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
-              WebkitTextStroke: '2px rgba(255,255,255,0.9)',
+              WebkitTextStroke: '2.5px rgba(255,255,255,0.95)',
             }}
             aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Fill gradient - main visible text */}
+          {/* Fill gradient */}
           <span
-            className="relative text-7xl sm:text-8xl select-none"
+            className="relative text-5xl sm:text-6xl select-none"
             style={{
               ...titleStyle,
               background: isDraw 
@@ -300,77 +586,133 @@ export default function ResultScreen({
           </span>
         </div>
 
-        {/* Reason subtitle */}
-        <p className="text-secondary font-body text-sm mb-6 uppercase tracking-wider">
+        {/* Reason + Flavor text */}
+        <p 
+          className="font-body text-sm mb-2 uppercase tracking-widest"
+          style={{ 
+            color: didWin ? 'rgba(0,255,255,0.8)' : !isDraw ? 'rgba(255,0,255,0.8)' : 'rgba(255,255,255,0.6)',
+            textShadow: didWin 
+              ? '0 0 10px rgba(0,255,255,0.4)' 
+              : !isDraw 
+              ? '0 0 10px rgba(255,0,255,0.4)' 
+              : 'none',
+          }}
+        >
           {getReasonText()}
         </p>
+        
+        {getFlavorText() && (
+          <p 
+            className={`font-heading font-bold text-lg mb-6 ${!didWin && !isDraw ? 'animate-pulse' : ''}`}
+            style={{ 
+              color: didWin ? '#00FFFF' : '#FF00FF',
+              textShadow: didWin 
+                ? '0 0 15px rgba(0,255,255,0.6)' 
+                : '0 0 15px rgba(255,0,255,0.6)',
+            }}
+          >
+            {getFlavorText()}
+          </p>
+        )}
 
         {/* Score comparison */}
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-6 mb-6">
           <div className="text-center">
-            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">{myDisplayName}</span>
             <span 
-              className={`text-4xl font-mono font-bold ${didWin ? 'text-player' : 'text-primary'}`}
-              style={didWin ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
+              className="text-xs font-body uppercase tracking-widest block mb-2"
+              style={{ color: 'rgba(0,255,255,0.7)' }}
+            >
+              {myDisplayName}
+            </span>
+            <span 
+              className="text-5xl font-mono font-bold text-player"
+              style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
             >
               {myResult.cellsCompleted}
             </span>
           </div>
-          <span className="text-2xl text-muted font-mono">—</span>
+          
+          <span 
+            className="text-2xl font-heading font-bold text-primary mt-4"
+            style={{ textShadow: '0 0 10px rgba(139,0,255,0.4)' }}
+          >
+            —
+          </span>
+          
           <div className="text-center">
-            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">{opponentDisplayName}</span>
             <span 
-              className={`text-4xl font-mono font-bold ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}
-              style={!didWin && !isDraw ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
+              className="text-xs font-body uppercase tracking-widest block mb-2 truncate max-w-[100px]"
+              style={{ color: 'rgba(255,0,255,0.7)' }}
+              title={opponentName}
+            >
+              {opponentName.length > 10 ? opponentName.slice(0, 10) + '…' : opponentName}
+            </span>
+            <span 
+              className="text-5xl font-mono font-bold text-opponent"
+              style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
             >
               {opponentResult.cellsCompleted}
             </span>
           </div>
         </div>
 
-        {/* Close loss message */}
-        {wasClose && (
-          <p className="text-player text-sm font-body mb-4 animate-pulse">
-            {cellDifference} more cell{cellDifference !== 1 ? 's' : ''} would've won!
-          </p>
-        )}
-
         {/* Stats row */}
-        <div className="flex gap-6 mb-6 text-center">
+        <div className="flex gap-8 mb-6 text-center">
           <div>
-            <span className="text-xs text-muted font-body uppercase tracking-wider block">Time Left</span>
-            <span className="text-lg font-mono text-primary">{formatTime(myResult.timeRemaining)}</span>
+            <span className="text-xs font-body uppercase tracking-widest block mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Time Left
+            </span>
+            <span className="text-xl font-mono font-semibold text-primary" style={{ textShadow: '0 0 8px rgba(139,0,255,0.3)' }}>
+              {formatTime(myResult.timeRemaining)}
+            </span>
           </div>
           <div>
-            <span className="text-xs text-muted font-body uppercase tracking-wider block">Mistakes</span>
-            <span className="text-lg font-mono text-primary">{myResult.mistakes}</span>
+            <span className="text-xs font-body uppercase tracking-widest block mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Mistakes
+            </span>
+            <span className="text-xl font-mono font-semibold text-primary" style={{ textShadow: '0 0 8px rgba(139,0,255,0.3)' }}>
+              {myResult.mistakes}
+            </span>
           </div>
         </div>
 
-        {/* Rating */}
+        {/* Rating - Slot machine style */}
         <div 
-          className="bg-elevated/50 rounded-xl px-8 py-4 mb-8 border"
+          className={`rounded-xl px-10 py-4 mb-8 transition-all duration-300 ${ratingLanded ? 'animate-rating-land' : ''}`}
           style={{
-            borderColor: ratingChange > 0 
-              ? 'rgba(0,255,136,0.4)' 
+            background: 'rgba(30,15,45,0.6)',
+            border: `2px solid ${ratingChange > 0 
+              ? 'rgba(0,255,136,0.5)' 
               : ratingChange < 0 
-              ? 'rgba(255,51,102,0.4)' 
-              : 'rgba(139,0,255,0.3)',
+              ? 'rgba(255,51,102,0.5)' 
+              : 'rgba(139,0,255,0.3)'}`,
             boxShadow: ratingChange > 0 
-              ? '0 0 20px rgba(0,255,136,0.15)' 
+              ? '0 0 25px rgba(0,255,136,0.2), inset 0 0 20px rgba(0,255,136,0.05)' 
               : ratingChange < 0 
-              ? '0 0 20px rgba(255,51,102,0.15)' 
-              : 'none',
+              ? '0 0 25px rgba(255,51,102,0.2), inset 0 0 20px rgba(255,51,102,0.05)' 
+              : '0 0 15px rgba(139,0,255,0.15)',
           }}
         >
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-3xl font-mono font-bold text-primary">
+          <div className="flex items-center justify-center gap-4">
+            <span 
+              className="text-4xl font-mono font-bold tabular-nums"
+              style={{ 
+                color: '#FFFFFF',
+                textShadow: '0 0 15px rgba(255,255,255,0.3)',
+              }}
+            >
               {Math.round(displayedRating)}
             </span>
             <span 
-              className={`text-xl font-mono font-bold ${
-                ratingChange > 0 ? 'text-success' : ratingChange < 0 ? 'text-error' : 'text-muted'
-              }`}
+              className="text-2xl font-mono font-bold tabular-nums"
+              style={{
+                color: ratingChange > 0 ? '#00FF88' : ratingChange < 0 ? '#FF3366' : '#888888',
+                textShadow: ratingChange > 0 
+                  ? '0 0 12px rgba(0,255,136,0.6)' 
+                  : ratingChange < 0 
+                  ? '0 0 12px rgba(255,51,102,0.6)' 
+                  : 'none',
+              }}
             >
               {ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)}
             </span>
@@ -416,20 +758,34 @@ export default function ResultScreen({
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Rematch */}
+              {/* Rematch - Pulsing glow */}
               <button
-                onClick={onRematch}
+                onClick={() => { handleButtonPress(); onRematch(); }}
                 disabled={rematchState === 'requested'}
-                className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${
-                  rematchState === 'waiting'
-                    ? 'bg-success/20 border-2 border-success text-success animate-pulse'
-                    : rematchState === 'requested'
-                    ? 'bg-elevated border border-grid-line text-muted cursor-not-allowed'
-                    : 'bg-player/10 border-2 border-player text-player hover:bg-player/20'
+                className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 ${
+                  rematchState === 'waiting' ? '' : rematchState === 'requested' ? 'cursor-not-allowed' : 'animate-button-glow'
                 }`}
-                style={rematchState === 'idle' ? {
-                  boxShadow: '0 0 20px rgba(0,255,255,0.25)',
-                } : {}}
+                style={
+                  rematchState === 'waiting'
+                    ? {
+                        background: 'rgba(0,255,136,0.15)',
+                        border: '2px solid #00FF88',
+                        color: '#00FF88',
+                        boxShadow: '0 0 20px rgba(0,255,136,0.3)',
+                        animation: 'pulse 1s ease-in-out infinite',
+                      }
+                    : rematchState === 'requested'
+                    ? {
+                        background: 'rgba(30,15,45,0.4)',
+                        border: '1px solid rgba(139,0,255,0.3)',
+                        color: 'rgba(255,255,255,0.4)',
+                      }
+                    : {
+                        background: 'rgba(0,255,255,0.1)',
+                        border: '2px solid #00FFFF',
+                        color: '#00FFFF',
+                      }
+                }
               >
                 {rematchState === 'idle' && 'Rematch'}
                 {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
@@ -438,8 +794,13 @@ export default function ResultScreen({
 
               {/* Find New Match */}
               <button
-                onClick={handleFindNewMatch}
-                className="w-full py-4 text-lg bg-void border-2 border-player text-player font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+                onClick={() => { handleButtonPress(); handleFindNewMatch(); }}
+                className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                style={{
+                  background: 'rgba(30,15,45,0.4)',
+                  border: '1px solid rgba(139,0,255,0.4)',
+                  color: 'rgba(255,255,255,0.7)',
+                }}
               >
                 Find New Match
               </button>
