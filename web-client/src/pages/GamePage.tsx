@@ -1821,7 +1821,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
 
       {/* Number Pad - closer to grid */}
-      <div className="px-3 pt-3 pb-2">
+      <div className="px-3 pt-1 pb-1">
         <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -1850,7 +1850,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       </div>
 
       {/* Toolbar OR Emoji Picker - they swap, same position */}
-      <div className="px-3 py-2 pb-safe">
+      <div className="px-3 py-1 pb-safe">
         {!showEmotePicker ? (
           <>
             {/* Normal Toolbar */}

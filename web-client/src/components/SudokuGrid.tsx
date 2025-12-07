@@ -359,9 +359,9 @@ function SudokuGrid({
                 fontSize: feedback.correct 
                   ? (feedback.streak && feedback.streak >= 8 ? '1.4rem' : feedback.streak && feedback.streak >= 5 ? '1.2rem' : '1rem')
                   : '1rem',
-                color: feedback.correct ? '#00FFFF' : '#FF3366',
+                color: feedback.correct ? '#00FF88' : '#FF3366',
                 textShadow: feedback.correct
-                  ? '0 0 10px rgba(0, 255, 255, 0.8)'
+                  ? '0 0 10px rgba(0, 255, 136, 0.8), 0 0 20px rgba(0, 255, 136, 0.5)'
                   : '0 0 10px rgba(255, 51, 102, 0.8)',
               }}
             >
