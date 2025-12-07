@@ -13,7 +13,7 @@ export default function EmoteCustomizerModal({
   onClose,
   emotes: initialEmotes,
   onSave,
-  isPremium = false, // Kept for future use
+  isPremium: _isPremium = false, // Kept for future use
 }: EmoteCustomizerModalProps) {
   const [emotes, setEmotes] = useState<string[]>(initialEmotes);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
