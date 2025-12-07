@@ -306,6 +306,21 @@ export default {
           '90%': { opacity: '0.3' },
           '100%': { transform: 'translateY(100vh)', opacity: '0' },
         },
+        'shooting-star': {
+          '0%': { transform: 'translate(0, 0)', opacity: '1' },
+          '70%': { opacity: '1' },
+          '100%': { transform: 'translate(200px, 120px)', opacity: '0' },
+        },
+        'grid-pulse-3d': {
+          '0%': { top: '0%', transform: 'rotateX(75deg) scaleX(0.3)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '80%': { opacity: '0.8' },
+          '100%': { top: '100%', transform: 'rotateX(75deg) scaleX(1.5)', opacity: '0' },
+        },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },
+          '50%': { opacity: '0.8', transform: 'scale(1.1)' },
+        },
       },
       
       /* =========================================

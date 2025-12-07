@@ -114,6 +114,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
 
   return (
     <div className="min-h-screen bg-void flex flex-col">
+      <BackgroundEffects />
+      
       {/* Header with Logo */}
       <div className="px-4 pt-32 pb-4 flex flex-col items-center safe-top">
         <SudoDuelLogo size="xl" />

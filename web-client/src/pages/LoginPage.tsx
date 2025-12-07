@@ -35,6 +35,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-void flex flex-col">
       {/* Matrix rain background */}
       <MatrixRain />
+      <BackgroundEffects />
       
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom relative z-10">
