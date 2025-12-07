@@ -243,6 +243,9 @@ export default {
         'shake-big': 'shake-big 0.5s ease-out',
         'rating-land': 'rating-land 0.3s ease-out',
         'button-glow': 'button-glow 2s ease-in-out infinite',
+        'drift-1': 'drift-1 25s ease-in-out infinite',
+        'drift-2': 'drift-2 30s ease-in-out infinite',
+        'drift-3': 'drift-3 20s ease-in-out infinite',
       },
       
       keyframes: {

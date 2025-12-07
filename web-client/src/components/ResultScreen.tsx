@@ -448,26 +448,65 @@ export default function ResultScreen({
         />
       )}
 
-      {/* Breathing grid background - behind everything */}
+      {/* Drifting gradient blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Cyan blob */}
+        <div 
+          className="absolute w-[500px] h-[500px] animate-drift-1"
+          style={{
+            background: didWin 
+              ? 'radial-gradient(circle, rgba(0,255,255,0.18) 0%, rgba(0,255,255,0.05) 40%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(0,255,255,0.08) 0%, rgba(0,255,255,0.02) 40%, transparent 70%)',
+            filter: 'blur(40px)',
+            top: '-5%',
+            left: '-10%',
+          }}
+        />
+        
+        {/* Magenta blob */}
+        <div 
+          className="absolute w-[450px] h-[450px] animate-drift-2"
+          style={{
+            background: !didWin && !isDraw
+              ? 'radial-gradient(circle, rgba(255,0,255,0.18) 0%, rgba(255,0,255,0.05) 40%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(255,0,255,0.08) 0%, rgba(255,0,255,0.02) 40%, transparent 70%)',
+            filter: 'blur(45px)',
+            top: '30%',
+            right: '-15%',
+          }}
+        />
+        
+        {/* Purple accent blob */}
+        <div 
+          className="absolute w-[400px] h-[400px] animate-drift-3"
+          style={{
+            background: 'radial-gradient(circle, rgba(139,0,255,0.1) 0%, rgba(139,0,255,0.03) 40%, transparent 70%)',
+            filter: 'blur(50px)',
+            bottom: '5%',
+            left: '10%',
+          }}
+        />
+      </div>
+
+      {/* Grid overlay */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-all duration-300 z-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(hsla(${gridHue}, 100%, 50%, ${breatheOpacity}) 1px, transparent 1px),
-            linear-gradient(90deg, hsla(${gridHue}, 100%, 50%, ${breatheOpacity}) 1px, transparent 1px)
+            linear-gradient(hsla(${gridHue}, 100%, 50%, ${breatheOpacity * 0.7}) 1px, transparent 1px),
+            linear-gradient(90deg, hsla(${gridHue}, 100%, 50%, ${breatheOpacity * 0.7}) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
-          transform: `scale(${breatheScale})`,
         }}
       />
 
-      {/* Ambient glow - breathing */}
+      {/* Ambient glow - now more subtle since blobs do the work */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-all duration-500 z-0"
+        className="absolute inset-0 pointer-events-none"
         style={{
           background: didWin 
-            ? `radial-gradient(circle at center 30%, rgba(0,255,255,${0.1 + Math.sin(breathePhase * Math.PI / 180) * 0.05}) 0%, transparent 50%)`
-            : `radial-gradient(circle at center 30%, rgba(255,0,255,${0.08 + Math.sin(breathePhase * Math.PI / 180) * 0.04}) 0%, transparent 50%)`,
+            ? 'radial-gradient(circle at center 30%, rgba(0,255,255,0.05) 0%, transparent 40%)'
+            : 'radial-gradient(circle at center 30%, rgba(255,0,255,0.04) 0%, transparent 40%)',
         }}
       />
 
