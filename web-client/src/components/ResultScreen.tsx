@@ -126,7 +126,7 @@ export default function ResultScreen({
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const attemptsRef = useRef(0);
   const hasTriggeredEffects = useRef(false);
   const ratingAnimationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
