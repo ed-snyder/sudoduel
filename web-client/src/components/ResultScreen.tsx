@@ -101,19 +101,29 @@ export default function ResultScreen({
 
   return (
     <div className="fixed inset-0 bg-void flex items-center justify-center p-4 z-50">
-      {/* Background effects */}
+      {/* Background grid */}
+      <div 
+        className="absolute inset-0 opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(139,0,255,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139,0,255,0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+        }}
+      />
+
+      {/* Victory effects */}
       {didWin && !isDraw && (
         <>
-          {/* Victory glow burst */}
           <div 
             className="absolute inset-0 animate-victory-burst pointer-events-none"
             style={{
-              background: 'radial-gradient(circle at center, rgba(0,255,255,0.15) 0%, transparent 60%)',
+              background: 'radial-gradient(circle at center, rgba(0,255,255,0.2) 0%, transparent 60%)',
             }}
           />
-          {/* Scanlines */}
           <div 
-            className="absolute inset-0 pointer-events-none opacity-20"
+            className="absolute inset-0 pointer-events-none opacity-30"
             style={{
               backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.1) 2px, rgba(0,255,255,0.1) 4px)',
               backgroundSize: '100% 4px',
@@ -122,27 +132,37 @@ export default function ResultScreen({
         </>
       )}
       
+      {/* Defeat dim overlay */}
       {!didWin && !isDraw && (
-        // Defeat dim overlay
-        <div className="absolute inset-0 bg-void/50 pointer-events-none" />
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'rgba(10,0,20,0.5)' }}
+        />
       )}
 
       {/* Main card */}
       <div 
-        className={`bg-surface border rounded-xl p-6 max-w-md w-full shadow-2xl relative transition-all duration-500 ${
+        className={`relative bg-surface border rounded-xl p-6 max-w-md w-full transition-all duration-500 ${
           showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         } ${
           didWin && !isDraw 
-            ? 'border-player shadow-glow-player' 
+            ? 'border-player' 
             : isDraw 
             ? 'border-grid-line' 
-            : 'border-error/30'
+            : 'border-opponent/50'
         }`}
+        style={{
+          boxShadow: didWin && !isDraw 
+            ? '0 0 30px rgba(0,255,255,0.3), 0 0 60px rgba(0,255,255,0.1)' 
+            : !didWin && !isDraw
+            ? '0 0 30px rgba(255,0,255,0.2)'
+            : '0 0 20px rgba(139,0,255,0.2)',
+        }}
       >
         {/* Result Header */}
         <div className="text-center mb-6">
           <h1 
-            className={`text-4xl sm:text-5xl font-heading font-bold mb-2 tracking-wider ${
+            className={`text-4xl sm:text-5xl font-heading font-bold mb-2 uppercase tracking-wider ${
               isDraw 
                 ? 'text-secondary' 
                 : didWin 
@@ -151,6 +171,8 @@ export default function ResultScreen({
             }`}
             style={didWin && !isDraw ? {
               textShadow: '0 0 10px rgba(0,255,255,0.8), 0 0 20px rgba(0,255,255,0.5), 0 0 40px rgba(255,0,255,0.3)',
+            } : !didWin && !isDraw ? {
+              textShadow: '0 0 10px rgba(255,0,255,0.3)',
             } : {}}
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
@@ -184,7 +206,7 @@ export default function ResultScreen({
             <div className="text-xs text-muted font-mono">/81</div>
           </div>
           
-          <div className="text-2xl text-muted">—</div>
+          <div className="text-2xl text-muted font-body">vs</div>
           
           <div className="text-center">
             <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Opponent</div>
@@ -205,38 +227,42 @@ export default function ResultScreen({
           }`}
         >
           {/* Your Stats */}
-          <div className={`bg-elevated/50 rounded-lg p-3 border ${
-            didWin ? 'border-player/30' : 'border-grid-line/50'
+          <div className={`bg-elevated rounded-lg p-3 border ${
+            didWin ? 'border-player/30' : 'border-grid-line'
           }`}>
-            <p className={`font-body font-semibold mb-2 text-sm ${didWin ? 'text-player' : 'text-secondary'}`}>
+            <p className={`font-body font-semibold mb-2 text-sm uppercase tracking-wider ${
+              didWin ? 'text-player' : 'text-secondary'
+            }`}>
               You
             </p>
-            <div className="space-y-1 text-xs font-body text-muted">
+            <div className="space-y-1 text-xs font-body">
               <div className="flex justify-between">
-                <span>Mistakes</span>
+                <span className="text-muted">Mistakes</span>
                 <span className="font-mono text-primary">{myResult.mistakes}</span>
               </div>
               <div className="flex justify-between">
-                <span>Time Left</span>
+                <span className="text-muted">Time Left</span>
                 <span className="font-mono text-primary">{formatTime(myResult.timeRemaining)}</span>
               </div>
             </div>
           </div>
           
           {/* Opponent Stats */}
-          <div className={`bg-elevated/50 rounded-lg p-3 border ${
-            !didWin && !isDraw ? 'border-opponent/30' : 'border-grid-line/50'
+          <div className={`bg-elevated rounded-lg p-3 border ${
+            !didWin && !isDraw ? 'border-opponent/30' : 'border-grid-line'
           }`}>
-            <p className={`font-body font-semibold mb-2 text-sm ${!didWin && !isDraw ? 'text-opponent' : 'text-secondary'}`}>
+            <p className={`font-body font-semibold mb-2 text-sm uppercase tracking-wider ${
+              !didWin && !isDraw ? 'text-opponent' : 'text-secondary'
+            }`}>
               Opponent
             </p>
-            <div className="space-y-1 text-xs font-body text-muted">
+            <div className="space-y-1 text-xs font-body">
               <div className="flex justify-between">
-                <span>Mistakes</span>
+                <span className="text-muted">Mistakes</span>
                 <span className="font-mono text-primary">{opponentResult.mistakes}</span>
               </div>
               <div className="flex justify-between">
-                <span>Time Left</span>
+                <span className="text-muted">Time Left</span>
                 <span className="font-mono text-primary">{formatTime(opponentResult.timeRemaining)}</span>
               </div>
             </div>
@@ -245,21 +271,28 @@ export default function ResultScreen({
 
         {/* Rating Change */}
         <div 
-          className={`bg-elevated/30 rounded-xl p-4 mb-6 border transition-all duration-500 delay-200 ${
+          className={`bg-elevated rounded-xl p-4 mb-6 border transition-all duration-500 delay-200 ${
             showStats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           } ${
             ratingChange > 0 
-              ? 'border-success/30' 
+              ? 'border-success/50' 
               : ratingChange < 0 
-              ? 'border-error/30' 
-              : 'border-grid-line/50'
+              ? 'border-error/50' 
+              : 'border-grid-line'
           }`}
+          style={{
+            boxShadow: ratingChange > 0 
+              ? '0 0 15px rgba(0,255,136,0.15)' 
+              : ratingChange < 0 
+              ? '0 0 15px rgba(255,51,102,0.15)' 
+              : 'none',
+          }}
         >
           <div className="text-center">
             <div className="text-xs text-muted font-body uppercase tracking-wider mb-2">Rating</div>
             <div className="flex items-center justify-center gap-3">
               <span 
-                className="text-3xl font-mono font-bold text-primary"
+                className="text-3xl font-mono font-bold text-player"
                 style={{ textShadow: '0 0 10px rgba(0,255,255,0.3)' }}
               >
                 {Math.round(displayedRating)}
@@ -285,23 +318,26 @@ export default function ResultScreen({
           <button
             onClick={onRematch}
             disabled={rematchState === 'requested'}
-            className={`w-full py-3 font-body font-semibold rounded-lg transition-all ${
+            className={`w-full py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all ${
               rematchState === 'waiting'
                 ? 'bg-success/20 border-2 border-success text-success hover:bg-success/30 animate-pulse'
                 : rematchState === 'requested'
                 ? 'bg-elevated border border-grid-line text-muted cursor-not-allowed'
-                : 'bg-transparent border-2 border-player text-player hover:bg-player/20 hover:shadow-glow-player'
+                : 'bg-transparent border-2 border-player text-player hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98]'
             }`}
+            style={rematchState === 'idle' ? {
+              boxShadow: '0 0 10px rgba(0,255,255,0.2)',
+            } : {}}
           >
             {rematchState === 'idle' && 'Rematch'}
-            {rematchState === 'requested' && `Waiting for opponent... (${rematchCountdown}s)`}
+            {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
             {rematchState === 'waiting' && '⚔️ Accept Rematch!'}
           </button>
 
           {/* Back to Lobby */}
           <button
             onClick={onBackToLobby}
-            className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold rounded-lg hover:border-player/50 hover:text-player transition-all"
+            className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold uppercase tracking-wider rounded-lg hover:border-player/50 hover:text-player transition-all"
           >
             Back to Lobby
           </button>
