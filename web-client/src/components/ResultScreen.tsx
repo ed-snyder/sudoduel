@@ -802,7 +802,7 @@ export default function ResultScreen({
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Rematch - Pulsing glow */}
+              {/* Rematch - Solid with thick glowing border */}
               <button
                 onClick={() => { handleButtonPress(); onRematch(); }}
                 disabled={rematchState === 'requested'}
@@ -812,22 +812,24 @@ export default function ResultScreen({
                 style={
                   rematchState === 'waiting'
                     ? {
-                        background: 'rgba(0,255,136,0.15)',
-                        border: '2px solid #00FF88',
+                        background: 'rgb(15, 10, 25)',
+                        border: '3px solid #00FF88',
                         color: '#00FF88',
-                        boxShadow: '0 0 20px rgba(0,255,136,0.3)',
+                        boxShadow: '0 0 20px rgba(0,255,136,0.4), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
                         animation: 'pulse 1s ease-in-out infinite',
                       }
                     : rematchState === 'requested'
                     ? {
-                        background: 'rgba(30,15,45,0.4)',
-                        border: '1px solid rgba(139,0,255,0.3)',
+                        background: 'rgb(20, 12, 30)',
+                        border: '3px solid rgba(139,0,255,0.3)',
                         color: 'rgba(255,255,255,0.4)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                       }
                     : {
-                        background: 'rgba(0,255,255,0.1)',
-                        border: '2px solid #00FFFF',
+                        background: 'rgb(15, 10, 25)',
+                        border: '3px solid #00FFFF',
                         color: '#00FFFF',
+                        boxShadow: '0 0 15px rgba(0,255,255,0.3), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
                       }
                 }
               >
@@ -836,14 +838,15 @@ export default function ResultScreen({
                 {rematchState === 'waiting' && '⚔️ Accept Rematch'}
               </button>
 
-              {/* Find New Match */}
+              {/* Find New Match - Solid secondary */}
               <button
-                onClick={() => { handleButtonPress(); handleFindNewMatch(); }}
+                onClick={() => { handleButtonPress(); onBackToLobby(); }}
                 className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
                 style={{
-                  background: 'rgba(30,15,45,0.4)',
-                  border: '1px solid rgba(139,0,255,0.4)',
-                  color: 'rgba(255,255,255,0.7)',
+                  background: 'rgb(20, 12, 30)',
+                  border: '3px solid rgba(139,0,255,0.5)',
+                  color: 'rgba(255,255,255,0.8)',
+                  boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               >
                 Find New Match
