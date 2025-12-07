@@ -9,7 +9,7 @@ interface SudokuGridProps {
   notesMode?: boolean;
   lockedOut?: boolean;
   lastMoveResult?: { row: number; col: number; correct: boolean } | null;
-  opponentScoredCells?: Set<string>; // Set of "row-col" keys for cells opponent has scored
+  opponentScoredCells?: Set<string>;
   lastScoredCell?: { row: number; col: number } | null;
   completedCells?: Set<string>;
   almostCompleteCells?: Set<string>;
@@ -44,7 +44,6 @@ const playErrorSound = () => {
     oscillator.start();
     oscillator.stop(audioContext.currentTime + 0.15);
   } catch (error) {
-    // Silently fail if Web Audio API is not available
     console.warn('Could not play error sound:', error);
   }
 };
@@ -55,7 +54,7 @@ function SudokuGrid({
   selectedCell,
   onCellClick,
   notes = new Map(),
-  notesMode: _notesMode = false, // Reserved for future notes mode feature
+  notesMode: _notesMode = false,
   lockedOut = false,
   lastMoveResult = null,
   opponentScoredCells = new Set(),
@@ -68,15 +67,10 @@ function SudokuGrid({
   const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
-  const isInitialCell = (row: number, col: number) => {
-    return initialGrid[row][col] !== 0;
-  };
+  
+  const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
+  const isSelected = (row: number, col: number) => selectedCell?.row === row && selectedCell?.col === col;
 
-  const isSelected = (row: number, col: number) => {
-    return selectedCell?.row === row && selectedCell?.col === col;
-  };
-
-  // Get selected value once at the top level
   const selectedValue = selectedCell 
     ? (grid[selectedCell.row]?.[selectedCell.col] || null)
     : null;
@@ -84,7 +78,6 @@ function SudokuGrid({
 
   const isSameBox = (row: number, col: number) => {
     if (!selectedCell || !hasSelectedValue) return false;
-    // Don't highlight the selected cell itself
     if (row === selectedCell.row && col === selectedCell.col) return false;
     const boxRow = Math.floor(selectedCell.row / 3);
     const boxCol = Math.floor(selectedCell.col / 3);
@@ -93,14 +86,12 @@ function SudokuGrid({
 
   const isSameRowOrCol = (row: number, col: number) => {
     if (!selectedCell || !hasSelectedValue) return false;
-    // Don't highlight the selected cell itself
     if (row === selectedCell.row && col === selectedCell.col) return false;
     return row === selectedCell.row || col === selectedCell.col;
   };
 
   const isSameNumberAsSelected = (row: number, col: number) => {
     if (!selectedCell || !hasSelectedValue) return false;
-    // Don't highlight the selected cell itself
     if (row === selectedCell.row && col === selectedCell.col) return false;
     const cellValue = grid[row]?.[col];
     return cellValue === selectedValue;
@@ -120,99 +111,61 @@ function SudokuGrid({
     if (!lastMoveResult) return;
 
     const { row, col, correct } = lastMoveResult;
-    // Create unique move ID to prevent duplicate processing
     const moveId = `${row}-${col}-${correct}`;
     
-    // Prevent duplicate processing (React StrictMode or rapid state updates)
-    if (lastProcessedMoveRef.current === moveId) {
-      return;
-    }
+    if (lastProcessedMoveRef.current === moveId) return;
     lastProcessedMoveRef.current = moveId;
     
     const feedbackId = `${row}-${col}-${Date.now()}`;
     
     if (correct) {
-      // Correct answer: show "+5s!" (bonus is 5 seconds)
-      // Enhanced text at high streaks
       setFloatingFeedbacks((prev) => [
         ...prev,
         { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
       ]);
     } else {
-      // Incorrect answer: show "-30s!" and play sound/vibration
+      playErrorSound();
+      if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
       setFloatingFeedbacks((prev) => [
         ...prev,
         { id: feedbackId, row, col, text: '-30s!', correct: false },
       ]);
-      
-      // Play error sound
-      playErrorSound();
-      
-      // Trigger vibration if available
-      if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100]);
-      }
     }
 
-    // Remove feedback after animation completes (~1 second)
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       setFloatingFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
     }, 1000);
-
-    return () => clearTimeout(timer);
   }, [lastMoveResult, currentStreak]);
 
-  // Helper function to get cell position
   const getCellPosition = (row: number, col: number) => {
-    const cellKey = `${row}-${col}`;
-    const cellElement = cellRefs.current.get(cellKey);
-    const gridElement = gridRef.current;
-    
-    if (!cellElement || !gridElement) {
-      // Fallback to percentage-based positioning
-      const cellWidthPercent = 100 / 9;
-      const cellHeightPercent = 100 / 9;
-      // Position slightly above the cell
-      return {
-        left: (col * cellWidthPercent) + (cellWidthPercent / 2),
-        top: row * cellHeightPercent,
-        usePercent: true,
-        offsetTop: -10, // Offset in pixels for percentage-based positioning
-      };
-    }
-    
-    const cellRect = cellElement.getBoundingClientRect();
-    const gridRect = gridElement.getBoundingClientRect();
-    
-    // Calculate position relative to grid
-    const left = cellRect.left - gridRect.left + (cellRect.width / 2);
-    // Position slightly above the cell (about 10px above the top)
-    const top = cellRect.top - gridRect.top - 10;
-    
-    return { left, top, usePercent: false };
+    const cellPercent = 100 / 9;
+    return {
+      left: col * cellPercent + cellPercent / 2,
+      top: row * cellPercent + cellPercent / 2,
+      usePercent: true,
+      offsetTop: -15,
+    };
   };
 
   return (
     <div
       ref={gridRef}
-      className={`
-        relative grid grid-cols-9 gap-0 border-2 border-gray-700
-        ${lockedOut ? 'bg-gray-100' : 'bg-white'}
-        w-full
-      `}
+      className="grid grid-cols-9 relative"
       style={{
         aspectRatio: '1 / 1',
-        maxHeight: 'min(100%, calc(100vh - 280px))', // Reserved space for header + controls
+        maxHeight: 'min(100%, calc(100vh - 280px))',
         maxWidth: '100%',
-        marginBottom: '0px',
-        paddingBottom: '0px',
+        background: 'rgba(15, 10, 25, 0.9)',
+        border: '3px solid',
+        borderImage: 'linear-gradient(135deg, #00FFFF, #8B00FF, #FF00FF) 1',
+        boxShadow: '0 0 30px rgba(139,0,255,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+        borderRadius: '4px',
       }}
     >
       {grid.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
           const isInitial = isInitialCell(rowIndex, colIndex);
           const selected = isSelected(rowIndex, colIndex);
-          // Only highlight related cells if selected cell has a value, and exclude the selected cell itself
           const related =
             !selected &&
             hasSelectedValue &&
@@ -220,96 +173,97 @@ function SudokuGrid({
               isSameBox(rowIndex, colIndex) ||
               isSameNumberAsSelected(rowIndex, colIndex));
 
-          // Border styling for 3x3 boxes
-          const borderRight =
-            (colIndex + 1) % 3 === 0 && colIndex < 8
-              ? 'border-r-2 border-gray-700'
-              : 'border-r border-gray-400';
-          const borderBottom =
-            (rowIndex + 1) % 3 === 0 && rowIndex < 8
-              ? 'border-b-2 border-gray-700'
-              : 'border-b border-gray-400';
-
+          // 3x3 box borders - thicker purple
+          const isRightBoxEdge = (colIndex + 1) % 3 === 0 && colIndex < 8;
+          const isBottomBoxEdge = (rowIndex + 1) % 3 === 0 && rowIndex < 8;
+          
           const cellKey = `${rowIndex}-${colIndex}`;
           const cellNotes = notes.get(cellKey) || [];
           const hasValue = cell !== 0;
           const showNotes = !hasValue && cellNotes.length > 0;
-          
-          // Check if opponent has scored this cell but player hasn't
-          // Only show pink tint if player hasn't scored it yet and it's not an initial clue
           const opponentScored = opponentScoredCells.has(cellKey) && !hasValue && !isInitial;
-          
-          // Check if this cell just scored (for pop animation)
           const isJustScored = lastScoredCell?.row === rowIndex && lastScoredCell?.col === colIndex;
-          
-          // Check if this cell is part of a completed row/col/box
           const isCompleted = completedCells.has(cellKey);
-          
-          // Check if this cell is almost complete (last empty in row/col/box)
           const isAlmostComplete = almostCompleteCells.has(cellKey);
+
+          // Determine cell background
+          let cellBg = 'rgba(20, 12, 30, 0.8)'; // Default dark
+          if (lockedOut) {
+            cellBg = 'rgba(30, 20, 40, 0.5)';
+          } else if (isErrorFlash(rowIndex, colIndex)) {
+            cellBg = 'rgba(255, 51, 102, 0.4)';
+          } else if (selected) {
+            cellBg = 'rgba(0, 255, 255, 0.25)';
+          } else if (related) {
+            cellBg = 'rgba(0, 255, 255, 0.08)';
+          } else if (opponentScored) {
+            cellBg = 'rgba(255, 0, 255, 0.1)';
+          }
 
           return (
             <button
               key={cellKey}
               ref={(el) => {
-                if (el) {
-                  cellRefs.current.set(cellKey, el);
-                } else {
-                  cellRefs.current.delete(cellKey);
-                }
+                if (el) cellRefs.current.set(cellKey, el);
+                else cellRefs.current.delete(cellKey);
               }}
               onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
+              onTouchStart={(e) => {
+                if (!lockedOut) {
+                  e.preventDefault();
+                  onCellClick(rowIndex, colIndex);
+                }
+              }}
+              disabled={lockedOut}
               className={`
                 relative flex items-center justify-center
-                ${borderRight} ${borderBottom}
-                w-full
-                ${
-                  lockedOut
-                    ? 'bg-gray-100'
-                    : isErrorFlash(rowIndex, colIndex)
-                    ? 'bg-red-100'
-                    : selected
-                    ? 'bg-blue-300'
-                    : related
-                    ? 'bg-blue-100'
-                    : opponentScored
-                    ? 'opponent-scored'
-                    : 'bg-white'
-                }
+                transition-colors duration-75 touch-manipulation
                 ${isCompleted ? 'completion-flash' : ''}
                 ${isAlmostComplete ? 'almost-complete-glow' : ''}
-                ${
-                  !lockedOut
-                    ? 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                    : 'cursor-default'
-                }
-                transition-colors duration-75 touch-manipulation
+                ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
+              `}
               style={{
                 aspectRatio: '1 / 1',
-                  willChange: 'background-color', // GPU acceleration hint
+                background: cellBg,
+                borderRight: isRightBoxEdge 
+                  ? '2px solid rgba(139, 0, 255, 0.8)' 
+                  : '1px solid rgba(139, 0, 255, 0.25)',
+                borderBottom: isBottomBoxEdge 
+                  ? '2px solid rgba(139, 0, 255, 0.8)' 
+                  : '1px solid rgba(139, 0, 255, 0.25)',
+                boxShadow: selected 
+                  ? 'inset 0 0 15px rgba(0, 255, 255, 0.4), 0 0 10px rgba(0, 255, 255, 0.3)' 
+                  : isErrorFlash(rowIndex, colIndex)
+                  ? 'inset 0 0 15px rgba(255, 51, 102, 0.5)'
+                  : 'none',
+                willChange: 'background-color',
               }}
-              `}
-              disabled={lockedOut}
             >
               {hasValue ? (
                 <span
-                  className={`
-                    text-base sm:text-lg md:text-xl lg:text-2xl font-bold
-                    ${isInitial ? 'text-gray-800' : 'text-blue-500'}
-                    ${isJustScored ? 'cell-score-pop' : ''}
-                  `}
-                  style={{ fontSize: 'clamp(1.125rem, 5vw, 2rem)' }}
+                  className={`font-mono font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
+                  style={{ 
+                    fontSize: 'clamp(1.125rem, 5vw, 2rem)',
+                    color: isInitial ? 'rgba(255, 255, 255, 0.9)' : '#00FFFF',
+                    textShadow: isInitial 
+                      ? 'none' 
+                      : '0 0 10px rgba(0, 255, 255, 0.6)',
+                  }}
                 >
                   {cell}
                 </span>
               ) : showNotes ? (
-                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-1">
+                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <span
                       key={num}
-                      className={`w-full h-full text-[9px] sm:text-[11px] md:text-[13px] text-gray-500 flex items-center justify-center font-medium ${
+                      className={`w-full h-full flex items-center justify-center font-mono ${
                         cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                       }`}
+                      style={{
+                        fontSize: 'clamp(0.5rem, 2vw, 0.75rem)',
+                        color: 'rgba(0, 255, 255, 0.7)',
+                      }}
                     >
                       {num}
                     </span>
@@ -330,10 +284,8 @@ function SudokuGrid({
             key={feedback.id}
             className="floating-feedback absolute"
             style={{
-              left: position.usePercent ? `${position.left}%` : `${position.left}px`,
-              top: position.usePercent 
-                ? `calc(${position.top}% + ${(position as any).offsetTop || 0}px)` 
-                : `${position.top}px`,
+              left: `${position.left}%`,
+              top: `calc(${position.top}% + ${position.offsetTop}px)`,
               pointerEvents: 'none',
               zIndex: 1000,
               textAlign: 'center',
@@ -341,25 +293,15 @@ function SudokuGrid({
             }}
           >
             <span
-              className={`
-                whitespace-nowrap block font-bold
-                ${feedback.correct 
-                  ? (feedback.streak && feedback.streak >= 8 
-                      ? 'text-green-400 text-2xl font-black'
-                      : feedback.streak && feedback.streak >= 5
-                      ? 'text-green-400 text-xl font-bold'
-                      : 'text-green-400 text-lg font-semibold')
-                  : 'text-red-500 text-lg'
-                }
-              `}
+              className="whitespace-nowrap block font-mono font-bold"
               style={{
+                fontSize: feedback.correct 
+                  ? (feedback.streak && feedback.streak >= 8 ? '1.5rem' : feedback.streak && feedback.streak >= 5 ? '1.25rem' : '1rem')
+                  : '1rem',
+                color: feedback.correct ? '#00FFFF' : '#FF3366',
                 textShadow: feedback.correct
-                  ? (feedback.streak && feedback.streak >= 8
-                      ? '0 0 12px rgba(16, 185, 129, 0.8), 0 0 24px rgba(16, 185, 129, 0.4)'
-                      : feedback.streak && feedback.streak >= 5
-                      ? '0 0 10px rgba(16, 185, 129, 0.6)'
-                      : '0 0 8px rgba(16, 185, 129, 0.6)')
-                  : '0 0 8px rgba(239, 68, 68, 0.6)',
+                  ? '0 0 15px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4)'
+                  : '0 0 15px rgba(255, 51, 102, 0.8)',
               }}
             >
               {feedback.text}

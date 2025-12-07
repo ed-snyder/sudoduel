@@ -83,6 +83,7 @@ html, body, #root {
 }
 
 .floating-feedback {
+  animation: float-up 800ms ease-out forwards;
   animation: float-up 0.8s ease-out forwards;
   pointer-events: none;
   z-index: 1000;

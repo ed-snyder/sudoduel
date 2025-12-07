@@ -6,13 +6,13 @@ import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
 import ResultScreen from '../components/ResultScreen';
+import GameBackgroundEffects from '../components/GameBackgroundEffects';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 
 const DEFAULT_EMOTES = ['😂', '😢', '😍', '💩'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
-const EMOTE_PICKER_DURATION = 3000; // 3 seconds
 
 interface GamePageProps {
   matchId: number;
@@ -132,6 +132,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
   
+  // Background effect triggers
+  const [bgPlayerScored, setBgPlayerScored] = useState(false);
+  const [bgOpponentScored, setBgOpponentScored] = useState(false);
+  const [bgMistakeMade, setBgMistakeMade] = useState(false);
+  
   // Streak system - track longest streak (used internally, not displayed in ResultScreen)
   const [_longestStreak, setLongestStreak] = useState(0);
   const myStreakRef = useRef(0);
@@ -160,6 +165,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     text: string;
     colorClass: string;
     priority: number;
+    type?: 'positive' | 'negative' | 'neutral';
   }
   const [bannerMessage, setBannerMessage] = useState<BannerMessage | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -168,7 +174,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [shownLowTimeWarning, setShownLowTimeWarning] = useState(false);
   
   // Function to show a banner message
-  const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000) => {
+  const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000, type?: 'positive' | 'negative' | 'neutral') => {
     // Clear any existing timeout
     if (bannerTimeoutRef.current) {
       clearTimeout(bannerTimeoutRef.current);
@@ -180,7 +186,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       if (prev && prev.priority > priority) {
         return prev; // Keep existing higher priority message
       }
-      return { text, colorClass, priority };
+      return { text, colorClass, priority, type: type || 'neutral' };
     });
     
     // Auto-hide after duration
@@ -331,11 +337,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Gained the lead: was behind or tied, now ahead
     if (prevDiff <= 0 && currentDiff > 0) {
-      showBanner("Gained the Lead!", "text-indigo-500", 5);
+      showBanner("Gained the Lead!", "text-indigo-500", 5, 2000, 'positive');
     }
     // Lost the lead: was ahead or tied, now behind
     else if (prevDiff >= 0 && currentDiff < 0) {
-      showBanner("Lost the Lead!", "text-pink-500", 5);
+      showBanner("Lost the Lead!", "text-pink-500", 5, 2000, 'negative');
     }
     
     prevScoreDiffRef.current = currentDiff;
@@ -350,11 +356,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Only trigger when crossing the threshold (not on initial load)
     if (prevRemaining > 9 && cellsRemaining <= 9 && cellsRemaining === 9) {
-      showBanner("9 cells left!", "text-indigo-500", 3);
+      showBanner("9 cells left!", "text-indigo-500", 3, 2000, 'positive');
     } else if (prevRemaining > 3 && cellsRemaining <= 3 && cellsRemaining === 3) {
-      showBanner("3 cells left!", "text-indigo-500", 3);
+      showBanner("3 cells left!", "text-indigo-500", 3, 2000, 'positive');
     } else if (prevRemaining > 1 && cellsRemaining <= 1 && cellsRemaining === 1) {
-      showBanner("Final cell!", "text-indigo-500", 3);
+      showBanner("Final cell!", "text-indigo-500", 3, 2000, 'positive');
     }
     
     prevCellsRemainingRef.current = cellsRemaining;
@@ -371,7 +377,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     if (bothUnder9 && !isDownToWire) {
       setIsDownToWire(true);
-      showBanner("Down to the wire!", "text-red-500", 7, 3000);
+      showBanner("Down to the wire!", "text-red-500", 7, 3000, 'negative');
     } else if (!bothUnder9) {
       setIsDownToWire(false);
     }
@@ -383,7 +389,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     if (myTimeRemaining < 15 && myTimeRemaining > 0 && !shownLowTimeWarning) {
       setShownLowTimeWarning(true);
-      showBanner("Running out of time!", "text-red-500", 10, 3000);
+      showBanner("Running out of time!", "text-red-500", 10, 3000, 'negative');
     }
     
     // Reset warning if time goes back above 15 (shouldn't happen, but handle edge case)
@@ -630,6 +636,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             // Grid already updated optimistically, no need to update again
             // Update state to reflect server's authoritative score/time
             setMyState(player_state);
+            
+            // Trigger background effects
+            setBgPlayerScored(prev => !prev); // Toggle to trigger effect
           } else {
             // Incorrect move: Server confirms incorrect (matches our local validation)
             // Error feedback already played locally - do NOT re-trigger to avoid duplicate flash
@@ -647,6 +656,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             
             // Revert optimistic score update (server's player_state has correct values)
           setMyState(player_state);
+          
+          // Trigger background effects
+          setBgMistakeMade(prev => !prev);
           }
           
           // Update pressure indicators
@@ -682,6 +694,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               }
               return prev;
             });
+            
+            // Trigger background effects
+            setBgOpponentScored(prev => !prev);
             
             // Optional: play distant tick for opponent moves
             // playDistantTick(); // Uncomment if enabled in settings
@@ -1369,10 +1384,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Connecting screen
   if (gameStatus === 'connecting') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-void flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <div className="text-gray-800 text-lg">Connecting to game...</div>
+          <div 
+            className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              border: '3px solid rgba(139, 0, 255, 0.2)',
+              borderTopColor: '#00FFFF',
+            }}
+          />
+          <div className="text-primary text-lg font-body">Connecting to game...</div>
         </div>
       </div>
     );
@@ -1382,11 +1403,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Waiting for opponent
   if (gameStatus === 'waiting') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-void flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <div className="text-gray-800 text-lg mb-1">Waiting for opponent</div>
-          <div className="text-gray-500 text-sm">Please wait...</div>
+          <div 
+            className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              border: '3px solid rgba(139, 0, 255, 0.2)',
+              borderTopColor: '#00FFFF',
+            }}
+          />
+          <div className="text-primary text-lg font-body mb-1">Waiting for opponent</div>
+          <div className="text-muted text-sm font-body">Please wait...</div>
         </div>
       </div>
     );
@@ -1467,22 +1494,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     );
   }
 
-  // Handle emote button
-  const handleEmote = () => {
-    // Toggle emote picker
-    if (showEmotePicker) {
-      setShowEmotePicker(false);
-      if (emotePickerTimeoutRef.current) {
-        clearTimeout(emotePickerTimeoutRef.current);
-      }
-    } else {
-      setShowEmotePicker(true);
-      // Auto-hide after 3 seconds
-      emotePickerTimeoutRef.current = setTimeout(() => {
-        setShowEmotePicker(false);
-      }, EMOTE_PICKER_DURATION);
-    }
-  };
 
   const handleSelectEmote = (emote: string) => {
     // Hide picker
@@ -1520,7 +1531,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className={`min-h-screen bg-white flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Battlefield Background */}
+      <GameBackgroundEffects 
+        playerScored={bgPlayerScored}
+        opponentScored={bgOpponentScored}
+        mistakeMade={bgMistakeMade}
+        timeRemaining={myTimeRemaining}
+        criticalTime={30}
+      />
+
       {/* Countdown overlay */}
       {countdown !== null && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -1559,19 +1579,29 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       {/* Disconnect Banner */}
       {opponentDisconnected && (
         <div className="absolute inset-x-0 z-50 mx-4" style={{ top: isCapacitor ? '64px' : '64px' }}>
-          <div className="bg-amber-500 text-white rounded-lg p-4 shadow-lg">
+          <div 
+            className="rounded-lg p-4 shadow-lg"
+            style={{
+              background: 'rgba(255, 184, 0, 0.2)',
+              border: '2px solid rgba(255, 184, 0, 0.5)',
+              color: '#FFB800',
+            }}
+          >
             <div>
-              <p className="font-semibold">Opponent disconnected</p>
-              <p className="text-sm opacity-90">
+              <p className="font-semibold font-body">Opponent disconnected</p>
+              <p className="text-sm opacity-90 font-body">
                 Waiting {graceTimeRemaining}s for reconnection...
               </p>
-              <p className="text-xs opacity-75 mt-1">Your timer is paused</p>
+              <p className="text-xs opacity-75 mt-1 font-body">Your timer is paused</p>
             </div>
             {/* Progress bar showing grace period */}
-            <div className="mt-3 h-1 bg-amber-400 rounded-full overflow-hidden">
+            <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255, 184, 0, 0.3)' }}>
               <div 
-                className="h-full bg-white transition-all duration-1000"
-                style={{ width: `${(graceTimeRemaining / 15) * 100}%` }}
+                className="h-full transition-all duration-1000"
+                style={{ 
+                  width: `${(graceTimeRemaining / 15) * 100}%`,
+                  background: '#FFB800',
+                }}
               />
             </div>
           </div>
@@ -1584,7 +1614,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         <div className="flex justify-end px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           <button
             onClick={() => setShowForfeitModal(true)}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-muted hover:text-secondary transition-colors"
             aria-label="Settings"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -1599,13 +1629,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
             <div className="flex items-center gap-2">
-              <div className="text-lg sm:text-xl font-bold text-blue-500">{user?.display_name || 'You'}</div>
-              <div className="text-xs sm:text-sm text-gray-500 font-mono">{Math.round(user?.rating || 1500)}</div>
+              <div className="text-lg sm:text-xl font-bold text-player">{user?.display_name || 'You'}</div>
+              <div className="text-xs sm:text-sm text-muted font-mono">{Math.round(user?.rating || 1500)}</div>
             </div>
             {/* Right: Opponent */}
             <div className="flex items-center gap-2">
-              <div className="text-lg sm:text-xl font-bold text-fuchsia-500">{opponentName}</div>
-              <div className="text-xs sm:text-sm text-gray-500 font-mono">
+              <div className="text-lg sm:text-xl font-bold text-opponent">{opponentName}</div>
+              <div className="text-xs sm:text-sm text-muted font-mono">
                 {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
               </div>
             </div>
@@ -1620,13 +1650,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                   color="blue" 
                 className="w-[120px]"
                 />
-              <div className="text-xs sm:text-sm font-mono font-semibold text-blue-500 whitespace-nowrap">
+              <div className="text-xs sm:text-sm font-mono font-semibold text-player whitespace-nowrap">
                 {myState.cells_completed}/81
               </div>
             </div>
             {/* Right: Opponent progress bar */}
             <div className="flex items-center gap-2">
-              <div className="text-xs sm:text-sm font-mono font-semibold text-fuchsia-500 whitespace-nowrap">
+              <div className="text-xs sm:text-sm font-mono font-semibold text-opponent whitespace-nowrap">
                 {opponentState.cells_completed}/81
               </div>
                 <ProgressBar 
@@ -1640,12 +1670,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         </div>
 
         {/* Timer boxes - Just above the border line, reduced spacing */}
-        <div className="px-3 sm:px-4 border-b border-gray-200 relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
+        <div className="px-3 sm:px-4 border-b border-grid-line relative" style={{ paddingTop: '0px', paddingBottom: '6px', marginTop: isCapacitor ? '8px' : '0px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0px' }}>
             {/* Left: Player timer */}
             <div className="relative">
-              <div className={`px-1 py-0.5 rounded-lg border-2 ${myTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'} ${myTimerPaused ? 'opacity-50' : ''}`}>
-                <div className={`text-xl sm:text-2xl font-mono font-bold ${myTimeRemaining < 30 ? 'text-red-500' : 'text-blue-500'}`}>
+              <div className={`px-2 py-1 rounded-lg border-2 ${
+                myTimeRemaining < 30 
+                  ? 'bg-error/20 border-error' 
+                  : 'bg-player/20 border-player'
+              } ${myTimerPaused ? 'opacity-50' : ''}`}
+                style={{
+                  boxShadow: myTimeRemaining < 30 
+                    ? '0 0 15px rgba(255,51,102,0.4)' 
+                    : '0 0 15px rgba(0,255,255,0.3)',
+                }}
+              >
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${
+                  myTimeRemaining < 30 ? 'text-error' : myTimeRemaining < 60 ? 'text-gold' : 'text-primary'
+                }`}>
                   {formatTime(myTimeRemaining)}
                   {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}
                 </div>
@@ -1693,8 +1735,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                   {opponentEmote}
                 </div>
               )}
-              <div className={`px-1 py-0.5 rounded-lg border-2 ${opponentTimeRemaining < 30 ? 'bg-red-500/20 border-red-500' : 'bg-fuchsia-500/20 border-fuchsia-500'}`}>
-                <div className={`text-xl sm:text-2xl font-mono font-bold ${opponentTimeRemaining < 30 ? 'text-red-500' : 'text-fuchsia-500'}`}>
+              <div className={`px-2 py-1 rounded-lg border-2 ${
+                opponentTimeRemaining < 30 
+                  ? 'bg-error/20 border-error' 
+                  : 'bg-opponent/20 border-opponent'
+              }`}
+                style={{
+                  boxShadow: opponentTimeRemaining < 30 
+                    ? '0 0 15px rgba(255,51,102,0.4)' 
+                    : '0 0 15px rgba(255,0,255,0.3)',
+                }}
+              >
+                <div className={`text-xl sm:text-2xl font-mono font-bold ${
+                  opponentTimeRemaining < 30 ? 'text-error' : 'text-opponent'
+                }`}>
                   {formatTime(opponentTimeRemaining)}
                 </div>
               </div>
@@ -1705,7 +1759,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         {/* EVENT BANNER - Between timer and grid */}
         <div className="h-10 flex items-center justify-center">
           {bannerMessage && (
-            <span className={`banner-pulse ${bannerMessage.colorClass}`}>
+            <span 
+              className="font-heading font-bold text-lg uppercase tracking-wider"
+              style={{
+                color: bannerMessage.type === 'positive' ? '#00FFFF' : bannerMessage.type === 'negative' ? '#FF3366' : '#FFFFFF',
+                textShadow: bannerMessage.type === 'positive' 
+                  ? '0 0 15px rgba(0, 255, 255, 0.6)' 
+                  : bannerMessage.type === 'negative'
+                  ? '0 0 15px rgba(255, 51, 102, 0.6)'
+                  : '0 0 10px rgba(255, 255, 255, 0.4)',
+              }}
+            >
               {bannerMessage.text}
             </span>
           )}
@@ -1741,7 +1805,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
 
       {/* Number Pad (1-9) - Positioned below grid with slightly more white space */}
-      <div className="absolute left-0 right-0 px-3 sm:px-4 border-t border-gray-200 bg-white" style={{ top: 'calc(50vh + 230px)', paddingTop: '2px', paddingBottom: '2px' }}>
+      <div className="absolute left-0 right-0 px-3 sm:px-4 border-t border-grid-line" style={{ top: 'calc(50vh + 230px)', paddingTop: '2px', paddingBottom: '2px' }}>
         <div className="grid grid-cols-9 gap-1.5 sm:gap-2 md:gap-2.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -1750,20 +1814,21 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               <button
                 key={num}
                 onClick={() => handleNumberClick(num)}
-                disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className={`
-                  min-h-[48px] sm:min-h-[56px] rounded-lg transition-colors touch-manipulation font-bold
-                  ${depleted
-                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                    : gameStatus !== 'playing' || myState.is_locked
-                    ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 active:bg-blue-200'
+                onTouchStart={(e) => {
+                  if (gameStatus === 'playing' && !myState.is_locked && !depleted) {
+                    e.preventDefault();
+                    handleNumberClick(num);
                   }
-                `}
-                style={{ 
+                }}
+                disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
+                className="min-h-[48px] sm:min-h-[56px] rounded-lg transition-all touch-manipulation font-mono font-bold active:scale-95"
+                style={{
                   fontSize: 'clamp(1.125rem, 4.5vw, 1.5rem)',
-                  willChange: 'background-color', // GPU acceleration hint
-                  transitionDuration: '75ms', // Faster transition
+                  background: depleted ? 'rgba(30, 20, 40, 0.3)' : 'rgb(20, 12, 30)',
+                  border: depleted ? '2px solid rgba(139, 0, 255, 0.2)' : '2px solid rgba(139, 0, 255, 0.5)',
+                  color: depleted ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.9)',
+                  boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
+                  willChange: 'background-color',
                 }}
               >
                 {num}
@@ -1773,76 +1838,84 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         </div>
       </div>
 
-      {/* Toolbar: [Erase] [Emote] [Notes] - Positioned below number pad */}
-      <div className="absolute left-0 right-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-gray-200" style={{ top: 'calc(50vh + 290px)', paddingTop: '2px', paddingBottom: '4px' }}>
+      {/* Toolbar: [Undo] [Notes] [Emote] [Forfeit] - Positioned below number pad */}
+      <div className="absolute left-0 right-0 flex items-center justify-center gap-2 sm:gap-2 px-3 sm:px-4 border-t border-grid-line" style={{ top: 'calc(50vh + 290px)', paddingTop: '2px', paddingBottom: '4px' }}>
         {/* Erase */}
         <button
           onClick={handleErase}
           disabled={gameStatus !== 'playing' || myState.is_locked}
-          className={`
-            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
-            ${gameStatus !== 'playing' || myState.is_locked
-              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-            }
-          `}
+          className="px-3 py-2 rounded-lg font-body font-semibold text-sm transition-all active:scale-95 disabled:opacity-40"
+          style={{
+            background: 'rgb(20, 12, 30)',
+            border: '2px solid rgba(139, 0, 255, 0.4)',
+            color: gameStatus === 'playing' && !myState.is_locked ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.3)',
+          }}
         >
           Erase
-        </button>
-
-        {/* Emote */}
-        <button
-          onClick={handleEmote}
-          disabled={gameStatus !== 'playing' || myState.is_locked}
-          className={`
-            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium
-            ${gameStatus !== 'playing' || myState.is_locked
-              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-            }
-          `}
-        >
-          Emote
         </button>
 
         {/* Notes */}
         <button
           onClick={handleToggleNotes}
-          disabled={gameStatus !== 'playing' || myState.is_locked}
-          className={`
-            flex-1 min-h-[40px] sm:min-h-[44px] px-2 sm:px-3 rounded-lg transition-colors text-xs sm:text-sm font-medium relative
-            ${gameStatus !== 'playing' || myState.is_locked
-              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              : notesMode
-              ? 'bg-blue-50 text-blue-500 hover:bg-blue-100'
-              : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-            }
-          `}
+          className="px-3 py-2 rounded-lg font-body font-semibold text-sm transition-all active:scale-95"
+          style={{
+            background: notesMode ? 'rgba(0, 255, 255, 0.2)' : 'rgb(20, 12, 30)',
+            border: notesMode ? '2px solid #00FFFF' : '2px solid rgba(139, 0, 255, 0.4)',
+            color: notesMode ? '#00FFFF' : 'rgba(255, 255, 255, 0.8)',
+            boxShadow: notesMode ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none',
+          }}
         >
-          Notes
-          {notesMode && (
-            <span className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 bg-blue-500 text-white rounded-full font-semibold">ON</span>
-          )}
+          Notes {notesMode && <span className="ml-1">ON</span>}
+        </button>
+
+        {/* Emote */}
+        <button
+          onClick={() => setShowEmotePicker(!showEmotePicker)}
+          className="px-3 py-2 rounded-lg text-lg transition-all active:scale-95"
+          style={{
+            background: 'rgb(20, 12, 30)',
+            border: '2px solid rgba(139, 0, 255, 0.4)',
+          }}
+        >
+          😊
+        </button>
+
+        {/* Forfeit */}
+        <button
+          onClick={() => setShowForfeitModal(true)}
+          className="px-3 py-2 rounded-lg font-body font-semibold text-sm transition-all active:scale-95"
+          style={{
+            background: 'rgb(20, 12, 30)',
+            border: '2px solid rgba(255, 51, 102, 0.4)',
+            color: '#FF3366',
+          }}
+        >
+          Forfeit
         </button>
       </div>
 
       {/* Emote Picker - Fixed at bottom */}
       {showEmotePicker && (
         <div 
-          className="fixed left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-4 bg-gray-50 border-t border-gray-200 animate-fade-in z-50 shadow-lg" 
+          className="absolute left-0 right-0 flex items-center justify-center gap-2 px-6 py-3 animate-fade-in" 
           style={{ 
-            bottom: '20px',
-            top: 'auto',
+            top: 'calc(50vh + 340px)',
+            background: 'rgba(20, 12, 30, 0.95)',
+            borderTop: '1px solid rgba(139, 0, 255, 0.3)',
+            borderBottom: '1px solid rgba(139, 0, 255, 0.3)',
           }}
         >
           {emotes.map((emote) => (
             <button
               key={emote}
               onClick={() => handleSelectEmote(emote)}
-              className="text-3xl sm:text-4xl p-3 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
-              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '50px', minHeight: '50px' }}
+              className="text-3xl sm:text-4xl p-2 rounded-lg transition-all hover:scale-110 active:scale-95"
+              style={{ 
+                background: 'rgba(139, 0, 255, 0.2)',
+                border: '1px solid rgba(139, 0, 255, 0.3)',
+              }}
             >
-              <span style={{ display: 'inline', whiteSpace: 'nowrap' }}>{emote}</span>
+              {emote}
             </button>
           ))}
         </div>

@@ -246,6 +246,11 @@ export default {
         'drift-1': 'drift-1 25s ease-in-out infinite',
         'drift-2': 'drift-2 30s ease-in-out infinite',
         'drift-3': 'drift-3 20s ease-in-out infinite',
+        'drift-battle-1': 'drift-battle-1 16s ease-in-out infinite',
+        'drift-battle-2': 'drift-battle-2 14s ease-in-out infinite',
+        'drift-battle-3': 'drift-battle-3 18s ease-in-out infinite',
+        'drift-battle-4': 'drift-battle-4 12s ease-in-out infinite',
+        'drift-battle-5': 'drift-battle-5 20s ease-in-out infinite',
       },
       
       keyframes: {

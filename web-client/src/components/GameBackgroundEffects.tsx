@@ -1,0 +1,162 @@
+import { useEffect, useState } from 'react';
+
+interface GameBackgroundEffectsProps {
+  playerScored?: boolean; // Trigger cyan pulse
+  opponentScored?: boolean; // Trigger magenta pulse
+  mistakeMade?: boolean; // Trigger dim/contract
+  timeRemaining?: number; // For intensity scaling
+  criticalTime?: number; // Threshold for critical state (default 30)
+}
+
+export default function GameBackgroundEffects({ 
+  playerScored, 
+  opponentScored, 
+  mistakeMade,
+  timeRemaining = 999,
+  criticalTime = 30 
+}: GameBackgroundEffectsProps) {
+  const [cyanPulse, setCyanPulse] = useState(false);
+  const [magentaPulse, setMagentaPulse] = useState(false);
+  const [dimmed, setDimmed] = useState(false);
+  const [phase, setPhase] = useState(0);
+
+  // Grid animation phase
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhase(prev => (prev + 1) % 360);
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Cyan pulse on player score
+  useEffect(() => {
+    if (playerScored) {
+      setCyanPulse(true);
+      setTimeout(() => setCyanPulse(false), 400);
+    }
+  }, [playerScored]);
+
+  // Magenta pulse on opponent score
+  useEffect(() => {
+    if (opponentScored) {
+      setMagentaPulse(true);
+      setTimeout(() => setMagentaPulse(false), 400);
+    }
+  }, [opponentScored]);
+
+  // Dim on mistake
+  useEffect(() => {
+    if (mistakeMade) {
+      setDimmed(true);
+      setTimeout(() => setDimmed(false), 300);
+    }
+  }, [mistakeMade]);
+
+  const isCritical = timeRemaining < criticalTime;
+  const isWarning = timeRemaining < 60;
+  const gridHue = 270 + Math.sin(phase * Math.PI / 180) * 30;
+  const gridOpacity = isCritical ? 0.18 : isWarning ? 0.15 : 0.12;
+  const vignetteIntensity = isCritical ? 0.7 : isWarning ? 0.5 : 0.3;
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
+      
+      {/* Drifting gradient blobs - 5 total, faster than lobby */}
+      <div className="absolute inset-0">
+        {/* Cyan blob 1 - larger, main */}
+        <div 
+          className={`absolute w-[500px] h-[500px] transition-transform duration-300 ${cyanPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            background: 'radial-gradient(circle, rgba(0,255,255,0.18) 0%, rgba(0,255,255,0.06) 40%, transparent 70%)',
+            filter: 'blur(50px)',
+            top: '-5%',
+            left: '-10%',
+            animation: 'drift-battle-1 16s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Cyan blob 2 - smaller, different path */}
+        <div 
+          className={`absolute w-[350px] h-[350px] transition-transform duration-300 ${cyanPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            background: 'radial-gradient(circle, rgba(0,255,255,0.14) 0%, rgba(0,255,255,0.04) 40%, transparent 70%)',
+            filter: 'blur(45px)',
+            bottom: '10%',
+            left: '5%',
+            animation: 'drift-battle-2 14s ease-in-out infinite',
+            animationDelay: '-5s',
+          }}
+        />
+        
+        {/* Magenta blob 1 - larger, main */}
+        <div 
+          className={`absolute w-[450px] h-[450px] transition-transform duration-300 ${magentaPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            background: 'radial-gradient(circle, rgba(255,0,255,0.16) 0%, rgba(255,0,255,0.05) 40%, transparent 70%)',
+            filter: 'blur(55px)',
+            top: '15%',
+            right: '-10%',
+            animation: 'drift-battle-3 18s ease-in-out infinite',
+            animationDelay: '-3s',
+          }}
+        />
+        
+        {/* Magenta blob 2 - smaller, different path */}
+        <div 
+          className={`absolute w-[300px] h-[300px] transition-transform duration-300 ${magentaPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            background: 'radial-gradient(circle, rgba(255,0,255,0.12) 0%, rgba(255,0,255,0.03) 40%, transparent 70%)',
+            filter: 'blur(40px)',
+            bottom: '20%',
+            right: '10%',
+            animation: 'drift-battle-4 12s ease-in-out infinite',
+            animationDelay: '-8s',
+          }}
+        />
+        
+        {/* Purple anchor blob - center */}
+        <div 
+          className={`absolute w-[400px] h-[400px] transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            background: 'radial-gradient(circle, rgba(139,0,255,0.12) 0%, rgba(139,0,255,0.04) 40%, transparent 70%)',
+            filter: 'blur(50px)',
+            top: '40%',
+            left: '30%',
+            animation: 'drift-battle-5 20s ease-in-out infinite',
+            animationDelay: '-10s',
+          }}
+        />
+      </div>
+
+      {/* Animated grid */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px),
+            linear-gradient(90deg, hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+        }}
+      />
+
+      {/* Vignette overlay - intensifies at low time */}
+      <div 
+        className="absolute inset-0 transition-opacity duration-500"
+        style={{
+          background: `radial-gradient(circle at center, transparent 30%, rgba(0,0,0,${vignetteIntensity}) 100%)`,
+        }}
+      />
+
+      {/* Critical time red edge glow */}
+      {isCritical && (
+        <div 
+          className="absolute inset-0 animate-pulse"
+          style={{
+            background: 'radial-gradient(circle at center, transparent 60%, rgba(255,51,102,0.15) 100%)',
+          }}
+        />
+      )}
+    </div>
+  );
+}
