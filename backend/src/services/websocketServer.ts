@@ -9,6 +9,7 @@ import { PlayerRatingModel } from '../models/PlayerRating';
 import { UserModel } from '../models/User';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
+import { cache } from './cacheService';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
 
 
@@ -139,18 +140,40 @@ export const setupWebSocketServer = (server: Server) => {
       }
 
       if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
-        GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
-        await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
-
+        // Mark game as starting (prevents re-triggering)
+        (game as any).status = 'STARTING';
+        
+        // Send countdown to both players
+        const countdownStartTime = Date.now();
         broadcastToMatch(matchId, {
-          type: 'GAME_START',
-          data: {
-            initial_grid: game.player1.grid,
-            solution_grid: game.solutionGrid, // Send solution for client-side validation
-            player1_time_remaining: game.player1.timeRemaining,
-            player2_time_remaining: game.player2.timeRemaining,
+          type: 'GAME_COUNTDOWN',
+          data: { 
+            seconds: 3,
+            server_timestamp: countdownStartTime,
           },
         });
+        
+        // Wait for countdown, then start
+        setTimeout(async () => {
+          const currentGame = GameStateManager.getGame(matchId);
+          if (!currentGame) return;
+          
+          GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
+          await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
+          
+          const now = Date.now();
+          broadcastToMatch(matchId, {
+            type: 'GAME_START',
+            data: {
+              server_timestamp: now,
+              game_start_time: now,
+              initial_grid: currentGame.player1.grid,
+              solution_grid: currentGame.solutionGrid,
+              player1_time_remaining: currentGame.player1.timeRemaining,
+              player2_time_remaining: currentGame.player2.timeRemaining,
+            },
+          });
+        }, 3000);
       }
 
       ws.send(JSON.stringify({
@@ -613,6 +636,7 @@ function handleTimerUpdate(matchId: number) {
     broadcastToMatch(matchId, {
       type: 'TIME_SYNC',
       data: {
+        server_timestamp: Date.now(),
         player1_time: game.player1.timeRemaining,
         player2_time: game.player2.timeRemaining,
         player1_locked: game.player1.isLocked,
@@ -841,6 +865,12 @@ async function endGame(matchId: number) {
 
     // Clear matchmaking cache for this match so players can join new games
     MatchmakingService.clearMatch(matchId);
+
+    // Invalidate player caches for both players
+    cache.invalidate(`stats:${player1Data.player_id}`);
+    cache.invalidate(`stats:${player2Data.player_id}`);
+    cache.invalidate(`history:`);
+    cache.invalidate(`profile:`);
 
     console.log(`📤 Broadcasting GAME_END...`);
     

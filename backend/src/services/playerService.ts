@@ -1,6 +1,7 @@
 import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
 import { query } from '../config/database';
+import { cache, CacheKeys, CacheTTL } from './cacheService';
 
 const DEFAULT_LADDER_ID = 1;
 
@@ -50,26 +51,30 @@ export interface PlayerStats {
 export const PlayerService = {
   // Get full player info with rating
   async getPlayerInfo(userId: number) {
-    const profile = await PlayerProfileModel.findByUserId(userId);
+    const cacheKey = CacheKeys.playerProfile(userId);
     
-    if (!profile) {
-      throw new Error('Player profile not found');
-    }
+    return cache.getOrSet(cacheKey, CacheTTL.PROFILE, async () => {
+      const profile = await PlayerProfileModel.findByUserId(userId);
+      
+      if (!profile) {
+        throw new Error('Player profile not found');
+      }
 
-    const rating = await PlayerRatingModel.findByPlayerAndLadder(
-      profile.id,
-      DEFAULT_LADDER_ID
-    );
+      const rating = await PlayerRatingModel.findByPlayerAndLadder(
+        profile.id,
+        DEFAULT_LADDER_ID
+      );
 
-    return {
-      id: profile.id,
-      display_name: profile.display_name,
-      avatar_url: profile.avatar_url,
-      country_code: profile.country_code,
-      rating: rating?.rating || 1500,
-      rd: rating?.rd || 350,
-      games_played: rating?.games_played || 0,
-    };
+      return {
+        id: profile.id,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        country_code: profile.country_code,
+        rating: rating?.rating || 1500,
+        rd: rating?.rd || 350,
+        games_played: rating?.games_played || 0,
+      };
+    });
   },
 
   // Get match history for a player
@@ -79,68 +84,75 @@ export const PlayerService = {
       throw new Error('Player profile not found');
     }
 
-    // Get total count
-    const countResult = await query(
-      `SELECT COUNT(*) as total
-       FROM match_players mp
-       JOIN matches m ON mp.match_id = m.id
-       WHERE mp.player_id = $1 AND m.status = 'COMPLETED'`,
-      [profile.id]
-    );
-    const total = parseInt(countResult.rows[0].total, 10);
+    const cacheKey = CacheKeys.matchHistory(userId, limit, offset);
+    
+    return cache.getOrSet(cacheKey, CacheTTL.MATCH_HISTORY, async () => {
+      // Get total count
+      const countResult = await query(
+        `SELECT COUNT(*) as total
+         FROM match_players mp
+         JOIN matches m ON mp.match_id = m.id
+         WHERE mp.player_id = $1 AND m.status = 'COMPLETED'`,
+        [profile.id]
+      );
+      const total = parseInt(countResult.rows[0].total, 10);
 
-    // Get match history with opponent info
-    const result = await query(
-      `SELECT 
-        mp.match_id,
-        COALESCE(m.ended_at, m.created_at) as date,
-        opponent.display_name as opponent_name,
-        CASE 
-          WHEN mp.is_winner = true THEN 'WIN'
-          WHEN mp.is_winner = false THEN 'LOSS'
-          ELSE 'DRAW'
-        END as result,
-        mp.cells_completed,
-        opponent_mp.cells_completed as opponent_cells_completed,
-        mp.mistakes,
-        mp.rating_before,
-        mp.rating_after,
-        COALESCE(mp.rating_after, mp.rating_before) - mp.rating_before as rating_change
-       FROM match_players mp
-       JOIN matches m ON mp.match_id = m.id
-       JOIN match_players opponent_mp ON opponent_mp.match_id = m.id AND opponent_mp.player_id != mp.player_id
-       JOIN player_profiles opponent ON opponent.id = opponent_mp.player_id
-       WHERE mp.player_id = $1 AND m.status = 'COMPLETED'
-       ORDER BY date DESC
-       LIMIT $2 OFFSET $3`,
-      [profile.id, limit, offset]
-    );
+      // Get match history with opponent info
+      const result = await query(
+        `SELECT 
+          mp.match_id,
+          COALESCE(m.ended_at, m.created_at) as date,
+          opponent.display_name as opponent_name,
+          CASE 
+            WHEN mp.is_winner = true THEN 'WIN'
+            WHEN mp.is_winner = false THEN 'LOSS'
+            ELSE 'DRAW'
+          END as result,
+          mp.cells_completed,
+          opponent_mp.cells_completed as opponent_cells_completed,
+          mp.mistakes,
+          mp.rating_before,
+          mp.rating_after,
+          COALESCE(mp.rating_after, mp.rating_before) - mp.rating_before as rating_change
+         FROM match_players mp
+         JOIN matches m ON mp.match_id = m.id
+         JOIN match_players opponent_mp ON opponent_mp.match_id = m.id AND opponent_mp.player_id != mp.player_id
+         JOIN player_profiles opponent ON opponent.id = opponent_mp.player_id
+         WHERE mp.player_id = $1 AND m.status = 'COMPLETED'
+         ORDER BY date DESC
+         LIMIT $2 OFFSET $3`,
+        [profile.id, limit, offset]
+      );
 
-    return {
-      matches: result.rows.map(row => ({
-        match_id: row.match_id,
-        date: row.date,
-        opponent_name: row.opponent_name,
-        result: row.result,
-        cells_completed: row.cells_completed,
-        opponent_cells_completed: row.opponent_cells_completed,
-        mistakes: row.mistakes,
-        rating_before: parseFloat(row.rating_before),
-        rating_after: row.rating_after ? parseFloat(row.rating_after) : null,
-        rating_change: row.rating_change ? parseFloat(row.rating_change) : 0,
-      })),
-      total,
-      limit,
-      offset,
-    };
+      return {
+        matches: result.rows.map(row => ({
+          match_id: row.match_id,
+          date: row.date,
+          opponent_name: row.opponent_name,
+          result: row.result,
+          cells_completed: row.cells_completed,
+          opponent_cells_completed: row.opponent_cells_completed,
+          mistakes: row.mistakes,
+          rating_before: parseFloat(row.rating_before),
+          rating_after: row.rating_after ? parseFloat(row.rating_after) : null,
+          rating_change: row.rating_change ? parseFloat(row.rating_change) : 0,
+        })),
+        total,
+        limit,
+        offset,
+      };
+    });
   },
 
   // Get player statistics
   async getPlayerStats(userId: number): Promise<PlayerStats> {
-    const profile = await PlayerProfileModel.findByUserId(userId);
-    if (!profile) {
-      throw new Error('Player profile not found');
-    }
+    const cacheKey = CacheKeys.playerStats(userId);
+    
+    return cache.getOrSet(cacheKey, CacheTTL.STATS, async () => {
+      const profile = await PlayerProfileModel.findByUserId(userId);
+      if (!profile) {
+        throw new Error('Player profile not found');
+      }
 
     const rating = await PlayerRatingModel.findByPlayerAndLadder(
       profile.id,
@@ -311,6 +323,7 @@ export const PlayerService = {
       bestWinStreak,
       avgCellStreak,
     };
+    });
   },
 
   // Helper: Get rating change since a date

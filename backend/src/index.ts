@@ -8,6 +8,8 @@ import puzzleRoutes from './routes/puzzle';
 import matchmakingRoutes from './routes/matchmaking';
 import friendsRoutes from './routes/friends';
 import { setupWebSocketServer } from './services/websocketServer';
+import { warmupDatabase } from './config/database';
+import { cache } from './services/cacheService';
 import './config/database';
 
 dotenv.config();
@@ -63,7 +65,8 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    cache_size: cache.stats().size,
   });
 });
 
@@ -80,12 +83,42 @@ const server = createServer(app);
 // Setup WebSocket server
 setupWebSocketServer(server);
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Database URL: ${process.env.DATABASE_URL ? 'Set' : 'NOT SET'}`);
-});
+// Start server with warmup
+async function startServer() {
+  try {
+    console.log('🚀 Starting Sudoduel server...');
+    
+    // Warm up database connections BEFORE starting server
+    await warmupDatabase();
+    
+    server.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Database URL: ${process.env.DATABASE_URL ? 'Set' : 'NOT SET'}`);
+      console.log(`📊 Cache service initialized`);
+    });
+
+    // Graceful shutdown handler
+    process.on('SIGTERM', async () => {
+      console.log('🛑 SIGTERM received, shutting down gracefully...');
+      cache.shutdown();
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.error('⚠️ Forcing shutdown after 10s timeout');
+        process.exit(1);
+      }, 10000);
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Handle server errors gracefully
 server.on('error', (err: any) => {

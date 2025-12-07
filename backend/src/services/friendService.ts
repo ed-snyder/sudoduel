@@ -5,6 +5,7 @@ import { PlayerRatingModel } from '../models/PlayerRating';
 import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
 import { query } from '../config/database';
+import { cache, CacheKeys, CacheTTL } from './cacheService';
 
 const DEFAULT_LADDER_ID = 1;
 
@@ -28,7 +29,12 @@ export const FriendService = {
     if (!profile) {
       throw new Error('Player profile not found');
     }
-    return FriendshipModel.getFriends(profile.id);
+
+    const cacheKey = CacheKeys.friends(profile.id);
+    
+    return cache.getOrSet(cacheKey, CacheTTL.FRIENDS, async () => {
+      return FriendshipModel.getFriends(profile.id);
+    });
   },
 
   // Send a friend request
@@ -56,6 +62,12 @@ export const FriendService = {
 
     try {
       const request = await FriendshipModel.createFriendRequest(profile.id, targetPlayerId);
+      
+      // Invalidate caches
+      cache.invalidate(`friends:${profile.id}`);
+      cache.invalidate(`friends:${targetPlayerId}`);
+      cache.invalidate(`friend_count:${profile.id}`);
+      cache.invalidate(`friend_count:${targetPlayerId}`);
       
       // Check if this auto-accepted (mutual request)
       if (request.status === 'ACCEPTED') {
@@ -99,6 +111,12 @@ export const FriendService = {
     try {
       const request = await FriendshipModel.createFriendRequest(profile.id, toPlayerId);
       
+      // Invalidate caches
+      cache.invalidate(`friends:${profile.id}`);
+      cache.invalidate(`friends:${toPlayerId}`);
+      cache.invalidate(`friend_count:${profile.id}`);
+      cache.invalidate(`friend_count:${toPlayerId}`);
+      
       if (request.status === 'ACCEPTED') {
         return { 
           success: true, 
@@ -123,7 +141,20 @@ export const FriendService = {
     }
 
     try {
+      const request = await FriendshipModel.getPendingRequestsReceived(profile.id);
+      const friendRequest = request.find(r => r.id === requestId);
+      const otherPlayerId = friendRequest?.from_player_id;
+      
       await FriendshipModel.acceptFriendRequest(requestId, profile.id);
+      
+      // Invalidate caches
+      if (otherPlayerId) {
+        cache.invalidate(`friends:${profile.id}`);
+        cache.invalidate(`friends:${otherPlayerId}`);
+        cache.invalidate(`friend_count:${profile.id}`);
+        cache.invalidate(`friend_count:${otherPlayerId}`);
+      }
+      
       return { success: true, message: 'Friend request accepted' };
     } catch (error: any) {
       throw new Error(error.message);
@@ -191,6 +222,13 @@ export const FriendService = {
     }
 
     await FriendshipModel.removeFriendship(profile.id, friendId);
+    
+    // Invalidate caches
+    cache.invalidate(`friends:${profile.id}`);
+    cache.invalidate(`friends:${friendId}`);
+    cache.invalidate(`friend_count:${profile.id}`);
+    cache.invalidate(`friend_count:${friendId}`);
+    
     return { success: true, message: 'Friend removed' };
   },
 

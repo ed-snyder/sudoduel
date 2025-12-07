@@ -91,6 +91,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [gameStatus, setGameStatus] = useState<'connecting' | 'waiting' | 'playing' | 'ended'>('connecting');
   const [myTimeRemaining, setMyTimeRemaining] = useState(STARTING_TIME_SECONDS);
   const [opponentTimeRemaining, setOpponentTimeRemaining] = useState(STARTING_TIME_SECONDS);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const serverTimeOffsetRef = useRef<number>(0);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   
@@ -224,27 +227,39 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       if (emotePickerTimeoutRef.current) clearTimeout(emotePickerTimeoutRef.current);
       if (myEmoteTimeoutRef.current) clearTimeout(myEmoteTimeoutRef.current);
       if (opponentEmoteTimeoutRef.current) clearTimeout(opponentEmoteTimeoutRef.current);
+      // Clean up countdown interval
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
     };
   }, [matchId, token]);
 
   // Client-side timer countdown for smooth UI updates
-  // Syncs with server updates but provides smooth countdown between updates
+  // Uses performance.now() for accurate timing and drift correction
   useEffect(() => {
     if (gameStatus !== 'playing' || myTimerPaused) return;
     
+    let lastTickTime = performance.now();
+    let accumulatedTime = 0;
+    
     const interval = setInterval(() => {
-      setMyTimeRemaining(prev => {
-        if (prev <= 0) return 0;
-        const newTime = prev - 1;
-        if (import.meta.env.DEV) {
-          console.log(`[TIMER] Tick at ${performance.now()}, time: ${newTime}`);
-        }
-        return newTime;
-      });
-    }, 1000);
+      const now = performance.now();
+      const elapsed = now - lastTickTime;
+      lastTickTime = now;
+      accumulatedTime += elapsed;
+      
+      // Only decrement when a full second has passed
+      if (accumulatedTime >= 1000) {
+        const secondsToDecrement = Math.floor(accumulatedTime / 1000);
+        accumulatedTime = accumulatedTime % 1000;
+        
+        setMyTimeRemaining(prev => Math.max(0, prev - secondsToDecrement));
+      }
+    }, 100); // Check every 100ms for smoother countdown
     
     return () => clearInterval(interval);
-  }, [gameStatus, myTimerPaused]); // ONLY depend on gameStatus and pause state
+  }, [gameStatus, myTimerPaused]);
 
   // Rating counter animation on game end
   useEffect(() => {
@@ -494,7 +509,34 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
         break;
 
+      case 'GAME_COUNTDOWN':
+        // Clear any existing countdown interval
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+        setCountdown(message.data.seconds);
+        // Start local countdown for smooth UI
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        break;
+
       case 'GAME_START':
+        // Clear countdown interval if still running
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        setCountdown(null);
         initAudio();
         resetStreak();
         myStreakRef.current = 0;
@@ -533,14 +575,25 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setMyGrid(grid.map((row: number[]) => [...row]));
         setInitialGrid(grid.map((row: number[]) => [...row]));
         setSolutionGrid(solution.map((row: number[]) => [...row]));
-        // Initialize timers from server (use mySlotRef to avoid stale closure)
-        if (mySlotRef.current === 1) {
-          setMyTimeRemaining(message.data.player1_time_remaining || STARTING_TIME_SECONDS);
-          setOpponentTimeRemaining(message.data.player2_time_remaining || STARTING_TIME_SECONDS);
-        } else {
-          setMyTimeRemaining(message.data.player2_time_remaining || STARTING_TIME_SECONDS);
-          setOpponentTimeRemaining(message.data.player1_time_remaining || STARTING_TIME_SECONDS);
+        
+        // Calculate server time offset for drift correction
+        const clientNow = Date.now();
+        const serverTime = message.data.server_timestamp;
+        if (serverTime) {
+          serverTimeOffsetRef.current = serverTime - clientNow;
         }
+        
+        // Set initial time from server (authoritative)
+        const myTime = mySlotRef.current === 1 
+          ? message.data.player1_time_remaining 
+          : message.data.player2_time_remaining;
+        setMyTimeRemaining(myTime || STARTING_TIME_SECONDS);
+        
+        const opponentTime = mySlotRef.current === 1 
+          ? message.data.player2_time_remaining 
+          : message.data.player1_time_remaining;
+        setOpponentTimeRemaining(opponentTime || STARTING_TIME_SECONDS);
+        
         setGameStatus('playing');
         break;
 
@@ -675,7 +728,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlotRef.current}`);
         if (mySlotRef.current === 1) {
-          setMyTimeRemaining(message.data.player1_time);
+          const myServerTime = message.data.player1_time;
+          // Correct if drift > 1 second
+          setMyTimeRemaining(prev => {
+            if (Math.abs(prev - myServerTime) > 1) {
+              console.log(`[TIMER] Correcting drift: local=${prev} server=${myServerTime}`);
+              return myServerTime;
+            }
+            return prev;
+          });
           setOpponentTimeRemaining(message.data.player2_time);
           setMyState(prev => {
             const newState = {
@@ -694,7 +755,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
           }));
         } else if (mySlotRef.current === 2) {
-          setMyTimeRemaining(message.data.player2_time);
+          const myServerTime = message.data.player2_time;
+          // Correct if drift > 1 second
+          setMyTimeRemaining(prev => {
+            if (Math.abs(prev - myServerTime) > 1) {
+              console.log(`[TIMER] Correcting drift: local=${prev} server=${myServerTime}`);
+              return myServerTime;
+            }
+            return prev;
+          });
           setOpponentTimeRemaining(message.data.player1_time);
           setMyState(prev => {
             const newState = {
@@ -1452,6 +1521,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Main game UI - Compact layout with header above grid
   return (
     <div className={`min-h-screen bg-white flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="text-center">
+            <div className="text-8xl font-bold text-white animate-pulse">
+              {countdown}
+            </div>
+            <div className="text-2xl text-white/80 mt-4">
+              Get Ready!
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Critical state vignette */}
       {isCriticalState && (
         <div className="critical-vignette fixed inset-0 pointer-events-none z-40" />
