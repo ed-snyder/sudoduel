@@ -423,7 +423,6 @@ export default function ResultScreen({
     letterSpacing: '-0.02em',
   };
 
-  const breatheScale = 1 + Math.sin(breathePhase * Math.PI / 180) * 0.02;
   const breatheOpacity = 0.15 + Math.sin(breathePhase * Math.PI / 180) * 0.05;
 
   const handleButtonPress = () => {
