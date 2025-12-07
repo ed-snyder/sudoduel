@@ -145,15 +145,14 @@ function SudokuGrid({
   return (
     <div
       ref={gridRef}
-      className="relative bg-white rounded-lg"
+      className="relative"
       style={{
         aspectRatio: '1 / 1',
         width: '100%',
         maxWidth: 'min(100vw - 16px, 400px)',
-        border: '2px solid #333',
       }}
     >
-      {/* 9x9 Grid */}
+      {/* 9x9 Grid of cells - transparent backgrounds */}
       <div className="absolute inset-0 grid grid-cols-9 grid-rows-9">
         {grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => {
@@ -176,18 +175,18 @@ function SudokuGrid({
             const isAlmostComplete = almostCompleteCells.has(cellKey);
             const isError = isErrorFlash(rowIndex, colIndex);
 
-            // Cell background
+            // Cell background - transparent by default, subtle tint for states
             let cellBg = 'transparent';
             if (lockedOut) {
-              cellBg = '#f0f0f0';
+              cellBg = 'rgba(100, 100, 100, 0.2)';
             } else if (isError) {
-              cellBg = '#ffcccc';
+              cellBg = 'rgba(255, 51, 102, 0.25)';
             } else if (selected) {
-              cellBg = '#cce5ff';
+              cellBg = 'rgba(0, 255, 255, 0.15)';
             } else if (related) {
-              cellBg = '#e8f4ff';
+              cellBg = 'rgba(0, 255, 255, 0.05)';
             } else if (opponentScored) {
-              cellBg = '#ffe8f5';
+              cellBg = 'rgba(255, 0, 255, 0.1)';
             }
 
             return (
@@ -210,14 +209,22 @@ function SudokuGrid({
                 `}
                 style={{
                   background: cellBg,
+                  boxShadow: selected 
+                    ? 'inset 0 0 15px rgba(0, 255, 255, 0.3)' 
+                    : isError
+                    ? 'inset 0 0 15px rgba(255, 51, 102, 0.4)'
+                    : 'none',
                 }}
               >
                 {hasValue ? (
                   <span
-                    className={`font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
+                    className={`font-heading font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
                     style={{ 
-                      fontSize: 'clamp(1.1rem, 5vw, 1.75rem)',
-                      color: isInitial ? '#333' : '#0066cc',
+                      fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
+                      color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
+                      textShadow: isInitial 
+                        ? '0 0 10px rgba(255, 255, 255, 0.3)' 
+                        : '0 0 12px rgba(0, 255, 255, 0.7)',
                     }}
                   >
                     {cell}
@@ -227,12 +234,12 @@ function SudokuGrid({
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <span
                         key={num}
-                        className={`w-full h-full flex items-center justify-center font-medium ${
+                        className={`w-full h-full flex items-center justify-center font-heading font-medium ${
                           cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                         }`}
                         style={{
                           fontSize: 'clamp(0.4rem, 1.5vw, 0.6rem)',
-                          color: '#666',
+                          color: 'rgba(255, 255, 255, 0.7)',
                         }}
                       >
                         {num}
@@ -246,10 +253,21 @@ function SudokuGrid({
         )}
       </div>
 
-      {/* Grid lines overlay */}
+      {/* White wireframe grid lines overlay */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Thin lines - every cell */}
-        <svg className="absolute inset-0 w-full h-full">
+        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          {/* Outer border / perimeter */}
+          <rect
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            strokeWidth="2"
+          />
+
+          {/* Thin white lines - between regular cells */}
           {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
@@ -257,7 +275,7 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="#ccc"
+              stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth="1"
             />
           ))}
@@ -268,14 +286,12 @@ function SudokuGrid({
               y1="0"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="#ccc"
+              stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth="1"
             />
           ))}
-        </svg>
 
-        {/* Thick lines - 3x3 boxes */}
-        <svg className="absolute inset-0 w-full h-full">
+          {/* Thick white lines - 3x3 box boundaries */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -283,7 +299,7 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="#333"
+              stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth="2"
             />
           ))}
@@ -294,14 +310,14 @@ function SudokuGrid({
               y1="0"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="#333"
+              stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth="2"
             />
           ))}
         </svg>
       </div>
-      
-      {/* Floating feedback elements */}
+
+      {/* Floating feedback */}
       {floatingFeedbacks.map((feedback) => {
         const position = getCellPosition(feedback.row, feedback.col);
         
@@ -312,20 +328,20 @@ function SudokuGrid({
             style={{
               left: `${position.left}%`,
               top: `${position.top}%`,
-              transform: 'translate(-50%, -50%)',
+              transform: 'translate(-50%, -100%)',
               zIndex: 100,
             }}
           >
             <span
-              className="whitespace-nowrap block font-mono font-bold"
+              className="whitespace-nowrap block font-heading font-bold"
               style={{
                 fontSize: feedback.correct 
-                  ? (feedback.streak && feedback.streak >= 8 ? '1.5rem' : feedback.streak && feedback.streak >= 5 ? '1.25rem' : '1.1rem')
-                  : '1.1rem',
+                  ? (feedback.streak && feedback.streak >= 8 ? '1.4rem' : feedback.streak && feedback.streak >= 5 ? '1.2rem' : '1rem')
+                  : '1rem',
                 color: feedback.correct ? '#00FFFF' : '#FF3366',
                 textShadow: feedback.correct
-                  ? '0 0 15px rgba(0, 255, 255, 0.9), 0 0 30px rgba(0, 255, 255, 0.5)'
-                  : '0 0 15px rgba(255, 51, 102, 0.9)',
+                  ? '0 0 10px rgba(0, 255, 255, 0.8)'
+                  : '0 0 10px rgba(255, 51, 102, 0.8)',
               }}
             >
               {feedback.text}
