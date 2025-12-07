@@ -111,8 +111,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
   
-  // Streak system - only track longest streak for display
-  const [longestStreak, setLongestStreak] = useState(0);
+  // Streak system - track longest streak (used internally, not displayed in ResultScreen)
+  const [_longestStreak, setLongestStreak] = useState(0);
   const myStreakRef = useRef(0);
   const opponentStreakRef = useRef(0);
   
@@ -124,7 +124,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   
   // Pressure indicators
   const prevScoreDiffRef = useRef<number>(0);
-  const [showDefeatOverlay, setShowDefeatOverlay] = useState(false);
   const [displayedRating, setDisplayedRating] = useState<number | null>(null);
   const [showScreenShake, setShowScreenShake] = useState(false);
   
@@ -481,7 +480,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         setLongestStreak(0);
         prevScoreDiffRef.current = 0;
         setDisplayedRating(null); // Reset rating display for new game
-        setShowDefeatOverlay(false);
         setShowScreenShake(false);
         // Reset banner states
         setBannerMessage(null);
@@ -765,7 +763,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           // Initialize rating counter animation (will be handled by useEffect)
           // Don't set displayedRating here to avoid conflicts with useEffect
         } else {
-          setShowDefeatOverlay(true);
+          // Defeat overlay handled by ResultScreen component
           playDefeatSound();
         }
         
@@ -1330,173 +1328,44 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
     // Use cells_completed (includes pre-completed squares) instead of score
     const myScore = myResult.cellsCompleted || myResult.cells_completed || myResult.score || 0;
     const opponentScore = opponentResult.cellsCompleted || opponentResult.cells_completed || opponentResult.score || 0;
-    
-    // Close loss detection
-    const cellDifference = opponentScore - myScore;
-    const wasClose = !didWin && !isDraw && cellDifference <= 5;
 
-    // Use displayed rating if available, otherwise use ratingAfter
-    const currentDisplayedRating = displayedRating !== null ? displayedRating : ratingAfter;
+    // Prepare data for ResultScreen
+    const myResultData = {
+      playerId: myResult.playerId || 0,
+      displayName: myResult.displayName,
+      score: myScore,
+      cellsCompleted: myScore,
+      mistakes: myResult.mistakes || 0,
+      timeRemaining: myResult.timeRemaining || 0,
+      rating_before: ratingBefore,
+      rating_after: ratingAfter,
+      rating_change: ratingChange,
+    };
+
+    const opponentResultData = {
+      playerId: opponentResult.playerId || 0,
+      displayName: opponentResult.displayName,
+      score: opponentScore,
+      cellsCompleted: opponentScore,
+      mistakes: opponentResult.mistakes || 0,
+      timeRemaining: opponentResult.timeRemaining || 0,
+      rating_before: opponentResult.rating_before || 1500,
+      rating_after: opponentResult.rating_after || 1500,
+      rating_change: opponentResult.rating_change || 0,
+    };
 
     return (
-      <div className={`min-h-screen bg-white flex items-center justify-center p-4 relative ${showScreenShake ? 'screen-shake' : ''}`}>
-        {/* Defeat overlay */}
-        {showDefeatOverlay && <div className="absolute inset-0 defeat-overlay z-40 pointer-events-none" />}
-        
-        <div className="bg-white rounded-xl p-6 sm:p-8 text-center max-w-md w-full shadow-lg border border-gray-200 relative z-50">
-          {/* Result Header */}
-          <div className="mb-6">
-            <h1 className={`text-4xl sm:text-5xl font-bold mb-2 ${
-              isDraw ? 'text-gray-600' : didWin ? 'text-green-500 victory-text' : 'text-gray-800'
-            }`}>
-              {isDraw ? '🤝 Draw!' : didWin ? '🏆 VICTORY!' : 'DEFEAT'}
-            </h1>
-            
-            {/* Win reason / subtitle */}
-            <p className="text-gray-600 text-sm sm:text-base">
-              {reason === 'FORFEIT' && (didWin ? 'Win by forfeit' : 'Defeat by forfeit')}
-              {reason === 'PUZZLE_SOLVED' && didWin && '✨ You completed the puzzle!'}
-              {reason === 'PUZZLE_SOLVED' && !didWin && '⚡ Opponent completed the puzzle'}
-              {reason === 'TIMEOUT_SCORE' && didWin && '🎯 Higher score at timeout!'}
-              {reason === 'TIMEOUT_SCORE' && !didWin && '⏱️ Lower score at timeout'}
-              {reason === 'DRAW' && 'Equal scores'}
-            </p>
-            
-            {/* Close loss message */}
-            {wasClose && (
-              <p className="text-cyan-400 text-sm mt-2">
-                Almost! {cellDifference} more cell{cellDifference !== 1 ? 's' : ''} would have won.
-              </p>
-            )}
-          </div>
-
-          {/* Score comparison */}
-          <div className="flex justify-center gap-8 mb-6">
-            <div>
-              <div className="text-sm text-gray-500">You</div>
-              <div className="text-3xl font-bold text-gray-800 font-mono">{myScore}/81</div>
-            </div>
-            <div className="text-2xl text-gray-300 self-center">—</div>
-            <div>
-              <div className="text-sm text-gray-500">Opponent</div>
-              <div className="text-3xl font-bold text-gray-800 font-mono">{opponentScore}/81</div>
-            </div>
-          </div>
-
-          {/* Stats comparison */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-            <div className={`bg-gray-50 rounded-lg p-3 sm:p-4 border ${
-              didWin ? 'border-green-500' : isDraw ? 'border-gray-300' : 'border-gray-200'
-            }`}>
-              <p className="text-blue-500 font-bold mb-2 text-sm sm:text-base">You</p>
-              <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                <p>Score: <span className="font-mono font-bold">{myScore}/81</span></p>
-                <p>Mistakes: <span className="font-mono">{myResult.mistakes || 0}</span></p>
-                <p>Time: <span className="font-mono">{formatTime(myResult.timeRemaining || 0)}</span></p>
-              </div>
-            </div>
-            <div className={`bg-gray-50 rounded-lg p-3 sm:p-4 border ${
-              !didWin && !isDraw ? 'border-red-500' : isDraw ? 'border-gray-300' : 'border-gray-200'
-            }`}>
-              <p className="text-gray-600 font-bold mb-2 text-sm sm:text-base">Opponent</p>
-              <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                <p>Score: <span className="font-mono font-bold">{opponentScore}/81</span></p>
-                <p>Mistakes: <span className="font-mono">{opponentResult.mistakes || 0}</span></p>
-                <p>Time: <span className="font-mono">{formatTime(opponentResult.timeRemaining || 0)}</span></p>
-              </div>
-            </div>
-          </div>
-
-          {/* Rating change - Prominent with animation */}
-          <div className={`bg-gray-50 rounded-lg p-4 sm:p-5 mb-6 border ${
-            ratingChange > 0 
-              ? 'border-green-500' 
-              : ratingChange < 0
-              ? 'border-red-500'
-              : 'border-gray-200'
-          }`}>
-            <p className="text-gray-600 mb-2 text-sm sm:text-base font-medium">Rating Change</p>
-            <div className="flex items-center justify-center gap-2 sm:gap-3">
-              <span className="text-xl sm:text-2xl font-bold text-gray-800 font-mono">
-                {Math.round(ratingBefore)}
-              </span>
-              <span className="text-gray-400 text-lg sm:text-xl">→</span>
-              <span className={`text-2xl sm:text-3xl font-bold font-mono ${
-                ratingChange > 0 ? 'text-green-500' : ratingChange < 0 ? 'text-red-500' : 'text-gray-800'
-              }`}>
-                {Math.round(currentDisplayedRating)}
-              </span>
-              <span className={`text-xl sm:text-2xl font-bold font-mono ${
-                ratingChange > 0 ? 'text-green-500' : ratingChange < 0 ? 'text-red-500' : 'text-gray-400'
-              }`}>
-                ({ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)})
-              </span>
-            </div>
-          </div>
-
-          {/* Longest streak stat */}
-          {longestStreak > 0 && (
-            <div className="mb-4">
-              <p className="text-gray-500 text-sm">
-                Longest streak: <span className="text-cyan-400 font-mono font-bold">{longestStreak}</span>
-              </p>
-            </div>
-          )}
-
-          {/* Rematch series - reserved for future use */}
-          {/* {rematchSeries.wins + rematchSeries.losses > 0 && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-500">
-                Series: <span className="text-green-400">{rematchSeries.wins}</span>
-                {' - '}
-                <span className="text-red-400">{rematchSeries.losses}</span>
-              </p>
-            </div>
-          )} */}
-
-          {/* Rematch button */}
-          <div className="relative z-[60] w-full mb-3" style={{ pointerEvents: rematchState === 'requested' ? 'none' : 'auto' }}>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('[REMATCH] Button clicked, state:', rematchState);
-                if (rematchState !== 'requested') {
-                  handleRematchRequest();
-                }
-              }}
-              disabled={rematchState === 'requested'}
-              className={`
-                w-full py-3 rounded-lg font-semibold transition-colors text-base sm:text-lg relative
-                ${rematchState === 'idle' 
-                  ? 'bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer active:bg-cyan-700' 
-                  : rematchState === 'waiting'
-                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
-              `}
-              style={{
-                pointerEvents: rematchState === 'requested' ? 'none' : 'auto',
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'transparent',
-                position: 'relative',
-                zIndex: 100
-              }}
-              type="button"
-            >
-              {rematchState === 'idle' && 'Rematch'}
-              {rematchState === 'requested' && `Waiting... (${rematchCountdown}s)`}
-              {rematchState === 'waiting' && 'Opponent wants rematch! Tap to accept'}
-            </button>
-          </div>
-
-          <button
-            onClick={onGameEnd}
-            className="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 active:bg-blue-700 transition-colors text-base sm:text-lg"
-          >
-            Back to Lobby
-          </button>
-        </div>
-      </div>
+      <ResultScreen
+        didWin={didWin}
+        isDraw={isDraw}
+        reason={reason as 'PUZZLE_SOLVED' | 'TIMEOUT_SCORE' | 'DRAW' | 'FORFEIT'}
+        myResult={myResultData}
+        opponentResult={opponentResultData}
+        onRematch={handleRematchRequest}
+        onBackToLobby={onGameEnd}
+        rematchState={rematchState}
+        rematchCountdown={rematchCountdown}
+      />
     );
   }
 
