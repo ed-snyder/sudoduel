@@ -199,15 +199,15 @@ export default function ResultScreen({
     }
   }, [didWin, isDraw, isBigWin, hapticVictory, hapticBigWin, vibrate, generateParticles]);
 
-  // Grid breathing animation
+  // Grid breathing animation - more dynamic hue shift
   useEffect(() => {
     const interval = setInterval(() => {
       setBreathePhase(prev => (prev + 1) % 360);
       
-      // Hue shifts: victory goes cyan (180), defeat goes magenta (300)
-      const targetHue = didWin ? 180 : isDraw ? 270 : 300;
-      const oscillation = Math.sin(Date.now() / 2000) * 15;
-      setGridHue(targetHue + oscillation);
+      // Victory shifts toward cyan (180-200), defeat toward magenta (300-320), draw stays purple (260-280)
+      const baseHue = didWin ? 190 : isDraw ? 270 : 310;
+      const oscillation = Math.sin(Date.now() / 1500) * 30;
+      setGridHue(baseHue + oscillation);
     }, 50);
     
     return () => clearInterval(interval);
@@ -447,30 +447,30 @@ export default function ResultScreen({
         />
       )}
 
-      {/* Drifting gradient blobs */}
+      {/* Drifting gradient blobs - intensity based on result */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Cyan blob */}
+        {/* Cyan blob - stronger on victory */}
         <div 
-          className="absolute w-[500px] h-[500px] animate-drift-1"
+          className="absolute w-[550px] h-[550px] animate-drift-1"
           style={{
             background: didWin 
-              ? 'radial-gradient(circle, rgba(0,255,255,0.18) 0%, rgba(0,255,255,0.05) 40%, transparent 70%)'
+              ? 'radial-gradient(circle, rgba(0,255,255,0.22) 0%, rgba(0,255,255,0.08) 40%, transparent 70%)'
               : 'radial-gradient(circle, rgba(0,255,255,0.08) 0%, rgba(0,255,255,0.02) 40%, transparent 70%)',
-            filter: 'blur(40px)',
+            filter: 'blur(50px)',
             top: '-5%',
             left: '-10%',
           }}
         />
         
-        {/* Magenta blob */}
+        {/* Magenta blob - stronger on defeat */}
         <div 
-          className="absolute w-[450px] h-[450px] animate-drift-2"
+          className="absolute w-[500px] h-[500px] animate-drift-2"
           style={{
             background: !didWin && !isDraw
-              ? 'radial-gradient(circle, rgba(255,0,255,0.18) 0%, rgba(255,0,255,0.05) 40%, transparent 70%)'
+              ? 'radial-gradient(circle, rgba(255,0,255,0.22) 0%, rgba(255,0,255,0.08) 40%, transparent 70%)'
               : 'radial-gradient(circle, rgba(255,0,255,0.08) 0%, rgba(255,0,255,0.02) 40%, transparent 70%)',
-            filter: 'blur(45px)',
-            top: '30%',
+            filter: 'blur(55px)',
+            top: '25%',
             right: '-15%',
           }}
         />
@@ -479,33 +479,36 @@ export default function ResultScreen({
         <div 
           className="absolute w-[400px] h-[400px] animate-drift-3"
           style={{
-            background: 'radial-gradient(circle, rgba(139,0,255,0.1) 0%, rgba(139,0,255,0.03) 40%, transparent 70%)',
-            filter: 'blur(50px)',
+            background: 'radial-gradient(circle, rgba(139,0,255,0.12) 0%, rgba(139,0,255,0.04) 40%, transparent 70%)',
+            filter: 'blur(45px)',
             bottom: '5%',
-            left: '10%',
+            left: '15%',
           }}
         />
       </div>
 
-      {/* Grid overlay */}
+      {/* Animated grid - color shifts with breathePhase */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(hsla(${gridHue}, 100%, 50%, ${breatheOpacity * 0.7}) 1px, transparent 1px),
-            linear-gradient(90deg, hsla(${gridHue}, 100%, 50%, ${breatheOpacity * 0.7}) 1px, transparent 1px)
+            linear-gradient(hsla(${gridHue}, 80%, 50%, ${breatheOpacity}) 1px, transparent 1px),
+            linear-gradient(90deg, hsla(${gridHue}, 80%, 50%, ${breatheOpacity}) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
         }}
       />
 
-      {/* Ambient glow - now more subtle since blobs do the work */}
+      {/* Secondary offset grid for depth */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: didWin 
-            ? 'radial-gradient(circle at center 30%, rgba(0,255,255,0.05) 0%, transparent 40%)'
-            : 'radial-gradient(circle at center 30%, rgba(255,0,255,0.04) 0%, transparent 40%)',
+          backgroundImage: `
+            linear-gradient(hsla(${(gridHue + 30) % 360}, 70%, 50%, ${breatheOpacity * 0.35}) 1px, transparent 1px),
+            linear-gradient(90deg, hsla(${(gridHue + 30) % 360}, 70%, 50%, ${breatheOpacity * 0.35}) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          transform: 'translate(25px, 25px)',
         }}
       />
 
