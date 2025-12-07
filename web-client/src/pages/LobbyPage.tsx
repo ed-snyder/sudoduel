@@ -261,7 +261,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
               <div className="flex gap-3">
                 <button
                   onClick={() => {/* TODO: Premium flow */}}
-                  className="flex-1 py-3 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
+                  className="flex-1 py-3 bg-void bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
                 >
                   Upgrade to SudoDuel+
                 </button>
@@ -276,7 +276,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
 
             <button
               onClick={handleFindMatch}
-              className="w-full max-w-sm py-4 bg-transparent border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              className="w-full max-w-sm py-4 bg-void border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
             >
               Find Match
             </button>

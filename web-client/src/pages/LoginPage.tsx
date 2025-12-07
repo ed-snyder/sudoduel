@@ -76,7 +76,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-4">
           {error && (
             <div 
-              className="px-4 py-3 bg-error/10 border border-error/50 rounded-lg animate-shake"
+              className="px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg animate-shake"
               style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
             >
               <p className="text-error text-sm font-body">{error}</p>
@@ -116,7 +116,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-transparent border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full py-3.5 bg-void border-2 border-player text-player font-body font-bold uppercase tracking-widest rounded-lg hover:bg-player/20 hover:shadow-glow-player active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
