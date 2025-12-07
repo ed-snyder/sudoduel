@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { friendsAPI, Friend, FriendRequest, PlayerSearchResult, MatchRequest } from '../services/api';
+import { friendsAPI } from '../services/api';
+import type { Friend, FriendRequest, PlayerSearchResult, MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface FriendsListModalProps {
@@ -10,7 +11,7 @@ interface FriendsListModalProps {
 
 type Tab = 'friends' | 'requests' | 'search';
 
-const vibrate = async (pattern?: number[]) => {
+const vibrate = async () => {
   try {
     await Haptics.impact({ style: ImpactStyle.Light });
   } catch (e) {
@@ -214,7 +215,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     setActionLoading(`match-${friendId}`);
     vibrate();
     try {
-      const response = await friendsAPI.sendMatchRequest(friendId);
+      await friendsAPI.sendMatchRequest(friendId);
       setMatchRequestPolling(true);
       await loadMatchRequests();
     } catch (err: any) {

@@ -178,6 +178,34 @@ export const api = {
       throw error;
     }
   },
+  
+  delete: async <T>(path: string, token?: string): Promise<T> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const authToken = token || getToken();
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    
+    try {
+      const response = await fetch(`${API_URL}${path}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Something went wrong' }));
+        throw new Error(error.error || `API error: ${response.status}`);
+      }
+      // DELETE requests might return empty body
+      const text = await response.text();
+      return text ? JSON.parse(text) : ({} as T);
+    } catch (error: any) {
+      // Handle network errors (backend not running, CORS, etc.)
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${API_URL}. Make sure the backend is running.`);
+      }
+      throw error;
+    }
+  },
 };
 
 // ===========================================
