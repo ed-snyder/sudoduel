@@ -27,6 +27,7 @@ interface ResultScreenProps {
 export default function ResultScreen({
   didWin,
   isDraw,
+  reason,
   myResult,
   opponentResult,
   onRematch,
@@ -38,6 +39,8 @@ export default function ResultScreen({
   const [showContent, setShowContent] = useState(false);
 
   const ratingChange = myResult.rating_change || 0;
+  const cellDifference = opponentResult.cellsCompleted - myResult.cellsCompleted;
+  const wasClose = !didWin && !isDraw && cellDifference <= 5 && cellDifference > 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setShowContent(true), 100);
@@ -72,8 +75,36 @@ export default function ResultScreen({
     return () => clearInterval(interval);
   }, [showContent, myResult.rating_before, myResult.rating_after]);
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getReasonText = () => {
+    if (reason === 'FORFEIT') return didWin ? 'Opponent forfeited' : 'You forfeited';
+    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : 'Opponent solved it';
+    if (reason === 'TIMEOUT_SCORE') return didWin ? 'Higher score' : 'Lower score';
+    if (reason === 'DRAW') return 'Equal scores';
+    return '';
+  };
+
+  // Colors based on win/loss
+  const fillColor = didWin ? '#00FFFF' : '#FF00FF';
+  const fillColorLight = didWin ? '#7FFFFF' : '#FF7FFF';
+  const fillColorDark = didWin ? '#00B3B3' : '#B300B3';
+  const glowColor = didWin ? '#FF00FF' : '#00FFFF';
+  const glowColorRgba = didWin ? 'rgba(255,0,255,' : 'rgba(0,255,255,';
+
+  const titleStyle = {
+    fontFamily: "'Industry', 'Orbitron', sans-serif",
+    fontWeight: 900,
+    fontStyle: 'italic',
+    letterSpacing: '-0.02em',
+  };
+
   return (
-    <div className="fixed inset-0 bg-void flex flex-col items-center justify-center p-6 z-50">
+    <div className="fixed inset-0 bg-void flex flex-col z-50">
       {/* Background grid */}
       <div 
         className="absolute inset-0 opacity-15 pointer-events-none"
@@ -86,93 +117,209 @@ export default function ResultScreen({
         }}
       />
 
-      {/* Victory/Defeat glow */}
-      {didWin && !isDraw && (
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle at center 30%, rgba(0,255,255,0.15) 0%, transparent 50%)',
-          }}
-        />
-      )}
-
-      {/* Content */}
+      {/* Ambient glow */}
       <div 
-        className={`relative flex flex-col items-center transition-all duration-500 ${
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: didWin 
+            ? 'radial-gradient(circle at center 30%, rgba(0,255,255,0.1) 0%, transparent 50%)'
+            : 'radial-gradient(circle at center 30%, rgba(255,0,255,0.08) 0%, transparent 50%)',
+        }}
+      />
+
+      {/* Back Button - Top Left */}
+      <div className="relative z-10 p-4 safe-top">
+        <button
+          onClick={onBackToLobby}
+          className="flex items-center gap-2 text-muted hover:text-player transition-colors group"
+        >
+          <svg 
+            className="w-6 h-6 group-hover:scale-110 transition-transform" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="font-body text-sm uppercase tracking-wider">Lobby</span>
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div 
+        className={`flex-1 flex flex-col items-center justify-center px-6 pb-8 transition-all duration-500 ${
           showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
         }`}
       >
-        {/* Result Title */}
-        <h1 
-          className={`text-5xl sm:text-6xl font-heading font-bold uppercase tracking-wider mb-2 ${
-            isDraw 
-              ? 'text-secondary' 
-              : didWin 
-              ? 'text-player' 
-              : 'text-primary'
-          }`}
-          style={didWin && !isDraw ? {
-            textShadow: '0 0 20px rgba(0,255,255,0.8), 0 0 40px rgba(0,255,255,0.4)',
-          } : {}}
+        {/* Result Title - Logo style effect */}
+        <div className="relative mb-2">
+          {/* Outer glow layer */}
+          <span
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            style={{
+              ...titleStyle,
+              color: 'transparent',
+              WebkitTextStroke: `6px ${glowColor}`,
+              filter: 'blur(8px)',
+              opacity: 0.6,
+            }}
+            aria-hidden="true"
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+
+          {/* Inner glow layer */}
+          <span
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            style={{
+              ...titleStyle,
+              color: 'transparent',
+              WebkitTextStroke: `4px ${glowColor}`,
+              filter: 'blur(3px)',
+              opacity: 0.8,
+            }}
+            aria-hidden="true"
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+
+          {/* White stroke layer */}
+          <span
+            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            style={{
+              ...titleStyle,
+              color: 'transparent',
+              WebkitTextStroke: '2px rgba(255,255,255,0.9)',
+            }}
+            aria-hidden="true"
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+
+          {/* Fill gradient - main visible text */}
+          <span
+            className="relative text-5xl sm:text-6xl select-none"
+            style={{
+              ...titleStyle,
+              background: isDraw 
+                ? 'linear-gradient(135deg, #8B8B8B 0%, #FFFFFF 50%, #8B8B8B 100%)'
+                : `linear-gradient(135deg, ${fillColor} 0%, ${fillColorLight} 25%, ${fillColor} 50%, ${fillColorDark} 75%, ${fillColor} 100%)`,
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'logo-shimmer 3s ease-in-out infinite',
+            }}
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+        </div>
+
+        {/* Reason subtitle */}
+        <p className="text-secondary font-body text-sm mb-6 uppercase tracking-wider">
+          {getReasonText()}
+        </p>
+
+        {/* Score comparison */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="text-center">
+            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">You</span>
+            <span 
+              className={`text-4xl font-mono font-bold ${didWin ? 'text-player' : 'text-primary'}`}
+              style={didWin ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
+            >
+              {myResult.cellsCompleted}
+            </span>
+          </div>
+          <span className="text-2xl text-muted font-mono">—</span>
+          <div className="text-center">
+            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">Opp</span>
+            <span 
+              className={`text-4xl font-mono font-bold ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}
+              style={!didWin && !isDraw ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
+            >
+              {opponentResult.cellsCompleted}
+            </span>
+          </div>
+        </div>
+
+        {/* Close loss message */}
+        {wasClose && (
+          <p className="text-player text-sm font-body mb-4 animate-pulse">
+            {cellDifference} more cell{cellDifference !== 1 ? 's' : ''} would've won!
+          </p>
+        )}
+
+        {/* Stats row */}
+        <div className="flex gap-6 mb-6 text-center">
+          <div>
+            <span className="text-xs text-muted font-body uppercase tracking-wider block">Time</span>
+            <span className="text-lg font-mono text-primary">{formatTime(myResult.timeRemaining)}</span>
+          </div>
+          <div>
+            <span className="text-xs text-muted font-body uppercase tracking-wider block">Mistakes</span>
+            <span className="text-lg font-mono text-primary">{myResult.mistakes}</span>
+          </div>
+        </div>
+
+        {/* Rating */}
+        <div 
+          className="bg-elevated/50 rounded-xl px-8 py-4 mb-8 border"
+          style={{
+            borderColor: ratingChange > 0 
+              ? 'rgba(0,255,136,0.4)' 
+              : ratingChange < 0 
+              ? 'rgba(255,51,102,0.4)' 
+              : 'rgba(139,0,255,0.3)',
+            boxShadow: ratingChange > 0 
+              ? '0 0 20px rgba(0,255,136,0.15)' 
+              : ratingChange < 0 
+              ? '0 0 20px rgba(255,51,102,0.15)' 
+              : 'none',
+          }}
         >
-          {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
-        </h1>
-
-        {/* Score - Simple and clean */}
-        <div className="flex items-baseline gap-3 mb-6">
-          <span className={`text-4xl font-mono font-bold ${didWin ? 'text-player' : 'text-primary'}`}>
-            {myResult.cellsCompleted}
-          </span>
-          <span className="text-xl text-muted font-body">-</span>
-          <span className={`text-4xl font-mono font-bold ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}>
-            {opponentResult.cellsCompleted}
-          </span>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-3xl font-mono font-bold text-primary">
+              {Math.round(displayedRating)}
+            </span>
+            <span 
+              className={`text-xl font-mono font-bold ${
+                ratingChange > 0 ? 'text-success' : ratingChange < 0 ? 'text-error' : 'text-muted'
+              }`}
+            >
+              {ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)}
+            </span>
+          </div>
         </div>
 
-        {/* Rating Change - The key info */}
-        <div className="flex items-center gap-2 mb-10">
-          <span 
-            className="text-3xl font-mono font-bold text-primary"
-          >
-            {Math.round(displayedRating)}
-          </span>
-          <span 
-            className={`text-2xl font-mono font-bold ${
-              ratingChange > 0 ? 'text-success' : ratingChange < 0 ? 'text-error' : 'text-muted'
-            }`}
-          >
-            ({ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)})
-          </span>
-        </div>
-
-        {/* Buttons - Big and prominent */}
+        {/* Action Buttons */}
         <div className="w-full max-w-xs space-y-3">
-          {/* Rematch - Primary action */}
+          {/* Rematch */}
           <button
             onClick={onRematch}
             disabled={rematchState === 'requested'}
-            className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all ${
+            className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${
               rematchState === 'waiting'
                 ? 'bg-success/20 border-2 border-success text-success animate-pulse'
                 : rematchState === 'requested'
                 ? 'bg-elevated border border-grid-line text-muted cursor-not-allowed'
-                : 'bg-player/20 border-2 border-player text-player hover:bg-player/30 active:scale-[0.98]'
+                : 'bg-player/10 border-2 border-player text-player hover:bg-player/20'
             }`}
             style={rematchState === 'idle' ? {
-              boxShadow: '0 0 20px rgba(0,255,255,0.3), inset 0 0 20px rgba(0,255,255,0.1)',
+              boxShadow: '0 0 20px rgba(0,255,255,0.25)',
             } : {}}
           >
             {rematchState === 'idle' && 'Rematch'}
             {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
-            {rematchState === 'waiting' && 'Accept Rematch'}
+            {rematchState === 'waiting' && '⚔️ Accept Rematch'}
           </button>
 
-          {/* New Match */}
+          {/* Find New Match */}
           <button
             onClick={onBackToLobby}
-            className="w-full py-4 text-lg bg-transparent border border-grid-line text-secondary font-body font-semibold uppercase tracking-wider rounded-xl hover:border-player/50 hover:text-player transition-all active:scale-[0.98]"
+            className="w-full py-4 text-lg bg-surface border border-grid-line text-secondary font-body font-semibold uppercase tracking-wider rounded-xl hover:border-player/50 hover:text-player transition-all active:scale-[0.98]"
           >
-            New Match
+            Find New Match
           </button>
         </div>
       </div>
