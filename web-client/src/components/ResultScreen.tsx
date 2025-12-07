@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
-import { matchmakingAPI } from '../services/api';
+import { matchmakingAPI, friendsAPI, HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface PlayerResult {
@@ -131,10 +131,77 @@ export default function ResultScreen({
   const ratingAnimationStartedRef = useRef(false);
   const ratingAnimationStepsRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Friend functionality state
+  const [h2hStats, setH2hStats] = useState<HeadToHeadStats | null>(null);
+  const [h2hLoading, setH2hLoading] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [friendError, setFriendError] = useState('');
+
   const ratingChange = myResult.rating_change || 0;
   const opponentName = opponentResult.displayName || 'Opponent';
   const myName = myResult.displayName || user?.display_name || 'Player';
   const isBigWin = didWin && ratingChange >= 25;
+
+  // Load head-to-head stats and friend status when modal opens
+  useEffect(() => {
+    if (showOpponentModal && opponentResult.playerId) {
+      loadOpponentData();
+    }
+  }, [showOpponentModal, opponentResult.playerId]);
+
+  const loadOpponentData = async () => {
+    if (!opponentResult.playerId) return;
+    
+    setH2hLoading(true);
+    setFriendError('');
+    
+    try {
+      // Load head-to-head stats
+      const h2hResponse = await friendsAPI.getHeadToHeadStats(opponentResult.playerId);
+      setH2hStats(h2hResponse.stats);
+      
+      // Check friend status
+      const friendsResponse = await friendsAPI.getFriends();
+      const isFriendAlready = friendsResponse.friends.some(f => f.friend_id === opponentResult.playerId);
+      setIsFriend(isFriendAlready);
+      
+      // Check for pending request
+      if (!isFriendAlready) {
+        const sentRequests = await friendsAPI.getPendingRequestsSent();
+        const hasPending = sentRequests.requests.some(r => r.to_player_id === opponentResult.playerId);
+        setFriendRequestSent(hasPending);
+      }
+    } catch (err: any) {
+      console.error('Failed to load opponent data:', err);
+    } finally {
+      setH2hLoading(false);
+    }
+  };
+
+  const handleAddFriend = async () => {
+    if (!opponentResult.playerId || friendActionLoading) return;
+    
+    setFriendActionLoading(true);
+    setFriendError('');
+    vibrate([10, 5, 10]);
+    
+    try {
+      await friendsAPI.sendFriendRequestById(opponentResult.playerId);
+      setFriendRequestSent(true);
+    } catch (err: any) {
+      setFriendError(err.message || 'Failed to send request');
+      // If already friends or request already exists, update state
+      if (err.message?.includes('already friends')) {
+        setIsFriend(true);
+      } else if (err.message?.includes('already pending')) {
+        setFriendRequestSent(true);
+      }
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
 
   // Generate geometric particles
   const generateParticles = useCallback((isVictory: boolean): Particle[] => {
@@ -1078,69 +1145,117 @@ export default function ResultScreen({
                   Head to Head
                 </p>
                 
-                <div className="flex justify-around">
-                  <div className="text-center">
-                    <span 
-                      className="block text-2xl font-mono font-bold text-player"
-                      style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}
-                    >
-                      —
-                    </span>
-                    <span className="text-xs text-muted font-body uppercase">Wins</span>
+                {h2hLoading ? (
+                  <div className="flex justify-center py-2">
+                    <div className="w-6 h-6 border-2 border-player border-t-transparent rounded-full animate-spin" />
                   </div>
-                  
-                  <div 
-                    className="w-px"
-                    style={{ background: 'rgba(139,0,255,0.3)' }}
-                  />
-                  
-                  <div className="text-center">
-                    <span 
-                      className="block text-2xl font-mono font-bold text-opponent"
-                      style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}
-                    >
-                      —
-                    </span>
-                    <span className="text-xs text-muted font-body uppercase">Losses</span>
+                ) : h2hStats ? (
+                  <div className="flex justify-around">
+                    <div className="text-center">
+                      <span 
+                        className="block text-2xl font-mono font-bold text-player"
+                        style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}
+                      >
+                        {h2hStats.wins}
+                      </span>
+                      <span className="text-xs text-muted font-body uppercase">Wins</span>
+                    </div>
+                    
+                    <div className="w-px" style={{ background: 'rgba(139,0,255,0.3)' }} />
+                    
+                    <div className="text-center">
+                      <span 
+                        className="block text-2xl font-mono font-bold text-opponent"
+                        style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}
+                      >
+                        {h2hStats.losses}
+                      </span>
+                      <span className="text-xs text-muted font-body uppercase">Losses</span>
+                    </div>
+                    
+                    <div className="w-px" style={{ background: 'rgba(139,0,255,0.3)' }} />
+                    
+                    <div className="text-center">
+                      <span 
+                        className="block text-2xl font-mono font-bold text-secondary"
+                        style={{ textShadow: '0 0 10px rgba(139,0,255,0.3)' }}
+                      >
+                        {h2hStats.draws}
+                      </span>
+                      <span className="text-xs text-muted font-body uppercase">Draws</span>
+                    </div>
                   </div>
-                  
-                  <div 
-                    className="w-px"
-                    style={{ background: 'rgba(139,0,255,0.3)' }}
-                  />
-                  
-                  <div className="text-center">
-                    <span 
-                      className="block text-2xl font-mono font-bold text-secondary"
-                      style={{ textShadow: '0 0 10px rgba(139,0,255,0.3)' }}
-                    >
-                      —
-                    </span>
-                    <span className="text-xs text-muted font-body uppercase">Draws</span>
+                ) : (
+                  <div className="flex justify-around">
+                    <div className="text-center">
+                      <span className="block text-2xl font-mono font-bold text-player" style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}>0</span>
+                      <span className="text-xs text-muted font-body uppercase">Wins</span>
+                    </div>
+                    <div className="w-px" style={{ background: 'rgba(139,0,255,0.3)' }} />
+                    <div className="text-center">
+                      <span className="block text-2xl font-mono font-bold text-opponent" style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}>0</span>
+                      <span className="text-xs text-muted font-body uppercase">Losses</span>
+                    </div>
+                    <div className="w-px" style={{ background: 'rgba(139,0,255,0.3)' }} />
+                    <div className="text-center">
+                      <span className="block text-2xl font-mono font-bold text-secondary" style={{ textShadow: '0 0 10px rgba(139,0,255,0.3)' }}>0</span>
+                      <span className="text-xs text-muted font-body uppercase">Draws</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <p className="text-xs text-muted text-center mt-3 opacity-60">
-                  Head-to-head stats coming soon
-                </p>
+                {h2hStats && h2hStats.total_matches > 0 && (
+                  <p className="text-xs text-muted text-center mt-3 opacity-60">
+                    {h2hStats.total_matches} total matches
+                  </p>
+                )}
               </div>
 
-              {/* Add Friend */}
+              {/* Friend Error */}
+              {friendError && (
+                <p className="text-xs text-error text-center mt-3">{friendError}</p>
+              )}
+
+              {/* Add Friend Button */}
               <button
-                onClick={() => {
-                  setShowOpponentModal(false);
-                  // TODO: Implement add friend functionality
-                  vibrate([10, 5, 10]);
-                }}
-                className="w-full mt-4 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                onClick={handleAddFriend}
+                disabled={friendActionLoading || isFriend || friendRequestSent}
+                className="w-full mt-4 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95 disabled:opacity-60"
                 style={{
-                  background: 'rgb(20, 12, 30)',
-                  border: '2px solid rgba(255,0,255,0.5)',
-                  color: '#FF00FF',
-                  boxShadow: '0 0 15px rgba(255,0,255,0.2)',
+                  background: isFriend 
+                    ? 'rgba(0,255,136,0.1)'
+                    : friendRequestSent 
+                      ? 'rgba(255,184,0,0.1)'
+                      : 'rgb(20, 12, 30)',
+                  border: isFriend 
+                    ? '2px solid rgba(0,255,136,0.5)'
+                    : friendRequestSent
+                      ? '2px solid rgba(255,184,0,0.5)'
+                      : '2px solid rgba(255,0,255,0.5)',
+                  color: isFriend 
+                    ? '#00FF88'
+                    : friendRequestSent
+                      ? '#FFB800'
+                      : '#FF00FF',
+                  boxShadow: isFriend 
+                    ? '0 0 15px rgba(0,255,136,0.2)'
+                    : friendRequestSent
+                      ? '0 0 15px rgba(255,184,0,0.2)'
+                      : '0 0 15px rgba(255,0,255,0.2)',
                 }}
               >
-                Add Friend
+                {friendActionLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </span>
+                ) : isFriend ? (
+                  '✓ Friends'
+                ) : friendRequestSent ? (
+                  '📤 Request Sent'
+                ) : (
+                  'Add Friend'
+                )}
               </button>
             </div>
           </div>

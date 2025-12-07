@@ -10,6 +10,7 @@ export interface Match {
   started_at: Date | null;
   ended_at: Date | null;
   server_region: string | null;
+  is_ranked: boolean;
 }
 
 export interface MatchPlayer {
@@ -34,12 +35,12 @@ export interface MatchPlayer {
 
 export const MatchModel = {
   // Create a new match
-  async create(ladderId: number, puzzleId: number): Promise<Match> {
+  async create(ladderId: number, puzzleId: number, isRanked: boolean = true): Promise<Match> {
     const result = await query(
-      `INSERT INTO matches (ladder_id, puzzle_id, status)
-       VALUES ($1, $2, 'PENDING')
+      `INSERT INTO matches (ladder_id, puzzle_id, status, is_ranked)
+       VALUES ($1, $2, 'PENDING', $3)
        RETURNING *`,
-      [ladderId, puzzleId]
+      [ladderId, puzzleId, isRanked]
     );
     return result.rows[0];
   },
@@ -61,6 +62,24 @@ export const MatchModel = {
       [matchId, playerId, slot, rating, rd, volatility]
     );
     return result.rows[0];
+  },
+
+  // Find match by ID
+  async findById(matchId: number): Promise<Match | null> {
+    const result = await query(
+      'SELECT * FROM matches WHERE id = $1',
+      [matchId]
+    );
+    return result.rows[0] || null;
+  },
+
+  // Get players in a match
+  async getPlayers(matchId: number): Promise<MatchPlayer[]> {
+    const result = await query(
+      'SELECT * FROM match_players WHERE match_id = $1 ORDER BY slot',
+      [matchId]
+    );
+    return result.rows;
   },
 
   // Update match status
@@ -91,6 +110,15 @@ export const MatchModel = {
     );
   },
 
+  // Check if match is ranked
+  async isRanked(matchId: number): Promise<boolean> {
+    const result = await query(
+      'SELECT is_ranked FROM matches WHERE id = $1',
+      [matchId]
+    );
+    return result.rows[0]?.is_ranked ?? true;
+  },
+
   // Update match player final stats
   async updatePlayerStats(
     matchId: number,
@@ -106,50 +134,63 @@ export const MatchModel = {
       ratingAfter: number;
       rdAfter: number;
       volatilityAfter: number;
-      timeAtFinish?: number; // seconds remaining when game ended
-      longestCellStreak?: number; // longest in-game cell streak
+      timeAtFinish?: number;
+      longestCellStreak?: number;
     }
   ): Promise<void> {
-    // First, try to update with new columns (if migration has been run)
+    // Build the query dynamically based on what columns exist
+    let updateQuery = `
+      UPDATE match_players 
+      SET cells_completed = $1,
+          lives_used = $2,
+          lives_remaining = $3,
+          mistakes = $4,
+          time_spent_seconds = $5,
+          final_state = $6,
+          is_winner = $7,
+          rating_after = $8,
+          rd_after = $9,
+          volatility_after = $10
+    `;
+    
+    const params: any[] = [
+      stats.cellsCompleted,
+      stats.livesUsed,
+      stats.livesRemaining,
+      stats.mistakes,
+      stats.timeSpentSeconds,
+      stats.finalState,
+      stats.isWinner,
+      stats.ratingAfter,
+      stats.rdAfter,
+      stats.volatilityAfter,
+    ];
+    
+    let paramIndex = 11;
+    
+    // Add optional columns if provided
+    if (stats.timeAtFinish !== undefined) {
+      updateQuery += `, time_at_finish = $${paramIndex}`;
+      params.push(stats.timeAtFinish);
+      paramIndex++;
+    }
+    
+    if (stats.longestCellStreak !== undefined) {
+      updateQuery += `, longest_cell_streak = $${paramIndex}`;
+      params.push(stats.longestCellStreak);
+      paramIndex++;
+    }
+    
+    updateQuery += ` WHERE match_id = $${paramIndex} AND player_id = $${paramIndex + 1}`;
+    params.push(matchId, playerId);
+    
     try {
-      await query(
-        `UPDATE match_players
-         SET cells_completed = $1,
-             lives_used = $2,
-             lives_remaining = $3,
-             mistakes = $4,
-             time_spent_seconds = $5,
-             final_state = $6,
-             is_winner = $7,
-             rating_after = $8,
-             rd_after = $9,
-             volatility_after = $10,
-             time_at_finish = $11,
-             longest_cell_streak = $12
-         WHERE match_id = $13 AND player_id = $14`,
-        [
-          stats.cellsCompleted,
-          stats.livesUsed,
-          stats.livesRemaining,
-          stats.mistakes,
-          stats.timeSpentSeconds,
-          stats.finalState,
-          stats.isWinner,
-          stats.ratingAfter,
-          stats.rdAfter,
-          stats.volatilityAfter,
-          stats.timeAtFinish ?? null,
-          stats.longestCellStreak ?? 0,
-          matchId,
-          playerId,
-        ]
-      );
+      await query(updateQuery, params);
     } catch (error: any) {
-      // If columns don't exist (migration not run), fall back to basic update
-      if (error.message && error.message.includes('column') && (error.message.includes('time_at_finish') || error.message.includes('longest_cell_streak'))) {
-        console.warn(`[MatchModel] New columns not found, using fallback update (migration may not be run)`);
+      // If columns don't exist, fall back to basic update
+      if (error.message && error.message.includes('column')) {
         await query(
-          `UPDATE match_players
+          `UPDATE match_players 
            SET cells_completed = $1,
                lives_used = $2,
                lives_remaining = $3,
@@ -177,26 +218,21 @@ export const MatchModel = {
           ]
         );
       } else {
-        // Re-throw if it's a different error
         throw error;
       }
     }
   },
 
-  // Get match by ID
-  async findById(matchId: number): Promise<Match | null> {
+  // Get recent matches for a player (for match history)
+  async getPlayerMatches(playerId: number, limit: number = 50): Promise<any[]> {
     const result = await query(
-      'SELECT * FROM matches WHERE id = $1',
-      [matchId]
-    );
-    return result.rows[0] || null;
-  },
-
-  // Get match players
-  async getPlayers(matchId: number): Promise<MatchPlayer[]> {
-    const result = await query(
-      'SELECT * FROM match_players WHERE match_id = $1 ORDER BY slot',
-      [matchId]
+      `SELECT m.*, mp.is_winner, mp.rating_before, mp.rating_after
+       FROM matches m
+       JOIN match_players mp ON mp.match_id = m.id
+       WHERE mp.player_id = $1 AND m.status = 'COMPLETED'
+       ORDER BY m.ended_at DESC
+       LIMIT $2`,
+      [playerId, limit]
     );
     return result.rows;
   },

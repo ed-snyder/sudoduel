@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { playerAPI } from '../services/api';
 
 interface PlayerInfoModalProps {
   isOpen: boolean;
@@ -14,30 +15,91 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
   const [displayName, setDisplayName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
 
   // Load current display name when modal opens
   useEffect(() => {
     if (isOpen && user?.display_name) {
       setDisplayName(user.display_name);
       setNameSaved(false);
+      setNameError('');
+      setNameAvailable(null);
     }
   }, [isOpen, user?.display_name]);
 
+  // Debounced name availability check
+  useEffect(() => {
+    const trimmedName = displayName.trim();
+    
+    // Reset state if name is same as current or empty
+    if (!trimmedName || trimmedName === user?.display_name) {
+      setNameAvailable(null);
+      setNameError('');
+      return;
+    }
+
+    // Validate format
+    if (trimmedName.length < 2) {
+      setNameError('Too short (min 2 chars)');
+      setNameAvailable(false);
+      return;
+    }
+
+    if (trimmedName.length > 20) {
+      setNameError('Too long (max 20 chars)');
+      setNameAvailable(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_\- ]+$/.test(trimmedName)) {
+      setNameError('Invalid characters');
+      setNameAvailable(false);
+      return;
+    }
+
+    setNameError('');
+    setIsCheckingName(true);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await playerAPI.checkDisplayName(trimmedName);
+        setNameAvailable(response.available);
+        if (!response.available) {
+          setNameError('Name already taken');
+        }
+      } catch (error: any) {
+        console.error('Failed to check name:', error);
+      } finally {
+        setIsCheckingName(false);
+      }
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [displayName, user?.display_name]);
+
   const handleSaveDisplayName = async () => {
-    if (!displayName.trim() || displayName === user?.display_name) return;
+    const trimmedName = displayName.trim();
+    
+    if (!trimmedName || trimmedName === user?.display_name) return;
+    if (!nameAvailable) return;
     
     setIsSavingName(true);
+    setNameError('');
+    
     try {
-      const { api } = await import('../config');
-      await api.patch('/api/player/profile', { display_name: displayName.trim() });
+      await playerAPI.updateProfile(trimmedName);
       
       setNameSaved(true);
+      setNameAvailable(null);
       if (refreshUser) {
         await refreshUser();
       }
       setTimeout(() => setNameSaved(false), 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update display name:', error);
+      setNameError(error.message || 'Failed to save');
     } finally {
       setIsSavingName(false);
     }
@@ -58,7 +120,53 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
     onOpenEmotes();
   };
 
+  const getInputBorderColor = () => {
+    if (nameError) return '2px solid rgba(255,51,102,0.5)';
+    if (nameAvailable === true) return '2px solid rgba(0,255,136,0.5)';
+    if (isCheckingName) return '2px solid rgba(0,255,255,0.3)';
+    return '1px solid rgba(45,27,105,0.5)';
+  };
+
+  const getStatusIndicator = () => {
+    if (displayName.trim() === user?.display_name || !displayName.trim()) return null;
+    
+    if (isCheckingName) {
+      return (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          <div className="w-4 h-4 border-2 border-player border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
+    
+    if (nameError) {
+      return (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-error">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+      );
+    }
+    
+    if (nameAvailable === true) {
+      return (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-success">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   if (!isOpen) return null;
+
+  const canSave = displayName.trim() && 
+                  displayName.trim() !== user?.display_name && 
+                  nameAvailable === true && 
+                  !isCheckingName;
 
   return (
     <div 
@@ -93,17 +201,21 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
           <div>
             <label className="block text-sm text-muted font-body mb-2">Display Name</label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
-                maxLength={20}
-                className="flex-1 px-3 py-3 bg-elevated border border-grid-line rounded-lg text-primary font-body focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all"
-                placeholder="Enter name..."
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
+                  maxLength={20}
+                  className="w-full px-3 py-3 pr-10 bg-elevated rounded-lg text-primary font-body focus:outline-none transition-all"
+                  style={{ border: getInputBorderColor() }}
+                  placeholder="Enter name..."
+                />
+                {getStatusIndicator()}
+              </div>
               <button
                 onClick={handleSaveDisplayName}
-                disabled={isSavingName || !displayName.trim() || displayName === user?.display_name}
+                disabled={isSavingName || !canSave}
                 className="px-4 py-3 rounded-lg font-body font-bold text-sm transition-all disabled:opacity-40"
                 style={{
                   background: nameSaved ? 'rgba(0,255,136,0.2)' : 'rgb(15, 10, 25)',
@@ -114,7 +226,14 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
                 {isSavingName ? '...' : nameSaved ? '✓' : 'Save'}
               </button>
             </div>
-            <p className="text-xs text-muted font-body mt-1">Max 20 characters</p>
+            <div className="flex justify-between items-center mt-1">
+              <p className={`text-xs font-body ${nameError ? 'text-error' : 'text-muted'}`}>
+                {nameError || 'Letters, numbers, spaces, underscores, hyphens'}
+              </p>
+              <p className="text-xs text-muted font-mono">
+                {displayName.length}/20
+              </p>
+            </div>
           </div>
 
           {/* Action Buttons Grid */}
