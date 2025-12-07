@@ -494,7 +494,7 @@ export default function ResultScreen({
       {/* Flash overlay */}
       {showFlash && (
         <div 
-          className="absolute inset-0 z-50 pointer-events-none"
+          className="absolute inset-0 z-40 pointer-events-none"
           style={{
             background: didWin 
               ? 'radial-gradient(circle, rgba(0,255,255,0.6) 0%, transparent 70%)'
@@ -660,7 +660,7 @@ export default function ResultScreen({
         {/* Result Title - Logo style with shimmer and float */}
         <div 
           className={`relative mb-6 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
-          style={{ animation: showTitle ? 'slam-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, float 4s ease-in-out 0.5s infinite' : undefined }}
+          {...(showTitle && { style: { animation: 'slam-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, float 4s ease-in-out 0.5s infinite' } })}
         >
           {/* Outer glow layer */}
           <span
