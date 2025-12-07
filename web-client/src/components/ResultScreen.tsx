@@ -840,7 +840,7 @@ export default function ResultScreen({
 
               {/* Find New Match - Solid secondary */}
               <button
-                onClick={() => { handleButtonPress(); onBackToLobby(); }}
+                onClick={() => { handleButtonPress(); handleFindNewMatch(); }}
                 className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
                 style={{
                   background: 'rgb(20, 12, 30)',
