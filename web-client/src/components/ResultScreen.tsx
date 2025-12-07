@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -109,6 +110,7 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
@@ -124,6 +126,7 @@ export default function ResultScreen({
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const attemptsRef = useRef(0);
   const hasTriggeredEffects = useRef(false);
   const ratingAnimationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -369,55 +372,94 @@ export default function ResultScreen({
   const handleFindNewMatch = async () => {
     handleButtonPress();
     setIsFindingMatch(true);
+    setSearchTime(0);
     
     try {
+      // Dynamic import to avoid circular dependencies
       const { matchmakingAPI } = await import('../services/api');
+      
+      // First, make sure we've left any existing queue
+      try {
+        await matchmakingAPI.leave();
+      } catch (e) {
+        // Ignore errors from leaving - we might not be in a queue
+      }
+      
+      // Join the matchmaking queue
       const result = await matchmakingAPI.join() as { status: string; match_id?: number };
+      console.log('[ResultScreen] Join result:', result);
       
       if (result.status === 'matched' && result.match_id) {
-        // Navigate to new game using the router or window location
-        window.location.href = `/game/${result.match_id}`;
+        // Instant match found
+        console.log('[ResultScreen] Instant match found:', result.match_id);
+        navigate(`/game/${result.match_id}`);
         return;
       }
       
       if (result.status === 'queued') {
-        // Start polling for match
-        const pollForMatch = async () => {
+        console.log('[ResultScreen] Queued, starting to poll...');
+        
+        // Poll for match status
+        pollIntervalRef.current = setInterval(async () => {
           try {
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
+            console.log('[ResultScreen] Poll status:', status);
+            
             if (status.status === 'matched' && status.match_id) {
-              window.location.href = `/game/${status.match_id}`;
-              return;
-            }
-            // Continue polling if still queued
-            if (status.status === 'queued' && isFindingMatch) {
-              setTimeout(pollForMatch, 1000);
+              console.log('[ResultScreen] Match found via polling:', status.match_id);
+              if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
+              }
+              navigate(`/game/${status.match_id}`);
+            } else if (status.status !== 'queued') {
+              // No longer queued and not matched - something went wrong
+              console.log('[ResultScreen] Unexpected status:', status.status);
+              if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
+              }
+              setIsFindingMatch(false);
             }
           } catch (err) {
-            console.error('Polling error:', err);
-            setIsFindingMatch(false);
+            console.error('[ResultScreen] Polling error:', err);
           }
-        };
-        
-        pollForMatch();
+        }, 1000);
       }
     } catch (error) {
-      console.error('Failed to find match:', error);
+      console.error('[ResultScreen] Failed to find match:', error);
       setIsFindingMatch(false);
     }
   };
 
   const handleCancelSearch = async () => {
     handleButtonPress();
+    
+    // Clear polling interval first
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    
     setIsFindingMatch(false);
     
     try {
       const { matchmakingAPI } = await import('../services/api');
       await matchmakingAPI.leave();
+      console.log('[ResultScreen] Left matchmaking queue');
     } catch (error) {
-      console.error('Failed to cancel search:', error);
+      console.error('[ResultScreen] Failed to cancel search:', error);
     }
   };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -615,9 +657,10 @@ export default function ResultScreen({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8 relative z-30">
-        {/* Result Title - Logo style like SUDODUEL */}
+        {/* Result Title - Logo style with shimmer and float */}
         <div 
           className={`relative mb-6 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
+          style={{ animation: showTitle ? 'slam-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, float 4s ease-in-out 0.5s infinite' : undefined }}
         >
           {/* Outer glow layer */}
           <span
@@ -682,12 +725,37 @@ export default function ResultScreen({
               background: isDraw 
                 ? 'linear-gradient(180deg, #FFFFFF 0%, #B8B8B8 50%, #888888 100%)'
                 : `linear-gradient(180deg, ${fillColorLight} 0%, ${fillColor} 50%, ${fillColorDark} 100%)`,
-              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
+          </span>
+
+          {/* Shimmer overlay - animating gradient */}
+          <span
+            className="absolute inset-0 text-6xl sm:text-7xl select-none pointer-events-none"
+            style={{
+              fontFamily: "'Industry', 'Orbitron', sans-serif",
+              fontWeight: 900,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              background: `linear-gradient(
+                120deg, 
+                transparent 0%, 
+                transparent 30%, 
+                rgba(255,255,255,0.4) 50%, 
+                transparent 70%, 
+                transparent 100%
+              )`,
+              backgroundSize: '200% 100%',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: 'logo-shimmer 3s ease-in-out infinite',
             }}
+            aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
@@ -872,7 +940,12 @@ export default function ResultScreen({
             <>
               {/* Rematch */}
               <button
-                onClick={() => { handleButtonPress(); onRematch(); }}
+                onClick={() => { 
+                  handleButtonPress(); 
+                  if (rematchState === 'idle' || rematchState === 'waiting') {
+                    onRematch(); 
+                  }
+                }}
                 disabled={rematchState === 'requested'}
                 className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 ${
                   rematchState === 'waiting' ? '' : rematchState === 'requested' ? 'cursor-not-allowed' : 'animate-button-glow'

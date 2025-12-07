@@ -448,6 +448,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const handleMessage = (message: any) => {
     switch (message.type) {
       case 'GAME_STATE':
+        // Reset rematch state when new game starts
+        setRematchState('idle');
+        setRematchCountdown(30);
+        
         const receivedSlot = message.data.your_slot;
         setMySlot(Number(receivedSlot)); // Ensure it's a number
         mySlotRef.current = Number(receivedSlot);
@@ -735,6 +739,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setOpponentDisconnected(false);
         setGraceTimeRemaining(0);
         setMyTimerPaused(false);
+        // Reset rematch state for new game end
+        setRematchState('idle');
+        setRematchCountdown(30);
         
         // Determine if we won for effects
         const myPlayerIdForEnd = user?.id;
