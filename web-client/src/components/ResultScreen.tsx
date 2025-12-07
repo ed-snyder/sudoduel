@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 interface PlayerResult {
   playerId: number;
