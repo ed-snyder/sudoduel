@@ -207,11 +207,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Connect to WebSocket
   useEffect(() => {
     if (!token) return;
+    
+    // Reset game state when matchId changes (for rematch/new match)
+    setGameStatus('connecting');
+    setGameResult(null);
+    setRematchState('idle');
+    setRematchCountdown(30);
+    
     const ws = createGameSocket(matchId, token);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      setGameStatus('waiting');
+      // Don't set to 'waiting' automatically - wait for GAME_STATE message
+      // This prevents overriding 'ended' status if reconnecting after game end
+      setGameStatus('connecting');
     };
 
     ws.onmessage = (event) => {
@@ -494,10 +503,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setMySlot(Number(receivedSlot)); // Ensure it's a number
         mySlotRef.current = Number(receivedSlot);
         // Align local gameStatus with server status in case we connected after start
-        if (message.data.status === 'IN_PROGRESS') {
-          setGameStatus('playing');
-        } else if (message.data.status === 'WAITING') {
-          setGameStatus('waiting');
+        // Don't override 'ended' status - if game has ended, keep it ended
+        if (gameStatus !== 'ended') {
+          if (message.data.status === 'IN_PROGRESS') {
+            setGameStatus('playing');
+          } else if (message.data.status === 'WAITING') {
+            setGameStatus('waiting');
+          } else if (message.data.status === 'ENDED') {
+            setGameStatus('ended');
+          }
         }
         setOpponentName(message.data.opponent_name || 'Opponent');
         if (receivedSlot === 1 || receivedSlot === '1') {
@@ -1400,27 +1414,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }
 
 
-  // Waiting for opponent
-  if (gameStatus === 'waiting') {
-    return (
-      <div className="min-h-screen bg-void flex items-center justify-center">
-        <div className="text-center">
-          <div 
-            className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
-            style={{
-              border: '3px solid rgba(139, 0, 255, 0.2)',
-              borderTopColor: '#00FFFF',
-            }}
-          />
-          <div className="text-primary text-lg font-body mb-1">Waiting for opponent</div>
-          <div className="text-muted text-sm font-body">Please wait...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Game ended
-  if (gameStatus === 'ended' && gameResult) {
+  // Game ended - check this BEFORE waiting screen to prevent stuck state
+  // Also handle case where we have gameResult but status might be 'waiting' (safeguard)
+  if (gameResult && (gameStatus === 'ended' || gameStatus === 'waiting')) {
     const myPlayerId = user?.id;
 
     // Prefer authoritative identity by player_id from backend results
@@ -1487,12 +1483,32 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         isRanked={isRanked}
         onRematch={handleRematchRequest}
         onBackToLobby={onGameEnd}
-        onFindNewMatch={onFindNewMatch || onGameEnd}
+        onFindNewMatch={onFindNewMatch || ((_matchId: number) => onGameEnd())}
         rematchState={rematchState}
         rematchCountdown={rematchCountdown}
       />
     );
   }
+
+  // Waiting for opponent - only show if game hasn't ended
+  if (gameStatus === 'waiting') {
+    return (
+      <div className="min-h-screen bg-void flex items-center justify-center">
+        <div className="text-center">
+          <div 
+            className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              border: '3px solid rgba(139, 0, 255, 0.2)',
+              borderTopColor: '#00FFFF',
+            }}
+          />
+          <div className="text-primary text-lg font-body mb-1">Waiting for opponent</div>
+          <div className="text-muted text-sm font-body">Please wait...</div>
+        </div>
+      </div>
+    );
+  }
+
 
 
   const handleSelectEmote = (emote: string) => {
