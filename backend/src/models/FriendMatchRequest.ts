@@ -95,7 +95,7 @@ export const FriendMatchRequestModel = {
     return result.rows;
   },
 
-  // Get current pending request sent by a player
+  // Get current pending request sent by a player (or recently accepted within 10 seconds)
   async getPendingRequestFromPlayer(playerId: number): Promise<FriendMatchRequestWithDetails | null> {
     const result = await query(
       `SELECT 
@@ -116,8 +116,10 @@ export const FriendMatchRequestModel = {
        LEFT JOIN player_ratings from_pr ON from_pr.player_id = fmr.from_player_id AND from_pr.ladder_id = 1
        LEFT JOIN player_ratings to_pr ON to_pr.player_id = fmr.to_player_id AND to_pr.ladder_id = 1
        WHERE fmr.from_player_id = $1 
-         AND fmr.status = 'PENDING'
-         AND fmr.expires_at > NOW()
+         AND (
+           (fmr.status = 'PENDING' AND fmr.expires_at > NOW())
+           OR (fmr.status = 'ACCEPTED' AND fmr.responded_at > NOW() - INTERVAL '10 seconds')
+         )
        ORDER BY fmr.created_at DESC
        LIMIT 1`,
       [playerId]

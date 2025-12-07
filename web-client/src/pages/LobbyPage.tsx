@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { matchmakingAPI } from '../services/api';
+import { matchmakingAPI, friendsAPI } from '../services/api';
+import type { MatchRequest } from '../services/api';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import MatchHistoryModal from '../components/MatchHistoryModal';
 import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
@@ -27,6 +29,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   const [showEmoteCustomizer, setShowEmoteCustomizer] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
+  const [incomingMatchRequest, setIncomingMatchRequest] = useState<MatchRequest | null>(null);
+  const [matchRequestActionLoading, setMatchRequestActionLoading] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
@@ -107,6 +111,68 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       await matchmakingAPI.leave();
     } catch (err) {}
     setSearching(false);
+  };
+
+  // Poll for incoming friend match requests
+  useEffect(() => {
+    const checkForMatchRequests = async () => {
+      try {
+        const response = await friendsAPI.getPendingMatchRequests();
+        if (response.requests && response.requests.length > 0) {
+          setIncomingMatchRequest(response.requests[0]);
+        } else {
+          setIncomingMatchRequest(null);
+        }
+      } catch (err) {
+        console.error('Failed to check match requests:', err);
+      }
+    };
+
+    const interval = setInterval(checkForMatchRequests, 2500);
+    checkForMatchRequests(); // Check immediately
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcceptMatchRequest = async () => {
+    if (!incomingMatchRequest || matchRequestActionLoading) return;
+
+    setMatchRequestActionLoading(true);
+    try {
+      const response = await friendsAPI.acceptMatchRequest(incomingMatchRequest.id);
+      if (response.matchId) {
+        onMatchFound(response.matchId);
+        setIncomingMatchRequest(null);
+      }
+    } catch (err: any) {
+      console.error('Failed to accept match request:', err);
+      setIncomingMatchRequest(null);
+    } finally {
+      setMatchRequestActionLoading(false);
+    }
+  };
+
+  const handleRejectMatchRequest = async () => {
+    if (!incomingMatchRequest || matchRequestActionLoading) return;
+
+    setMatchRequestActionLoading(true);
+    try {
+      await friendsAPI.rejectMatchRequest(incomingMatchRequest.id);
+      setIncomingMatchRequest(null);
+    } catch (err: any) {
+      console.error('Failed to reject match request:', err);
+      setIncomingMatchRequest(null);
+    } finally {
+      setMatchRequestActionLoading(false);
+    }
+  };
+
+  const vibrate = async () => {
+    try {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch (e) {
+      // Haptics not available
+    }
   };
 
   return (
@@ -321,7 +387,79 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       <FriendsListModal
         isOpen={showFriendsList}
         onClose={() => setShowFriendsList(false)}
+        onMatchFound={onMatchFound}
       />
+
+      {/* Incoming Match Request Modal */}
+      {incomingMatchRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+          
+          <div 
+            className="relative bg-surface border-2 border-player rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+            style={{ boxShadow: '0 0 30px rgba(0,255,255,0.4)' }}
+          >
+            <div className="p-6 text-center">
+              {/* Pulsing icon */}
+              <div 
+                className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-4"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0,255,255,0.3) 0%, rgba(139,0,255,0.3) 100%)',
+                  border: '3px solid rgba(0,255,255,0.5)',
+                  boxShadow: '0 0 20px rgba(0,255,255,0.3)',
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }}
+              >
+                ⚔️
+              </div>
+              
+              <h3 
+                className="font-heading font-bold text-xl text-player mb-2"
+                style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}
+              >
+                {incomingMatchRequest.from_display_name} wants to duel!
+              </h3>
+              <p className="text-secondary font-body text-sm mb-1">
+                Rating: <span className="text-player font-mono">{Math.round(incomingMatchRequest.from_rating)}</span>
+              </p>
+              <p className="text-muted font-body text-xs mb-6">
+                Friendly match • No rating change
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectMatchRequest}
+                  disabled={matchRequestActionLoading}
+                  className="flex-1 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                  style={{
+                    background: 'rgb(20, 12, 30)',
+                    border: '2px solid rgba(139,0,255,0.5)',
+                    color: 'rgba(255,255,255,0.7)',
+                  }}
+                >
+                  I'll Pass
+                </button>
+                <button
+                  onClick={() => {
+                    vibrate();
+                    handleAcceptMatchRequest();
+                  }}
+                  disabled={matchRequestActionLoading}
+                  className="flex-1 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                  style={{
+                    background: 'rgb(15, 10, 25)',
+                    border: '2px solid #00FFFF',
+                    color: '#00FFFF',
+                    boxShadow: '0 0 15px rgba(0,255,255,0.3)',
+                  }}
+                >
+                  {matchRequestActionLoading ? '...' : 'Accept'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

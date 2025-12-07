@@ -1143,7 +1143,7 @@ export default function ResultScreen({
                 }}
               >
                 <p className="text-xs text-muted font-body uppercase tracking-widest text-center mb-3">
-                  Head to Head
+                  Match History
                 </p>
                 
                 {h2hLoading ? (
