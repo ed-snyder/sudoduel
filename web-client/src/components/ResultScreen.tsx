@@ -236,7 +236,6 @@ export default function ResultScreen({
     const startTimeout = setTimeout(() => {
       console.log('🎰 Rating animation starting now!');
       
-      const duration = 2000; // 2 seconds total
       const steps = Math.max(30, Math.min(Math.abs(diff), 50));
       let currentStep = 0;
 
