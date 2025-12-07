@@ -1723,22 +1723,21 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         </button>
       </div>
 
-      {/* Emote Picker - Below toolbar */}
+      {/* Emote Picker - Fixed at bottom */}
       {showEmotePicker && (
         <div 
-          className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in z-50" 
+          className="fixed left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-4 bg-gray-50 border-t border-gray-200 animate-fade-in z-50 shadow-lg" 
           style={{ 
-            top: 'calc(50vh + 340px)',
-            position: 'fixed',
-            bottom: 'auto',
+            bottom: '20px',
+            top: 'auto',
           }}
         >
           {EMOTES.map((emote) => (
             <button
               key={emote}
               onClick={() => handleSelectEmote(emote)}
-              className="text-3xl sm:text-4xl p-2 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
-              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1' }}
+              className="text-3xl sm:text-4xl p-3 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
+              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '50px', minHeight: '50px' }}
             >
               <span style={{ display: 'inline', whiteSpace: 'nowrap' }}>{emote}</span>
             </button>
