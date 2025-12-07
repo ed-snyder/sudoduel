@@ -30,7 +30,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
 
   const handleEmoteClick = (index: number) => {
     setEditingIndex(index);
-    setInputValue(emotes[index]);
+    setInputValue(''); // Start empty instead of current emote
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,22 +115,22 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
           {editingIndex !== null && (
             <div className="space-y-3 animate-fade-in">
               <p className="text-xs text-muted font-body text-center">
-                Enter 1-2 emojis for slot {editingIndex + 1}
+                Select 1-2 emojis for slot {editingIndex + 1}
               </p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={handleInputChange}
-                  placeholder="😎"
+                  placeholder="Tap to select"
                   autoFocus
-                  className="flex-1 px-4 py-3 bg-elevated border border-grid-line rounded-lg text-3xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all"
-                  style={{ caretColor: 'transparent' }}
+                  className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-2xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all"
+                  style={{ caretColor: 'transparent', minHeight: '48px' }}
                 />
                 <button
                   onClick={handleSaveEmote}
                   disabled={!inputValue}
-                  className="px-4 py-3 rounded-lg font-body font-bold uppercase tracking-wider transition-all disabled:opacity-40"
+                  className="px-3 py-2 rounded-lg font-body font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-40"
                   style={{
                     background: 'rgb(15, 10, 25)',
                     border: '2px solid #00FFFF',
