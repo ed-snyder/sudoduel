@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { matchmakingAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface PlayerResult {
   playerId: number;
@@ -38,6 +39,7 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
+  const { user } = useAuth();
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
   const [showContent, setShowContent] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -49,8 +51,8 @@ export default function ResultScreen({
   const cellDifference = opponentResult.cellsCompleted - myResult.cellsCompleted;
   const wasClose = !didWin && !isDraw && cellDifference <= 5 && cellDifference > 0;
 
-  // Get display names with fallbacks
-  const myDisplayName = myResult.displayName || 'You';
+  // Get display names - use actual user names, fallback to displayName from results, then generic fallback
+  const myDisplayName = myResult.displayName || user?.display_name || 'Player';
   const opponentDisplayName = opponentResult.displayName || 'Opponent';
 
   useEffect(() => {
@@ -165,8 +167,8 @@ export default function ResultScreen({
   };
 
   const getReasonText = () => {
-    if (reason === 'FORFEIT') return didWin ? 'Opponent forfeited' : 'You forfeited';
-    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : 'Opponent solved it';
+    if (reason === 'FORFEIT') return didWin ? `${opponentDisplayName} forfeited` : `${myDisplayName} forfeited`;
+    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : `${opponentDisplayName} solved it`;
     if (reason === 'TIMEOUT_SCORE') return didWin ? 'Higher score' : 'Lower score';
     if (reason === 'DRAW') return 'Equal scores';
     return '';
@@ -336,7 +338,7 @@ export default function ResultScreen({
         {/* Stats row */}
         <div className="flex gap-6 mb-6 text-center">
           <div>
-            <span className="text-xs text-muted font-body uppercase tracking-wider block">Time</span>
+            <span className="text-xs text-muted font-body uppercase tracking-wider block">Time Left</span>
             <span className="text-lg font-mono text-primary">{formatTime(myResult.timeRemaining)}</span>
           </div>
           <div>
