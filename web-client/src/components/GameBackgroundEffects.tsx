@@ -18,15 +18,6 @@ export default function GameBackgroundEffects({
   const [cyanPulse, setCyanPulse] = useState(false);
   const [magentaPulse, setMagentaPulse] = useState(false);
   const [dimmed, setDimmed] = useState(false);
-  const [phase, setPhase] = useState(0);
-
-  // Grid animation phase
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhase(prev => (prev + 1) % 360);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
 
   // Cyan pulse on player score
   useEffect(() => {
@@ -54,8 +45,6 @@ export default function GameBackgroundEffects({
 
   const isCritical = timeRemaining < criticalTime;
   const isWarning = timeRemaining < 60;
-  const gridHue = 270 + Math.sin(phase * Math.PI / 180) * 30;
-  const gridOpacity = isCritical ? 0.18 : isWarning ? 0.15 : 0.12;
   const vignetteIntensity = isCritical ? 0.7 : isWarning ? 0.5 : 0.3;
 
   return (
@@ -128,17 +117,8 @@ export default function GameBackgroundEffects({
         />
       </div>
 
-      {/* Animated grid */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px),
-            linear-gradient(90deg, hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-        }}
-      />
+      {/* Remove the grid pattern - just solid color background shows through */}
+      {/* Grid pattern removed per request */}
 
       {/* Vignette overlay - intensifies at low time */}
       <div 

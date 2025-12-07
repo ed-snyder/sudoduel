@@ -145,15 +145,24 @@ function SudokuGrid({
   return (
     <div
       ref={gridRef}
-      className="relative"
+      className="relative select-none"
       style={{
         aspectRatio: '1 / 1',
         width: '100%',
-        maxWidth: 'min(100vw - 16px, 400px)',
+        maxWidth: 'min(100vw - 24px, 400px)',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
     >
       {/* 9x9 Grid of cells - transparent backgrounds */}
-      <div className="absolute inset-0 grid grid-cols-9 grid-rows-9">
+      <div 
+        className="absolute inset-0 grid grid-cols-9 grid-rows-9"
+        style={{
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
+      >
         {grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => {
             const isInitial = isInitialCell(rowIndex, colIndex);
@@ -175,45 +184,47 @@ function SudokuGrid({
             const isAlmostComplete = almostCompleteCells.has(cellKey);
             const isError = isErrorFlash(rowIndex, colIndex);
 
-            // Cell background - transparent by default, subtle tint for states
+            // Cell background - transparent by default, bright cyan for selection
             let cellBg = 'transparent';
+            let cellShadow = 'none';
+            
             if (lockedOut) {
               cellBg = 'rgba(100, 100, 100, 0.2)';
             } else if (isError) {
-              cellBg = 'rgba(255, 51, 102, 0.25)';
+              cellBg = 'rgba(255, 51, 102, 0.4)';
+              cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
             } else if (selected) {
-              cellBg = 'rgba(0, 255, 255, 0.15)';
+              cellBg = 'rgba(0, 255, 255, 0.35)';
+              cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
             } else if (related) {
-              cellBg = 'rgba(0, 255, 255, 0.05)';
+              cellBg = 'rgba(0, 255, 255, 0.12)';
+              cellShadow = 'inset 0 0 10px rgba(0, 255, 255, 0.15)';
             } else if (opponentScored) {
-              cellBg = 'rgba(255, 0, 255, 0.1)';
+              cellBg = 'rgba(255, 0, 255, 0.15)';
             }
 
             return (
               <button
                 key={cellKey}
-                onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
-                onTouchStart={(e) => {
+                onClick={() => {
                   if (!lockedOut) {
-                    e.preventDefault();
                     onCellClick(rowIndex, colIndex);
                   }
                 }}
                 disabled={lockedOut}
                 className={`
                   relative flex items-center justify-center
-                  transition-colors duration-75 touch-manipulation
+                  transition-all duration-75 touch-manipulation
                   ${isCompleted ? 'completion-flash' : ''}
                   ${isAlmostComplete ? 'almost-complete-glow' : ''}
                   ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
                 `}
                 style={{
                   background: cellBg,
-                  boxShadow: selected 
-                    ? 'inset 0 0 15px rgba(0, 255, 255, 0.3)' 
-                    : isError
-                    ? 'inset 0 0 15px rgba(255, 51, 102, 0.4)'
-                    : 'none',
+                  boxShadow: cellShadow,
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTapHighlightColor: 'transparent',
                 }}
               >
                 {hasValue ? (
@@ -225,12 +236,18 @@ function SudokuGrid({
                       textShadow: isInitial 
                         ? '0 0 10px rgba(255, 255, 255, 0.3)' 
                         : '0 0 12px rgba(0, 255, 255, 0.7)',
+                      WebkitUserSelect: 'none',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
                     }}
                   >
                     {cell}
                   </span>
                 ) : showNotes ? (
-                  <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
+                  <div 
+                    className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5"
+                    style={{ pointerEvents: 'none' }}
+                  >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <span
                         key={num}
@@ -240,6 +257,8 @@ function SudokuGrid({
                         style={{
                           fontSize: 'clamp(0.4rem, 1.5vw, 0.6rem)',
                           color: 'rgba(255, 255, 255, 0.7)',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
                         }}
                       >
                         {num}
@@ -258,13 +277,15 @@ function SudokuGrid({
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           {/* Outer border / perimeter */}
           <rect
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
+            x="1"
+            y="1"
+            width="calc(100% - 2px)"
+            height="calc(100% - 2px)"
             fill="none"
             stroke="rgba(255, 255, 255, 0.9)"
             strokeWidth="2"
+            rx="4"
+            ry="4"
           />
 
           {/* Thin white lines - between regular cells */}
