@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { extractEmojis } from '../utils/emoji';
 
 interface AvatarPickerModalProps {
   isOpen: boolean;
@@ -15,8 +16,10 @@ export default function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSa
 
   const handleEmojiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const emojis = [...value].filter(char => /\p{Emoji}/u.test(char));
+    // Extract complete emojis (handles complex emojis correctly)
+    const emojis = extractEmojis(value);
     if (emojis.length > 0) {
+      // Use the last emoji entered
       setEmoji(emojis[emojis.length - 1]);
     }
   };

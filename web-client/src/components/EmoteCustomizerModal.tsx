@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { extractEmojis } from '../utils/emoji';
 
 interface EmoteCustomizerModalProps {
   isOpen: boolean;
@@ -35,11 +36,9 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Extract emojis only - allow up to 2
-    const emojiRegex = /\p{Emoji}/gu;
-    const matches = value.match(emojiRegex) || [];
-    const emojisOnly = matches.slice(0, 2).join('');
-    setInputValue(emojisOnly);
+    // Extract emojis only - allow up to 2 complete emojis
+    const emojis = extractEmojis(value, 2);
+    setInputValue(emojis.join(''));
   };
 
   const handleSaveEmote = () => {
@@ -151,32 +150,11 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
             </div>
           )}
 
-          {/* Preview section */}
+          {/* Instruction text when not editing */}
           {editingIndex === null && (
-            <div className="pt-2">
-              <p className="text-xs text-muted font-body text-center mb-3">
-                Tap an emote to customize it
-              </p>
-              
-              {/* How it looks in game */}
-              <div 
-                className="flex items-center justify-center gap-2 p-3 rounded-lg"
-                style={{
-                  background: 'rgba(30,15,45,0.5)',
-                  border: '1px solid rgba(139,0,255,0.2)',
-                }}
-              >
-                {emotes.map((emote, i) => (
-                  <span 
-                    key={i} 
-                    className="text-2xl p-2 rounded-lg"
-                    style={{ background: 'rgba(139,0,255,0.1)' }}
-                  >
-                    {emote}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <p className="text-xs text-muted font-body text-center pt-2">
+              Tap an emote to customize it
+            </p>
           )}
 
           {/* Reset button */}
