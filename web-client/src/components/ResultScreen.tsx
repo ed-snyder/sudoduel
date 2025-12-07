@@ -109,7 +109,6 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
-  const { user } = useAuth();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
@@ -123,6 +122,8 @@ export default function ResultScreen({
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [showOpponentModal, setShowOpponentModal] = useState(false);
+  const [isFindingMatch, setIsFindingMatch] = useState(false);
+  const [searchTime, setSearchTime] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
   const hasTriggeredEffects = useRef(false);
@@ -132,7 +133,7 @@ export default function ResultScreen({
 
   const ratingChange = myResult.rating_change || 0;
   const opponentName = opponentResult.displayName || 'Opponent';
-  const myDisplayName = myResult.displayName || user?.display_name || 'You';
+  const myName = myResult.displayName || 'Player';
   const isBigWin = didWin && ratingChange >= 25;
 
   // Generate geometric particles
@@ -311,6 +312,20 @@ export default function ResultScreen({
     };
   }, [myResult.rating_before, myResult.rating_after]);
 
+  // Search timer when finding new match
+  useEffect(() => {
+    if (!isFindingMatch) {
+      setSearchTime(0);
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      setSearchTime(prev => prev + 1);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isFindingMatch]);
+
   // Matchmaking functions
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -353,13 +368,58 @@ export default function ResultScreen({
     }, 1000);
   }, [onFindNewMatch, stopPolling]);
 
-  const handleCancelSearch = useCallback(async () => {
-    stopPolling();
+  const handleFindNewMatch = async () => {
+    handleButtonPress();
+    setIsFindingMatch(true);
+    
     try {
+      // Import and use matchmaking API
+      const { matchmakingAPI } = await import('../services/api');
+      const result = await matchmakingAPI.join() as { status: string; match_id?: number };
+      
+      if (result.status === 'matched' && result.match_id) {
+        // Navigate to new game
+        onFindNewMatch(result.match_id);
+        setIsFindingMatch(false);
+      } else if (result.status === 'queued') {
+        // Poll for match
+        const pollInterval = setInterval(async () => {
+          try {
+            const status = await matchmakingAPI.status() as { status: string; match_id?: number };
+            if (status.status === 'matched' && status.match_id) {
+              clearInterval(pollInterval);
+              onFindNewMatch(status.match_id);
+              setIsFindingMatch(false);
+            }
+          } catch (err) {
+            console.error('Polling error:', err);
+          }
+        }, 1000);
+        
+        // Store interval for cleanup
+        (window as any).__matchPollInterval = pollInterval;
+      }
+    } catch (error) {
+      console.error('Failed to find match:', error);
+      setIsFindingMatch(false);
+    }
+  };
+
+  const handleCancelSearch = async () => {
+    handleButtonPress();
+    try {
+      const { matchmakingAPI } = await import('../services/api');
       await matchmakingAPI.leave();
-    } catch (err) {}
-    setSearching(false);
-  }, [stopPolling]);
+      
+      // Clear polling interval if exists
+      if ((window as any).__matchPollInterval) {
+        clearInterval((window as any).__matchPollInterval);
+      }
+    } catch (error) {
+      console.error('Failed to cancel search:', error);
+    }
+    setIsFindingMatch(false);
+  };
 
   useEffect(() => {
     return () => {
@@ -373,36 +433,11 @@ export default function ResultScreen({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getReasonText = () => {
-    if (reason === 'FORFEIT') return didWin ? `${opponentName} forfeited` : `${myDisplayName} forfeited`;
-    if (reason === 'PUZZLE_SOLVED') return didWin ? 'Puzzle completed!' : `${opponentName} solved it`;
-    if (reason === 'TIMEOUT_SCORE') return didWin ? 'Higher score' : 'Lower score';
-    if (reason === 'DRAW') return 'Equal scores';
-    return '';
-  };
-
-  const getFlavorText = () => {
-    if (isDraw) return '';
-    if (didWin) {
-      if (isBigWin) return '🔥 DOMINATED!';
-      if (ratingChange >= 15) return 'Crushed it!';
-      return 'Well played!';
-    }
-    return 'Next time...';
-  };
-
   // Colors based on win/loss
   const fillColor = didWin ? '#00FFFF' : '#FF00FF';
   const fillColorLight = didWin ? '#7FFFFF' : '#FF7FFF';
   const fillColorDark = didWin ? '#00B3B3' : '#B300B3';
   const glowColor = didWin ? '#FF00FF' : '#00FFFF';
-
-  const titleStyle = {
-    fontFamily: "'Industry', 'Orbitron', sans-serif",
-    fontWeight: 900,
-    fontStyle: 'italic',
-    letterSpacing: '-0.02em',
-  };
 
   const breatheOpacity = 0.15 + Math.sin(breathePhase * Math.PI / 180) * 0.05;
 
@@ -582,47 +617,39 @@ export default function ResultScreen({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8 relative z-30">
-        {/* Result Title - Fixed fill rendering */}
+        {/* Result Title - Logo style like SUDODUEL */}
         <div 
-          className={`relative mb-3 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
+          className={`relative mb-6 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
         >
-          {/* Shadow/depth layer */}
+          {/* Outer glow layer */}
           <span
-            className="absolute text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-6xl sm:text-7xl select-none pointer-events-none"
             style={{
-              ...titleStyle,
-              color: glowColor,
-              filter: 'blur(15px)',
-              opacity: 0.5,
-              top: '4px',
-              left: '4px',
-            }}
-            aria-hidden="true"
-          >
-            {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
-          </span>
-
-          {/* Outer glow */}
-          <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
-            style={{
-              ...titleStyle,
-              color: glowColor,
+              fontFamily: "'Industry', 'Orbitron', sans-serif",
+              fontWeight: 900,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              color: 'transparent',
+              WebkitTextStroke: `8px ${glowColor}`,
               filter: 'blur(12px)',
-              opacity: 0.6,
+              opacity: 0.5,
             }}
             aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Inner glow */}
+          {/* Inner glow layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-6xl sm:text-7xl select-none pointer-events-none"
             style={{
-              ...titleStyle,
-              color: glowColor,
-              filter: 'blur(5px)',
+              fontFamily: "'Industry', 'Orbitron', sans-serif",
+              fontWeight: 900,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              color: 'transparent',
+              WebkitTextStroke: `5px ${glowColor}`,
+              filter: 'blur(4px)',
               opacity: 0.7,
             }}
             aria-hidden="true"
@@ -630,90 +657,62 @@ export default function ResultScreen({
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Main fill - solid color, no gradient clipping issues */}
+          {/* White stroke layer */}
           <span
-            className="relative text-5xl sm:text-6xl select-none"
+            className="absolute inset-0 text-6xl sm:text-7xl select-none pointer-events-none"
             style={{
-              ...titleStyle,
-              color: fillColor,
-              textShadow: `
-                0 0 2px ${fillColorLight},
-                0 0 4px ${fillColor},
-                1px 1px 0 rgba(255,255,255,0.3),
-                -1px -1px 0 ${fillColorDark}
-              `,
+              fontFamily: "'Industry', 'Orbitron', sans-serif",
+              fontWeight: 900,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              color: 'transparent',
+              WebkitTextStroke: '3px rgba(255,255,255,0.9)',
             }}
+            aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
 
-          {/* Shimmer overlay */}
+          {/* Fill gradient - main visible text */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="relative text-6xl sm:text-7xl select-none"
             style={{
-              ...titleStyle,
-              background: `linear-gradient(135deg, transparent 30%, ${fillColorLight}40 50%, transparent 70%)`,
+              fontFamily: "'Industry', 'Orbitron', sans-serif",
+              fontWeight: 900,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              background: isDraw 
+                ? 'linear-gradient(180deg, #FFFFFF 0%, #B8B8B8 50%, #888888 100%)'
+                : `linear-gradient(180deg, ${fillColorLight} 0%, ${fillColor} 50%, ${fillColorDark} 100%)`,
               backgroundSize: '200% 200%',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: 'logo-shimmer 3s ease-in-out infinite',
             }}
-            aria-hidden="true"
           >
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </span>
         </div>
 
-        {/* Reason + Flavor text */}
-        <p 
-          className="font-body text-sm mb-2 uppercase tracking-widest"
-          style={{ 
-            color: didWin ? 'rgba(0,255,255,0.8)' : !isDraw ? 'rgba(255,0,255,0.8)' : 'rgba(255,255,255,0.6)',
-            textShadow: didWin 
-              ? '0 0 10px rgba(0,255,255,0.4)' 
-              : !isDraw 
-              ? '0 0 10px rgba(255,0,255,0.4)' 
-              : 'none',
-          }}
-        >
-          {getReasonText()}
-        </p>
-        
-        {getFlavorText() && (
-          <p 
-            className={`font-heading font-bold text-lg mb-6 ${!didWin && !isDraw ? 'animate-pulse' : ''}`}
-            style={{ 
-              color: didWin ? '#00FFFF' : '#FF00FF',
-              textShadow: didWin 
-                ? '0 0 15px rgba(0,255,255,0.6)' 
-                : '0 0 15px rgba(255,0,255,0.6)',
-            }}
-          >
-            {getFlavorText()}
-          </p>
-        )}
-
-        {/* Score comparison with name boxes */}
+        {/* Score comparison with equal-sized name boxes */}
         <div className="flex items-center gap-4 mb-6">
           {/* Your score box */}
           <div 
-            className="flex flex-col items-center px-5 py-3 rounded-lg"
+            className="flex flex-col items-center px-4 py-3 rounded-lg"
             style={{
               background: 'rgba(0,255,255,0.08)',
               border: '2px solid rgba(0,255,255,0.4)',
               boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
-              minWidth: '120px',
+              width: '140px',
             }}
           >
             <span 
-              className="text-xs font-body uppercase tracking-widest mb-2 truncate max-w-[110px]"
+              className="text-xs font-body uppercase tracking-widest mb-2 truncate w-full text-center"
               style={{ color: 'rgba(0,255,255,0.9)' }}
-              title={myResult.displayName || 'You'}
+              title={myName}
             >
-              {(myResult.displayName || 'You').length > 12 
-                ? (myResult.displayName || 'You').slice(0, 12) + '…' 
-                : (myResult.displayName || 'You')}
+              {myName.length > 10 ? myName.slice(0, 10) + '…' : myName}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-player"
@@ -733,20 +732,20 @@ export default function ResultScreen({
           {/* Opponent score box - clickable */}
           <button
             onClick={() => setShowOpponentModal(true)}
-            className="flex flex-col items-center px-5 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
+            className="flex flex-col items-center px-4 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
             style={{
               background: 'rgba(255,0,255,0.08)',
               border: '2px solid rgba(255,0,255,0.4)',
               boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
-              minWidth: '120px',
+              width: '140px',
             }}
           >
             <span 
-              className="text-xs font-body uppercase tracking-widest mb-2 truncate max-w-[110px]"
+              className="text-xs font-body uppercase tracking-widest mb-2 truncate w-full text-center"
               style={{ color: 'rgba(255,0,255,0.9)' }}
               title={opponentName}
             >
-              {opponentName.length > 12 ? opponentName.slice(0, 12) + '…' : opponentName}
+              {opponentName.length > 10 ? opponentName.slice(0, 10) + '…' : opponentName}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-opponent"
@@ -754,9 +753,7 @@ export default function ResultScreen({
             >
               {opponentResult.cellsCompleted}
             </span>
-            <span 
-              className="text-[10px] font-body text-muted mt-1 opacity-60"
-            >
+            <span className="text-[10px] font-body text-muted mt-1 opacity-60">
               tap for stats
             </span>
           </button>
@@ -901,18 +898,44 @@ export default function ResultScreen({
               </button>
 
               {/* Find New Match - Solid secondary with matching border thickness */}
-              <button
-                onClick={() => { handleButtonPress(); onBackToLobby(); }}
-                className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
-                style={{
-                  background: 'rgb(20, 12, 30)',
-                  border: '3px solid rgba(139,0,255,0.5)',
-                  color: 'rgba(255,255,255,0.8)',
-                  boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-                }}
-              >
-                Find New Match
-              </button>
+              {isFindingMatch ? (
+                <div className="w-full text-center">
+                  <div className="relative w-20 h-20 mx-auto mb-4">
+                    <div className="absolute inset-0 rounded-full border-4 border-surface" />
+                    <div 
+                      className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
+                      style={{ 
+                        boxShadow: '0 0 20px rgba(0,255,255,0.5)',
+                        filter: 'drop-shadow(0 0 10px rgba(0,255,255,0.8))'
+                      }}
+                    />
+                  </div>
+                  <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
+                  <p className="text-secondary font-display mb-1">Looking for an opponent</p>
+                  <p className="text-player text-lg font-display mb-4">
+                    {Math.floor(searchTime / 60)}:{String(searchTime % 60).padStart(2, '0')}
+                  </p>
+                  <button
+                    onClick={handleCancelSearch}
+                    className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-error/50 hover:text-error transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleFindNewMatch}
+                  className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                  style={{
+                    background: 'rgb(20, 12, 30)',
+                    border: '3px solid rgba(139,0,255,0.5)',
+                    color: 'rgba(255,255,255,0.8)',
+                    boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  }}
+                >
+                  Find New Match
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -974,7 +997,7 @@ export default function ResultScreen({
                   className="font-mono font-bold text-lg text-primary"
                   style={{ textShadow: '0 0 8px rgba(139,0,255,0.3)' }}
                 >
-                  {opponentResult.rating_after || opponentResult.rating_before || '—'}
+                  {Math.round(opponentResult.rating_after || opponentResult.rating_before || 0) || '—'}
                 </span>
               </div>
 
