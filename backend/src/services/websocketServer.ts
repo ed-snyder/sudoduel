@@ -662,6 +662,11 @@ async function endGame(matchId: number) {
   console.log(`🏁 Match ${matchId} ended. Winner: ${results.winnerId || 'DRAW'}`);
 
   try {
+    // Check if match is ranked
+    const match = await MatchModel.findById(matchId);
+    const isRanked = match?.is_ranked !== false; // Default to ranked if not set
+    console.log(`📊 Match ${matchId} is_ranked: ${isRanked}`);
+
     console.log(`💾 [1/6] Updating match status...`);
     await MatchModel.updateStatus(matchId, 'COMPLETED');
     console.log(`✅ [1/6] Match status updated`);
@@ -695,31 +700,55 @@ async function endGame(matchId: number) {
       return;
     }
 
-    let outcome: number;
-    if (results.winnerId === results.player1.playerId) {
-      outcome = 1;
-    } else if (results.winnerId === results.player2.playerId) {
-      outcome = 0;
-    } else {
-      outcome = 0.5;
-    }
-    console.log(`🎲 Outcome value: ${outcome}`);
+    // Calculate new ratings only if match is ranked
+    let newRatings: {
+      player1: { rating: number; rd: number; volatility: number };
+      player2: { rating: number; rd: number; volatility: number };
+    };
 
-    console.log(`💾 [5/6] Updating ratings with Glicko-2...`);
-    const newRatings = await RatingService.updateRatings(
-      rating1.id,
-      rating1.rating,
-      rating1.rd,
-      rating1.volatility,
-      rating1.last_update_at,
-      rating2.id,
-      rating2.rating,
-      rating2.rd,
-      rating2.volatility,
-      rating2.last_update_at,
-      outcome
-    );
-    console.log(`✅ [5/6] New ratings calculated:`, newRatings);
+    if (isRanked) {
+      let outcome: number;
+      if (results.winnerId === results.player1.playerId) {
+        outcome = 1;
+      } else if (results.winnerId === results.player2.playerId) {
+        outcome = 0;
+      } else {
+        outcome = 0.5;
+      }
+      console.log(`🎲 Outcome value: ${outcome}`);
+
+      console.log(`💾 [5/6] Updating ratings with Glicko-2...`);
+      newRatings = await RatingService.updateRatings(
+        rating1.id,
+        rating1.rating,
+        rating1.rd,
+        rating1.volatility,
+        rating1.last_update_at,
+        rating2.id,
+        rating2.rating,
+        rating2.rd,
+        rating2.volatility,
+        rating2.last_update_at,
+        outcome
+      );
+      console.log(`✅ [5/6] New ratings calculated:`, newRatings);
+    } else {
+      // Unranked match - no rating changes
+      console.log(`💾 [5/6] Unranked match - skipping rating calculation`);
+      newRatings = {
+        player1: {
+          rating: rating1.rating,
+          rd: rating1.rd,
+          volatility: rating1.volatility,
+        },
+        player2: {
+          rating: rating2.rating,
+          rd: rating2.rd,
+          volatility: rating2.volatility,
+        },
+      };
+      console.log(`✅ [5/6] Ratings unchanged (friendly match)`);
+    }
 
     console.log(`💾 [6/6] Saving player stats for player ${results.player1.playerId}...`);
     await MatchModel.updatePlayerStats(matchId, results.player1.playerId, {
@@ -755,55 +784,59 @@ async function endGame(matchId: number) {
     });
     console.log(`✅ [6/6b] Player 2 stats saved`);
 
-    // Update win streaks and peak rating (if columns exist)
-    console.log(`💾 [7/7] Updating win streaks and peak ratings...`);
-    try {
-      const { query } = await import('../config/database');
-      
-      // Update player 1 win streak and peak rating
-      if (results.player1.isWinner) {
-        await query(`
-          UPDATE player_profiles 
-          SET current_win_streak = current_win_streak + 1,
-              best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
-              peak_rating = GREATEST(peak_rating, $1)
-          WHERE id = $2
-        `, [newRatings.player1.rating, results.player1.playerId]);
-      } else {
-        await query(`
-          UPDATE player_profiles 
-          SET current_win_streak = 0,
-              peak_rating = GREATEST(peak_rating, $1)
-          WHERE id = $2
-        `, [newRatings.player1.rating, results.player1.playerId]);
+    // Update win streaks and peak rating (if columns exist) - only for ranked matches
+    if (isRanked) {
+      console.log(`💾 [7/7] Updating win streaks and peak ratings...`);
+      try {
+        const { query } = await import('../config/database');
+        
+        // Update player 1 win streak and peak rating
+        if (results.player1.isWinner) {
+          await query(`
+            UPDATE player_profiles 
+            SET current_win_streak = current_win_streak + 1,
+                best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+                peak_rating = GREATEST(peak_rating, $1)
+            WHERE id = $2
+          `, [newRatings.player1.rating, results.player1.playerId]);
+        } else {
+          await query(`
+            UPDATE player_profiles 
+            SET current_win_streak = 0,
+                peak_rating = GREATEST(peak_rating, $1)
+            WHERE id = $2
+          `, [newRatings.player1.rating, results.player1.playerId]);
+        }
+        
+        // Update player 2 win streak and peak rating
+        if (results.player2.isWinner) {
+          await query(`
+            UPDATE player_profiles 
+            SET current_win_streak = current_win_streak + 1,
+                best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
+                peak_rating = GREATEST(peak_rating, $1)
+            WHERE id = $2
+          `, [newRatings.player2.rating, results.player2.playerId]);
+        } else {
+          await query(`
+            UPDATE player_profiles 
+            SET current_win_streak = 0,
+                peak_rating = GREATEST(peak_rating, $1)
+            WHERE id = $2
+          `, [newRatings.player2.rating, results.player2.playerId]);
+        }
+        console.log(`✅ [7/7] Win streaks and peak ratings updated`);
+      } catch (error: any) {
+        // If columns don't exist (migration not run), skip this step
+        if (error.message && error.message.includes('column') && (error.message.includes('current_win_streak') || error.message.includes('peak_rating'))) {
+          console.warn(`[endGame] Win streak columns not found, skipping (migration may not be run)`);
+        } else {
+          // Log other errors but don't fail the game end
+          console.error(`[endGame] Error updating win streaks:`, error);
+        }
       }
-      
-      // Update player 2 win streak and peak rating
-      if (results.player2.isWinner) {
-        await query(`
-          UPDATE player_profiles 
-          SET current_win_streak = current_win_streak + 1,
-              best_win_streak = GREATEST(best_win_streak, current_win_streak + 1),
-              peak_rating = GREATEST(peak_rating, $1)
-          WHERE id = $2
-        `, [newRatings.player2.rating, results.player2.playerId]);
-      } else {
-        await query(`
-          UPDATE player_profiles 
-          SET current_win_streak = 0,
-              peak_rating = GREATEST(peak_rating, $1)
-          WHERE id = $2
-        `, [newRatings.player2.rating, results.player2.playerId]);
-      }
-      console.log(`✅ [7/7] Win streaks and peak ratings updated`);
-    } catch (error: any) {
-      // If columns don't exist (migration not run), skip this step
-      if (error.message && error.message.includes('column') && (error.message.includes('current_win_streak') || error.message.includes('peak_rating'))) {
-        console.warn(`[endGame] Win streak columns not found, skipping (migration may not be run)`);
-      } else {
-        // Log other errors but don't fail the game end
-        console.error(`[endGame] Error updating win streaks:`, error);
-      }
+    } else {
+      console.log(`💾 [7/7] Skipping win streaks (unranked match)`);
     }
 
     // Clear matchmaking cache for this match so players can join new games
@@ -840,6 +873,7 @@ async function endGame(matchId: number) {
       data: {
         winner_slot: winnerSlot,
         reason,
+        is_ranked: isRanked,
         final_scores: {
           player1: results.player1.score,
           player2: results.player2.score,

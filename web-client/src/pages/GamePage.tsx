@@ -1344,12 +1344,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const winnerSlot = gameResult.winner_slot;
     const reason = gameResult.reason || 'DRAW';
     const isDraw = winnerSlot === null || reason === 'DRAW';
+    const isRanked = gameResult.is_ranked !== false; // Default to ranked if not set
     
     // Determine if I won based on winner_slot
     const didWin = winnerSlot !== null && winnerSlot === mySlot;
-    const ratingChange = myResult.rating_change || 0;
+    // For unranked matches, rating_change should be 0
+    const ratingChange = isRanked ? (myResult.rating_change || 0) : 0;
     const ratingBefore = myResult.rating_before || 1500;
-    const ratingAfter = myResult.rating_after || 1500;
+    const ratingAfter = isRanked ? (myResult.rating_after || 1500) : ratingBefore;
     // Use cells_completed (includes pre-completed squares) instead of score
     const myScore = myResult.cellsCompleted || myResult.cells_completed || myResult.score || 0;
     const opponentScore = opponentResult.cellsCompleted || opponentResult.cells_completed || opponentResult.score || 0;
@@ -1375,8 +1377,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       mistakes: opponentResult.mistakes || 0,
       timeRemaining: opponentResult.timeRemaining || 0,
       rating_before: opponentResult.rating_before || 1500,
-      rating_after: opponentResult.rating_after || 1500,
-      rating_change: opponentResult.rating_change || 0,
+      rating_after: isRanked ? (opponentResult.rating_after || 1500) : (opponentResult.rating_before || 1500),
+      rating_change: isRanked ? (opponentResult.rating_change || 0) : 0,
     };
 
     return (
@@ -1386,6 +1388,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         reason={reason as 'PUZZLE_SOLVED' | 'TIMEOUT_SCORE' | 'DRAW' | 'FORFEIT'}
         myResult={myResultData}
         opponentResult={opponentResultData}
+        isRanked={isRanked}
         onRematch={handleRematchRequest}
         onBackToLobby={onGameEnd}
         onFindNewMatch={onFindNewMatch || onGameEnd}

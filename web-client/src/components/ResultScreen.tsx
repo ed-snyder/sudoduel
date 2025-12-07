@@ -22,6 +22,7 @@ interface ResultScreenProps {
   reason: 'PUZZLE_SOLVED' | 'TIMEOUT_SCORE' | 'DRAW' | 'FORFEIT';
   myResult: PlayerResult;
   opponentResult: PlayerResult;
+  isRanked?: boolean;
   onRematch: () => void;
   onBackToLobby: () => void;
   onFindNewMatch: (matchId: number) => void;
@@ -104,6 +105,7 @@ export default function ResultScreen({
   reason: _reason,
   myResult,
   opponentResult,
+  isRanked = true,
   onRematch,
   onBackToLobby,
   onFindNewMatch,
@@ -140,10 +142,11 @@ export default function ResultScreen({
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [friendError, setFriendError] = useState('');
 
-  const ratingChange = myResult.rating_change || 0;
+  // For unranked matches, rating_change is always 0
+  const ratingChange = isRanked ? (myResult.rating_change || 0) : 0;
   const opponentName = opponentResult.displayName || 'Opponent';
   const myName = myResult.displayName || user?.display_name || 'Player';
-  const isBigWin = didWin && ratingChange >= 25;
+  const isBigWin = didWin && isRanked && ratingChange >= 25;
 
   // Load head-to-head stats and friend status when modal opens
   useEffect(() => {
@@ -929,41 +932,53 @@ export default function ResultScreen({
           className={`rounded-xl px-10 py-4 mb-8 transition-all duration-300 ${ratingLanded ? 'animate-rating-land' : ''}`}
           style={{
             background: 'rgba(30,15,45,0.6)',
-            border: `2px solid ${ratingChange > 0 
-              ? 'rgba(0,255,136,0.5)' 
-              : ratingChange < 0 
-              ? 'rgba(255,51,102,0.5)' 
-              : 'rgba(139,0,255,0.3)'}`,
-            boxShadow: ratingChange > 0 
+            border: isRanked 
+              ? `2px solid ${ratingChange > 0 
+                  ? 'rgba(0,255,136,0.5)' 
+                  : ratingChange < 0 
+                  ? 'rgba(255,51,102,0.5)' 
+                  : 'rgba(139,0,255,0.3)'}`
+              : '2px solid rgba(139,0,255,0.3)',
+            boxShadow: isRanked && ratingChange > 0 
               ? '0 0 25px rgba(0,255,136,0.2), inset 0 0 20px rgba(0,255,136,0.05)' 
-              : ratingChange < 0 
+              : isRanked && ratingChange < 0 
               ? '0 0 25px rgba(255,51,102,0.2), inset 0 0 20px rgba(255,51,102,0.05)' 
               : '0 0 15px rgba(139,0,255,0.15)',
           }}
         >
-          <div className="flex items-center justify-center gap-4">
-            <span 
-              className="text-4xl font-mono font-bold tabular-nums"
-              style={{ 
-                color: '#FFFFFF',
-                textShadow: '0 0 15px rgba(255,255,255,0.3)',
-              }}
-            >
-              {Math.round(displayedRating)}
-            </span>
-            <span 
-              className="text-2xl font-mono font-bold tabular-nums"
-              style={{
-                color: ratingChange > 0 ? '#00FF88' : ratingChange < 0 ? '#FF3366' : '#888888',
-                textShadow: ratingChange > 0 
-                  ? '0 0 12px rgba(0,255,136,0.6)' 
-                  : ratingChange < 0 
-                  ? '0 0 12px rgba(255,51,102,0.6)' 
-                  : 'none',
-              }}
-            >
-              {ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)}
-            </span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-4">
+              <span 
+                className="text-4xl font-mono font-bold tabular-nums"
+                style={{ 
+                  color: '#FFFFFF',
+                  textShadow: '0 0 15px rgba(255,255,255,0.3)',
+                }}
+              >
+                {Math.round(displayedRating)}
+              </span>
+              {isRanked && ratingChange !== 0 && (
+                <span 
+                  className="text-2xl font-mono font-bold tabular-nums"
+                  style={{
+                    color: ratingChange > 0 ? '#00FF88' : '#FF3366',
+                    textShadow: ratingChange > 0 
+                      ? '0 0 12px rgba(0,255,136,0.6)' 
+                      : '0 0 12px rgba(255,51,102,0.6)',
+                  }}
+                >
+                  {ratingChange > 0 ? '+' : ''}{Math.round(ratingChange)}
+                </span>
+              )}
+            </div>
+            {!isRanked && (
+              <span 
+                className="text-xs font-body uppercase tracking-widest text-secondary"
+                style={{ textShadow: '0 0 8px rgba(139,0,255,0.4)' }}
+              >
+                Friendly Match • No Rating Change
+              </span>
+            )}
           </div>
         </div>
 
