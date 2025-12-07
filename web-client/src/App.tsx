@@ -8,25 +8,25 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
 
-  return (
+    return (
     <div className="min-h-screen bg-void">
       {loading ? (
         <div className="min-h-screen bg-void flex items-center justify-center">
-          <div className="text-white text-xl">Loading...</div>
-        </div>
+        <div className="text-white text-xl">Loading...</div>
+      </div>
       ) : !user ? (
         <LoginPage />
       ) : matchId ? (
-        <GamePage
-          matchId={matchId}
-          onGameEnd={() => setMatchId(null)}
-          onRematch={(newMatchId) => setMatchId(newMatchId)}
-        />
+      <GamePage
+        matchId={matchId}
+        onGameEnd={() => setMatchId(null)}
+        onRematch={(newMatchId) => setMatchId(newMatchId)}
+      />
       ) : (
         <LobbyPage onMatchFound={setMatchId} />
       )}
     </div>
-  );
+    );
 }
 
 export default function App() {

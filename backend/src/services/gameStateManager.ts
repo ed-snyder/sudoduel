@@ -345,9 +345,9 @@ export const GameStateManager = {
       } else {
         // Fallback: forfeitingId doesn't match either player (shouldn't happen)
         console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match either player!`);
-        // Last resort: determine opponent by process of elimination
-        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+          // Last resort: determine opponent by process of elimination
+          winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
+          resultCode = winnerId === p1.playerId ? 1 : 2;
       }
       
       // CRITICAL VALIDATION: Ensure winnerId is NEVER the forfeiting player
@@ -409,28 +409,28 @@ export const GameStateManager = {
             resultCode = 1;
           }
           console.log(`[GameState] Legacy forfeit resolved: disconnected player ${forfeitingId} forfeited, player ${winnerId} wins`);
-          return {
-            player1: {
-              playerId: p1.playerId,
-              score: p1.score,
-              cellsCompleted: p1.cellsCompleted,
-              mistakes: p1.mistakes,
-              timeRemaining: p1.timeRemaining,
-              longestCellStreak: p1.longestCellStreak,
-              isWinner: winnerId === p1.playerId,
-            },
-            player2: {
-              playerId: p2.playerId,
-              score: p2.score,
-              cellsCompleted: p2.cellsCompleted,
-              mistakes: p2.mistakes,
-              timeRemaining: p2.timeRemaining,
-              longestCellStreak: p2.longestCellStreak,
-              isWinner: winnerId === p2.playerId,
-            },
-            winnerId,
-            resultCode,
-          };
+      return {
+        player1: {
+          playerId: p1.playerId,
+          score: p1.score,
+          cellsCompleted: p1.cellsCompleted,
+          mistakes: p1.mistakes,
+          timeRemaining: p1.timeRemaining,
+          longestCellStreak: p1.longestCellStreak,
+          isWinner: winnerId === p1.playerId,
+        },
+        player2: {
+          playerId: p2.playerId,
+          score: p2.score,
+          cellsCompleted: p2.cellsCompleted,
+          mistakes: p2.mistakes,
+          timeRemaining: p2.timeRemaining,
+          longestCellStreak: p2.longestCellStreak,
+          isWinner: winnerId === p2.playerId,
+        },
+        winnerId,
+        resultCode,
+      };
         }
       }
       // If we can't determine who forfeited, DO NOT trust forfeitWinnerId
@@ -448,24 +448,24 @@ export const GameStateManager = {
                           (game.disconnectedPlayerId != null && game.disconnectTime != null && (Date.now() - game.disconnectTime >= 15000));
     
     if (!hasAnyForfeit) {
-      // Win condition 1: Puzzle solved
-      if (p1.isSolved && !p2.isSolved) {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      } else if (p2.isSolved && !p1.isSolved) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } 
-      // Win condition 2-4: Score comparison (higher score wins, draw if equal)
-      else if (p1.score > p2.score) {
-        winnerId = p1.playerId;
-        resultCode = 1;
-      } else if (p2.score > p1.score) {
-        winnerId = p2.playerId;
-        resultCode = 2;
-      } else {
-        // Equal scores = draw
-        resultCode = 3;
+    // Win condition 1: Puzzle solved
+    if (p1.isSolved && !p2.isSolved) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.isSolved && !p1.isSolved) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    } 
+    // Win condition 2-4: Score comparison (higher score wins, draw if equal)
+    else if (p1.score > p2.score) {
+      winnerId = p1.playerId;
+      resultCode = 1;
+    } else if (p2.score > p1.score) {
+      winnerId = p2.playerId;
+      resultCode = 2;
+    } else {
+      // Equal scores = draw
+      resultCode = 3;
       }
     } else {
       // Forfeit occurred but wasn't caught above - this shouldn't happen, but handle it
@@ -518,8 +518,8 @@ export const GameStateManager = {
         console.error(`[GameState] CRITICAL: Forfeit detected (forfeitingId=${finalForfeitingId}), FORCING opponent win. Current winnerId=${winnerId} is WRONG. Correcting to ${correctWinnerId}`);
         winnerId = correctWinnerId;
         resultCode = correctResultCode;
-      }
-      
+    }
+    
       // CRITICAL VALIDATION: Ensure forfeitWinnerId is correct (if set)
       if (game.forfeitWinnerId != null) {
         if (game.forfeitWinnerId === finalForfeitingId) {
@@ -601,7 +601,7 @@ export const GameStateManager = {
     
     // CRITICAL: Set winner to ALWAYS be the opponent
     game.forfeitWinnerId = correctWinnerId;
-    
+
     // CRITICAL VALIDATION: Ensure forfeitWinnerId is NEVER the forfeiting player
     if (game.forfeitWinnerId === forfeitingPlayerId) {
       console.error(`[GameState] CRITICAL ERROR: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeitingPlayerId (${forfeitingPlayerId})! FORCING correction...`);
@@ -613,7 +613,7 @@ export const GameStateManager = {
       console.error(`[GameState] CRITICAL ERROR: Triple-check failed! Forcing opponent as winner...`);
       game.forfeitWinnerId = correctWinnerId;
     }
-    
+
     // Mark forfeiting player as effectively out of the game
     const forfeiter = forfeitingPlayerId === p1.playerId ? p1 : p2;
     forfeiter.isLocked = true;

@@ -802,7 +802,70 @@
 }
 
 /* =========================================
-   17. REDUCED MOTION
+   17. BACKGROUND EFFECTS ANIMATIONS
+   ========================================= */
+
+/* Shooting star animation */
+@keyframes shooting-star {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(200px, 120px);
+    opacity: 0;
+  }
+}
+
+.animate-shooting-star {
+  animation: shooting-star var(--star-duration, 1s) ease-out forwards;
+}
+
+/* 3D Grid pulse - travels from horizon toward viewer */
+@keyframes grid-pulse-3d {
+  0% {
+    top: 0%;
+    transform: rotateX(75deg) scaleX(0.3);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    top: 100%;
+    transform: rotateX(75deg) scaleX(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-grid-pulse-3d {
+  animation: grid-pulse-3d 3.5s ease-in forwards;
+}
+
+/* Slow ambient pulse for glow spots */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+/* =========================================
+   18. REDUCED MOTION
    ========================================= */
 
 @media (prefers-reduced-motion: reduce) {

@@ -284,10 +284,10 @@ function SudokuGrid({
                     : 'cursor-default'
                 }
                 transition-colors duration-75 touch-manipulation
-                style={{
-                  aspectRatio: '1 / 1',
+              style={{
+                aspectRatio: '1 / 1',
                   willChange: 'background-color', // GPU acceleration hint
-                }}
+              }}
               `}
               disabled={lockedOut}
             >

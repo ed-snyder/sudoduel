@@ -286,7 +286,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       return () => clearTimeout(timer);
     }
   }, [lastMoveResult]);
-  
+
   // Banner trigger 1: Lead changes (Priority: 5)
   useEffect(() => {
     if (gameStatus !== 'playing') return;
@@ -380,7 +380,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
       if (bannerTimeoutRef.current) {
         clearTimeout(bannerTimeoutRef.current);
         bannerTimeoutRef.current = null;
-      }
+    }
     }
   }, [gameStatus]);
 
@@ -540,7 +540,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
             // Just sync state with server's authoritative values
             const newStreak = myStreakRef.current + 1;
             myStreakRef.current = newStreak;
-            setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
+              setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
             
             // Clear notes from the placed cell itself (already done optimistically, but ensure)
             const cellKey = `${row}-${col}`;
@@ -567,12 +567,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               newGrid[row][col] = 0;
               return newGrid;
             });
-            
+          
             // Reset streak (already done locally, but ensure consistency)
             myStreakRef.current = 0;
             
             // Revert optimistic score update (server's player_state has correct values)
-            setMyState(player_state);
+          setMyState(player_state);
           }
           
           // Update pressure indicators
@@ -1135,7 +1135,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         const newGrid = myGrid.map((r) => [...r]);
         newGrid[row][col] = num;
         setMyGrid(newGrid);
-        
+      
         // IMMEDIATELY check for completions using the NEW grid state (not stale myGrid)
         // This ensures the flash happens instantly, not after server response
         if (import.meta.env.DEV) {
@@ -1148,15 +1148,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         }
         
         // OPTIMISTIC: Clear notes for this cell (batched with grid update)
-        setNotes(prev => {
-          const newNotes = new Map(prev);
-          newNotes.delete(cellKey);
-          return newNotes;
-        });
-        
+      setNotes(prev => {
+        const newNotes = new Map(prev);
+        newNotes.delete(cellKey);
+        return newNotes;
+      });
+      
         // Clear selection immediately (batched)
-        setSelectedCell(null);
-        
+      setSelectedCell(null);
+      
         // DEFER: Clear related notes AFTER visual update (non-blocking)
         const clearNotesRef = clearRelatedNotes;
         const deferClearNotes = () => {
@@ -1263,13 +1263,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
   // MEMOIZED: Only recalculate when grid changes, not on every render
   const digitCounts = useMemo(() => {
     const counts: Record<number, number> = {};
-    myGrid.forEach((row) => {
-      row.forEach((value) => {
-        if (value >= 1 && value <= 9) {
+  myGrid.forEach((row) => {
+    row.forEach((value) => {
+      if (value >= 1 && value <= 9) {
           counts[value] = (counts[value] || 0) + 1;
-        }
-      });
+      }
     });
+  });
     return counts;
   }, [myGrid]);
 
@@ -1633,11 +1633,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
           <div className="flex items-center justify-between gap-2" style={{ marginBottom: '4px' }}>
             {/* Left: Player progress bar */}
             <div className="flex items-center gap-2">
-              <ProgressBar 
-                progress={myProgress} 
-                color="blue" 
+                <ProgressBar 
+                  progress={myProgress} 
+                  color="blue" 
                 className="w-[120px]"
-              />
+                />
               <div className="text-xs sm:text-sm font-mono font-semibold text-blue-500 whitespace-nowrap">
                 {myState.cells_completed}/81
               </div>
@@ -1647,11 +1647,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
               <div className="text-xs sm:text-sm font-mono font-semibold text-fuchsia-500 whitespace-nowrap">
                 {opponentState.cells_completed}/81
               </div>
-              <ProgressBar 
-                progress={opponentProgress} 
-                color="pink" 
+                <ProgressBar 
+                  progress={opponentProgress} 
+                  color="pink" 
                 className="w-[120px]"
-              />
+                />
             </div>
           </div>
           

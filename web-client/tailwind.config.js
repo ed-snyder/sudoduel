@@ -224,6 +224,11 @@ export default {
         
         // Matrix
         'matrix-fall': 'matrix-fall 15s linear infinite',
+        
+        // Background effects
+        'shooting-star': 'shooting-star 1s ease-out forwards',
+        'grid-pulse-3d': 'grid-pulse-3d 3.5s ease-in forwards',
+        'pulse-slow': 'pulse-slow 8s ease-in-out infinite',
       },
       
       keyframes: {
