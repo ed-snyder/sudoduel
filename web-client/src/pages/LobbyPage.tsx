@@ -120,7 +120,12 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       
       {/* Player Card */}
       <div className="px-4 py-6">
-        <div className="bg-surface rounded-xl p-4 border border-grid-line">
+        <div 
+          className="bg-surface rounded-xl p-4 border border-grid-line"
+          style={{
+            boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2), 0 0 60px rgba(255, 0, 255, 0.1)',
+          }}
+        >
           <div className="flex items-center gap-4">
             {/* Avatar - Tappable */}
             <button
@@ -281,7 +286,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
         <button
           onClick={() => setShowMatchHistory(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-opponent/50 text-opponent font-display font-black rounded-lg hover:border-opponent hover:text-opponent transition-all relative"
           style={{
             boxShadow: '0 0 15px rgba(255, 0, 255, 0.3), 0 0 30px rgba(255, 0, 255, 0.15)',
           }}
@@ -307,7 +312,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
         </button>
         <button
           onClick={() => setShowStats(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-opponent/50 hover:text-opponent transition-all relative"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-opponent/50 text-opponent font-display font-black rounded-lg hover:border-opponent hover:text-opponent transition-all relative"
           style={{
             boxShadow: '0 0 15px rgba(255, 0, 255, 0.3), 0 0 30px rgba(255, 0, 255, 0.15)',
           }}
