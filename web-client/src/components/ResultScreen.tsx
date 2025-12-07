@@ -216,43 +216,77 @@ export default function ResultScreen({
     const endRating = myResult.rating_after;
     const diff = endRating - startRating;
     
+    console.log('🎰 Rating animation triggered:', {
+      startRating,
+      endRating,
+      diff,
+      rating_before: myResult.rating_before,
+      rating_after: myResult.rating_after
+    });
+    
     if (diff === 0) {
+      console.log('🎰 No rating change, skipping animation');
       setDisplayedRating(endRating);
       setRatingLanded(true);
       return;
     }
 
-    const duration = 1500;
-    const steps = Math.min(Math.abs(diff), 40);
-    const stepDuration = duration / steps;
-    let currentStep = 0;
+    // Wait for slam animation to complete (0.8s)
+    console.log('🎰 Starting rating animation in 800ms...');
+    const startTimeout = setTimeout(() => {
+      console.log('🎰 Rating animation starting now!');
+      
+      const duration = 2000; // 2 seconds total
+      const steps = Math.max(30, Math.min(Math.abs(diff), 50));
+      let currentStep = 0;
 
-    const interval = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const newRating = Math.round(startRating + diff * easeOut);
-      
-      setDisplayedRating(newRating);
-      
-      // Haptic tick
-      if (currentStep % 3 === 0) {
-        vibrate([5]);
-      }
-      
-      // Sound tick
-      playRatingTick(diff > 0, progress);
-      
-      if (currentStep >= steps) {
-        clearInterval(interval);
-        setDisplayedRating(endRating);
-        setRatingLanded(true);
-        vibrate([20, 10, 20]);
-        playFinalSound(diff > 0);
-      }
-    }, stepDuration);
+      const animate = () => {
+        currentStep++;
+        const progress = currentStep / steps;
+        
+        // Accelerating curve: starts slow, speeds up
+        const acceleratingProgress = Math.pow(progress, 0.7);
+        const newRating = Math.round(startRating + diff * acceleratingProgress);
+        
+        setDisplayedRating(newRating);
+        
+        // Variable timing: starts slow (80ms), speeds up to fast (30ms)
+        const baseInterval = 80;
+        const minInterval = 30;
+        const currentInterval = Math.max(minInterval, baseInterval - (progress * 50));
+        
+        // Increasing feedback frequency: starts sparse, becomes frequent
+        const feedbackFrequency = Math.max(1, Math.floor(5 - (progress * 4)));
+        if (currentStep % feedbackFrequency === 0) {
+          // Haptic tick - stronger as it progresses
+          const hapticStrength = Math.min(10, 5 + (progress * 5));
+          vibrate([hapticStrength]);
+          
+          // Sound tick
+          playRatingTick(diff > 0, progress);
+        }
+        
+        console.log(`🎰 Step ${currentStep}/${steps}: ${newRating} (progress: ${(progress * 100).toFixed(1)}%)`);
+        
+        if (currentStep >= steps) {
+          console.log('🎰 Animation complete!');
+          setDisplayedRating(endRating);
+          setRatingLanded(true);
+          vibrate([30, 15, 30]);
+          playFinalSound(diff > 0);
+        } else {
+          // Schedule next step with variable timing
+          setTimeout(animate, currentInterval);
+        }
+      };
 
-    return () => clearInterval(interval);
+      // Start animation
+      animate();
+    }, 800);
+
+    return () => {
+      clearTimeout(startTimeout);
+    };
   }, [myResult.rating_before, myResult.rating_after, vibrate]);
 
   // Matchmaking functions
