@@ -244,7 +244,6 @@ export default function ResultScreen({
 
     // Wait for slam animation to complete (0.8s)
     console.log('🎰 Starting rating animation in 800ms...');
-    let animationTimeout: ReturnType<typeof setTimeout> | null = null;
     
     ratingAnimationRef.current = setTimeout(() => {
       console.log('🎰 Rating animation starting now!');
@@ -286,10 +285,10 @@ export default function ResultScreen({
           setRatingLanded(true);
           vibrate([30, 15, 30]);
           playFinalSound(diff > 0);
-          animationTimeout = null;
+          ratingAnimationStepsRef.current = null;
         } else {
           // Schedule next step with variable timing
-          animationTimeout = setTimeout(animate, currentInterval);
+          ratingAnimationStepsRef.current = setTimeout(animate, currentInterval);
         }
       };
 
