@@ -827,13 +827,19 @@
   animation: comet-streak var(--comet-duration, 2s) linear forwards;
 }
 
-/* Grid flash pulse */
+/* Grid flash pulse - smoother and slower */
 @keyframes grid-flash {
   0% {
     opacity: 0;
   }
-  30% {
+  20% {
+    opacity: 0.5;
+  }
+  50% {
     opacity: 1;
+  }
+  80% {
+    opacity: 0.5;
   }
   100% {
     opacity: 0;
@@ -841,7 +847,7 @@
 }
 
 .animate-grid-flash {
-  animation: grid-flash 0.6s ease-out forwards;
+  animation: grid-flash 2s ease-in-out forwards;
 }
 
 /* Slow ambient pulse for glow spots */

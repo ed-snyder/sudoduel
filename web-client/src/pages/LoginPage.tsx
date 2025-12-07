@@ -35,7 +35,7 @@ export default function LoginPage() {
       <BackgroundEffects />
       
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 safe-top safe-bottom relative z-20">
         {/* Logo */}
         <div className="mb-4">
           <SudoDuelLogo size="xl" />

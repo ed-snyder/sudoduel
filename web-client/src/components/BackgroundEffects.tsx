@@ -3,26 +3,26 @@ import { useEffect, useState } from 'react';
 export default function BackgroundEffects() {
   const [gridPulse, setGridPulse] = useState(false);
 
-  // Grid pulse every 4-7 seconds
+  // Grid pulse every 6-10 seconds (slower, smoother)
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
     
     const triggerPulse = () => {
       setGridPulse(true);
-      setTimeout(() => setGridPulse(false), 600);
+      setTimeout(() => setGridPulse(false), 2000); // Longer pulse duration
     };
     const scheduleNext = () => {
-      const delay = 4000 + Math.random() * 3000;
+      const delay = 6000 + Math.random() * 4000; // 6-10 seconds between pulses
       timeoutId = setTimeout(() => {
         triggerPulse();
         scheduleNext();
       }, delay);
     };
-    // First pulse after 2 seconds
+    // First pulse after 3 seconds
     const initialTimeout = setTimeout(() => {
       triggerPulse();
       scheduleNext();
-    }, 2000);
+    }, 3000);
     return () => {
       clearTimeout(initialTimeout);
       clearTimeout(timeoutId);
@@ -30,18 +30,19 @@ export default function BackgroundEffects() {
   }, []);
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
       
       {/* Full screen 2D grid */}
       <div 
-        className="absolute inset-0 transition-opacity duration-300"
+        className="absolute inset-0 transition-all duration-2000 ease-in-out"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(139,0,255,${gridPulse ? '0.4' : '0.15'}) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139,0,255,${gridPulse ? '0.4' : '0.15'}) 1px, transparent 1px)
+            linear-gradient(rgba(139,0,255,${gridPulse ? '0.25' : '0.12'}) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139,0,255,${gridPulse ? '0.25' : '0.12'}) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
-          boxShadow: gridPulse ? 'inset 0 0 100px rgba(255,0,255,0.15)' : 'none',
+          boxShadow: gridPulse ? 'inset 0 0 100px rgba(255,0,255,0.08)' : 'none',
+          transition: 'background-image 2s ease-in-out, box-shadow 2s ease-in-out',
         }}
       />
       {/* Grid pulse flash overlay */}
@@ -49,7 +50,8 @@ export default function BackgroundEffects() {
         <div 
           className="absolute inset-0 animate-grid-flash"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(255,0,255,0.1) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at center, rgba(255,0,255,0.06) 0%, transparent 70%)',
+            zIndex: 0,
           }}
         />
       )}
@@ -60,6 +62,7 @@ export default function BackgroundEffects() {
           top: '10%',
           left: '-10%',
           background: 'radial-gradient(circle, rgba(139,0,255,0.1) 0%, transparent 60%)',
+          zIndex: 0,
         }}
       />
       <div 
@@ -69,6 +72,7 @@ export default function BackgroundEffects() {
           right: '-5%',
           background: 'radial-gradient(circle, rgba(0,255,255,0.08) 0%, transparent 60%)',
           animationDelay: '4s',
+          zIndex: 0,
         }}
       />
     </div>
