@@ -540,7 +540,7 @@ export default function ResultScreen({
 
 
       {/* Back Button */}
-      <div className="relative z-10 pt-14 pl-4 safe-top">
+      <div className="relative z-50 pt-14 pl-4 safe-top">
         <button
           onClick={() => { handleButtonPress(); onBackToLobby(); }}
           className="flex items-center gap-2 text-secondary hover:text-player transition-colors group"
