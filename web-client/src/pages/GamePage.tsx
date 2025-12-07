@@ -1818,10 +1818,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       </div>
       
       {/* Spacer to maintain layout flow for other elements */}
-      <div className="flex-shrink-0" style={{ flex: '1 1 auto', minHeight: '0' }}></div>
+      <div className="flex-shrink-0" style={{ flex: '0 1 0', minHeight: '0' }}></div>
 
       {/* Number Pad - closer to grid */}
-      <div className="px-3 pt-1 pb-1">
+      <div className="px-3 pt-1 pb-1" style={{ marginTop: '-60px' }}>
         <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
