@@ -17,7 +17,7 @@ interface LobbyPageProps {
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
 export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
-  const { user, logout, refreshUser } = useAuth();
+  const { user } = useAuth();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);
