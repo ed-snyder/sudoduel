@@ -211,7 +211,7 @@ export default function ResultScreen({
       />
 
       {/* Back Button - Top Left */}
-      <div className="relative z-10 pt-6 px-4">
+      <div className="relative z-10 pt-16 px-4">
         <button
           onClick={onBackToLobby}
           className="flex items-center gap-2 text-muted hover:text-player transition-colors group"
@@ -238,7 +238,7 @@ export default function ResultScreen({
         <div className="relative mb-2">
           {/* Outer glow layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -253,7 +253,7 @@ export default function ResultScreen({
 
           {/* Inner glow layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -268,7 +268,7 @@ export default function ResultScreen({
 
           {/* White stroke layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-7xl sm:text-8xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -281,7 +281,7 @@ export default function ResultScreen({
 
           {/* Fill gradient - main visible text */}
           <span
-            className="relative text-5xl sm:text-6xl select-none"
+            className="relative text-7xl sm:text-8xl select-none"
             style={{
               ...titleStyle,
               background: isDraw 
