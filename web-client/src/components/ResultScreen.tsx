@@ -353,26 +353,6 @@ export default function ResultScreen({
     }, 1000);
   }, [onFindNewMatch, stopPolling]);
 
-  const handleFindNewMatch = useCallback(async () => {
-    setSearchError('');
-    setSearching(true);
-    attemptsRef.current = 0;
-
-    try {
-      const response = await matchmakingAPI.join() as { status: string; match_id?: number };
-      
-      if (response.status === 'matched') {
-        stopPolling();
-        onFindNewMatch(response.match_id!);
-      } else {
-        pollForMatch();
-      }
-    } catch (err: any) {
-      setSearchError(err.message);
-      setSearching(false);
-    }
-  }, [onFindNewMatch, pollForMatch, stopPolling]);
-
   const handleCancelSearch = useCallback(async () => {
     stopPolling();
     try {
