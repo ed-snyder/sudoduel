@@ -222,7 +222,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       <div className="flex-1 flex flex-col items-center justify-start px-4 pt-4 pb-4 relative z-20">
         {error && (
           <div 
-            className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
+            className="w-full max-w-sm mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
             style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
           >
             <p className="text-error text-sm font-display">{error}</p>
