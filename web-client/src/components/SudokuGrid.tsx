@@ -145,25 +145,16 @@ function SudokuGrid({
   return (
     <div
       ref={gridRef}
-      className="relative"
+      className="relative bg-white rounded-lg"
       style={{
         aspectRatio: '1 / 1',
-        maxHeight: 'min(100%, calc(100vh - 280px))',
-        maxWidth: '100%',
-        padding: '3px',
-        background: 'linear-gradient(135deg, #00FFFF 0%, #8B00FF 50%, #FF00FF 100%)',
-        borderRadius: '8px',
-        boxShadow: '0 0 30px rgba(139,0,255,0.4), 0 0 60px rgba(0,255,255,0.2)',
+        width: '100%',
+        maxWidth: 'min(100vw - 16px, 400px)',
+        border: '2px solid #333',
       }}
     >
-      {/* Inner container for the actual grid */}
-      <div
-        className="w-full h-full grid grid-cols-9 gap-0 overflow-hidden"
-        style={{
-          background: 'rgb(12, 8, 20)',
-          borderRadius: '5px',
-        }}
-      >
+      {/* 9x9 Grid */}
+      <div className="absolute inset-0 grid grid-cols-9 grid-rows-9">
         {grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => {
             const isInitial = isInitialCell(rowIndex, colIndex);
@@ -185,38 +176,19 @@ function SudokuGrid({
             const isAlmostComplete = almostCompleteCells.has(cellKey);
             const isError = isErrorFlash(rowIndex, colIndex);
 
-            // Determine cell background
-            let cellBg = 'rgba(25, 15, 40, 0.95)';
+            // Cell background
+            let cellBg = 'transparent';
             if (lockedOut) {
-              cellBg = 'rgba(40, 30, 50, 0.6)';
+              cellBg = '#f0f0f0';
             } else if (isError) {
-              cellBg = 'rgba(255, 51, 102, 0.35)';
+              cellBg = '#ffcccc';
             } else if (selected) {
-              cellBg = 'rgba(0, 255, 255, 0.2)';
+              cellBg = '#cce5ff';
             } else if (related) {
-              cellBg = 'rgba(0, 255, 255, 0.06)';
+              cellBg = '#e8f4ff';
             } else if (opponentScored) {
-              cellBg = 'rgba(255, 0, 255, 0.08)';
+              cellBg = '#ffe8f5';
             }
-
-            // Border logic - only right and bottom to avoid doubles
-            // Thicker borders for 3x3 box edges
-            const isRightEdge = colIndex === 8;
-            const isBottomEdge = rowIndex === 8;
-            const is3x3RightEdge = (colIndex + 1) % 3 === 0 && colIndex !== 8;
-            const is3x3BottomEdge = (rowIndex + 1) % 3 === 0 && rowIndex !== 8;
-
-            const borderRight = isRightEdge 
-              ? 'none' 
-              : is3x3RightEdge 
-                ? '2px solid rgba(139, 0, 255, 0.9)' 
-                : '1px solid rgba(139, 0, 255, 0.3)';
-            
-            const borderBottom = isBottomEdge 
-              ? 'none' 
-              : is3x3BottomEdge 
-                ? '2px solid rgba(139, 0, 255, 0.9)' 
-                : '1px solid rgba(139, 0, 255, 0.3)';
 
             return (
               <button
@@ -234,30 +206,18 @@ function SudokuGrid({
                   transition-colors duration-75 touch-manipulation
                   ${isCompleted ? 'completion-flash' : ''}
                   ${isAlmostComplete ? 'almost-complete-glow' : ''}
-                  ${!lockedOut ? 'cursor-pointer active:scale-95' : 'cursor-default'}
+                  ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
                 `}
                 style={{
-                  aspectRatio: '1 / 1',
                   background: cellBg,
-                  borderRight,
-                  borderBottom,
-                  boxShadow: selected 
-                    ? 'inset 0 0 12px rgba(0, 255, 255, 0.5)' 
-                    : isError
-                    ? 'inset 0 0 12px rgba(255, 51, 102, 0.6)'
-                    : 'none',
-                  willChange: 'background-color',
                 }}
               >
                 {hasValue ? (
                   <span
-                    className={`font-mono font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
+                    className={`font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
                     style={{ 
-                      fontSize: 'clamp(1.25rem, 5.5vw, 2rem)',
-                      color: isInitial ? 'rgba(255, 255, 255, 0.85)' : '#00FFFF',
-                      textShadow: isInitial 
-                        ? '0 1px 2px rgba(0,0,0,0.5)' 
-                        : '0 0 12px rgba(0, 255, 255, 0.7)',
+                      fontSize: 'clamp(1.1rem, 5vw, 1.75rem)',
+                      color: isInitial ? '#333' : '#0066cc',
                     }}
                   >
                     {cell}
@@ -267,12 +227,12 @@ function SudokuGrid({
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <span
                         key={num}
-                        className={`w-full h-full flex items-center justify-center font-mono font-medium ${
+                        className={`w-full h-full flex items-center justify-center font-medium ${
                           cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                         }`}
                         style={{
-                          fontSize: 'clamp(0.5rem, 2vw, 0.7rem)',
-                          color: 'rgba(0, 255, 255, 0.8)',
+                          fontSize: 'clamp(0.4rem, 1.5vw, 0.6rem)',
+                          color: '#666',
                         }}
                       >
                         {num}
@@ -284,6 +244,61 @@ function SudokuGrid({
             );
           })
         )}
+      </div>
+
+      {/* Grid lines overlay */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Thin lines - every cell */}
+        <svg className="absolute inset-0 w-full h-full">
+          {[1, 2, 4, 5, 7, 8].map((i) => (
+            <line
+              key={`h-thin-${i}`}
+              x1="0"
+              y1={`${(i / 9) * 100}%`}
+              x2="100%"
+              y2={`${(i / 9) * 100}%`}
+              stroke="#ccc"
+              strokeWidth="1"
+            />
+          ))}
+          {[1, 2, 4, 5, 7, 8].map((i) => (
+            <line
+              key={`v-thin-${i}`}
+              x1={`${(i / 9) * 100}%`}
+              y1="0"
+              x2={`${(i / 9) * 100}%`}
+              y2="100%"
+              stroke="#ccc"
+              strokeWidth="1"
+            />
+          ))}
+        </svg>
+
+        {/* Thick lines - 3x3 boxes */}
+        <svg className="absolute inset-0 w-full h-full">
+          {[3, 6].map((i) => (
+            <line
+              key={`h-thick-${i}`}
+              x1="0"
+              y1={`${(i / 9) * 100}%`}
+              x2="100%"
+              y2={`${(i / 9) * 100}%`}
+              stroke="#333"
+              strokeWidth="2"
+            />
+          ))}
+          {[3, 6].map((i) => (
+            <line
+              key={`v-thick-${i}`}
+              x1={`${(i / 9) * 100}%`}
+              y1="0"
+              x2={`${(i / 9) * 100}%`}
+              y2="100%"
+              stroke="#333"
+              strokeWidth="2"
+            />
+          ))}
+        </svg>
       </div>
       
       {/* Floating feedback elements */}
