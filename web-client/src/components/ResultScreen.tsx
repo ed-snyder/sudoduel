@@ -389,9 +389,9 @@ export default function ResultScreen({
         />
       )}
 
-      {/* Breathing grid background */}
+      {/* Breathing grid background - behind everything */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-all duration-300"
+        className="absolute inset-0 pointer-events-none transition-all duration-300 z-0"
         style={{
           backgroundImage: `
             linear-gradient(hsla(${gridHue}, 100%, 50%, ${breatheOpacity}) 1px, transparent 1px),
@@ -404,7 +404,7 @@ export default function ResultScreen({
 
       {/* Ambient glow - breathing */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-all duration-500"
+        className="absolute inset-0 pointer-events-none transition-all duration-500 z-0"
         style={{
           background: didWin 
             ? `radial-gradient(circle at center 30%, rgba(0,255,255,${0.1 + Math.sin(breathePhase * Math.PI / 180) * 0.05}) 0%, transparent 50%)`
@@ -413,7 +413,7 @@ export default function ResultScreen({
       />
 
       {/* Geometric Particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
         {particles.map((particle) => (
           <div
             key={particle.id}
@@ -479,7 +479,7 @@ export default function ResultScreen({
 
       {/* Floating sparkles around title (victory only) */}
       {didWin && !isDraw && (
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none z-20">
           {[...Array(12)].map((_, i) => (
             <div
               key={i}
@@ -519,7 +519,7 @@ export default function ResultScreen({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8 relative z-30">
         {/* Result Title - Slam in effect */}
         <div 
           className={`relative mb-3 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
