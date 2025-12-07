@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SudoDuelLogo from '../components/SudoDuelLogo';
-import MatrixRain from '../components/MatrixRain';
 import BackgroundEffects from '../components/BackgroundEffects';
 
 export default function LoginPage() {
