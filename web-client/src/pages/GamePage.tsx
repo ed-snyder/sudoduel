@@ -18,6 +18,7 @@ interface GamePageProps {
   matchId: number;
   onGameEnd: () => void;
   onRematch?: (newMatchId: number) => void;
+  onFindNewMatch?: (newMatchId: number) => void;
 }
 
 interface PlayerState {
@@ -28,7 +29,7 @@ interface PlayerState {
   is_solved: boolean;
 }
 
-export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProps) {
+export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
@@ -1363,6 +1364,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch }: GamePageProp
         opponentResult={opponentResultData}
         onRematch={handleRematchRequest}
         onBackToLobby={onGameEnd}
+        onFindNewMatch={onFindNewMatch || onGameEnd}
         rematchState={rematchState}
         rematchCountdown={rematchCountdown}
       />

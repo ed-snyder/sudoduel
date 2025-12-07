@@ -21,6 +21,7 @@ function AppContent() {
         matchId={matchId}
         onGameEnd={() => setMatchId(null)}
         onRematch={(newMatchId) => setMatchId(newMatchId)}
+        onFindNewMatch={(newMatchId) => setMatchId(newMatchId)}
       />
       ) : (
         <LobbyPage onMatchFound={setMatchId} />

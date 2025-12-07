@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { matchmakingAPI } from '../services/api';
 
 interface PlayerResult {
   playerId: number;
@@ -20,6 +21,7 @@ interface ResultScreenProps {
   opponentResult: PlayerResult;
   onRematch: () => void;
   onBackToLobby: () => void;
+  onFindNewMatch: (matchId: number) => void;
   rematchState: 'idle' | 'requested' | 'waiting';
   rematchCountdown?: number;
 }
@@ -32,20 +34,101 @@ export default function ResultScreen({
   opponentResult,
   onRematch,
   onBackToLobby,
+  onFindNewMatch,
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
   const [showContent, setShowContent] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attemptsRef = useRef(0);
 
   const ratingChange = myResult.rating_change || 0;
   const cellDifference = opponentResult.cellsCompleted - myResult.cellsCompleted;
   const wasClose = !didWin && !isDraw && cellDifference <= 5 && cellDifference > 0;
 
+  // Get display names with fallbacks
+  const myDisplayName = myResult.displayName || 'You';
+  const opponentDisplayName = opponentResult.displayName || 'Opponent';
+
   useEffect(() => {
     const timer = setTimeout(() => setShowContent(true), 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      stopPolling();
+    };
   }, []);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearTimeout(pollingRef.current);
+      pollingRef.current = null;
+    }
+    attemptsRef.current = 0;
+  };
+
+  const handleFindNewMatch = async () => {
+    setSearchError('');
+    setSearching(true);
+    attemptsRef.current = 0;
+
+    try {
+      const response = await matchmakingAPI.join() as { status: string; match_id?: number };
+      
+      if (response.status === 'matched') {
+        stopPolling();
+        onFindNewMatch(response.match_id!);
+      } else {
+        pollForMatch();
+      }
+    } catch (err: any) {
+      setSearchError(err.message);
+      setSearching(false);
+    }
+  };
+
+  const pollForMatch = () => {
+    pollingRef.current = setTimeout(async () => {
+      attemptsRef.current++;
+      
+      if (attemptsRef.current >= 30) {
+        try {
+          await matchmakingAPI.leave();
+        } catch (e) {}
+        setSearching(false);
+        setSearchError('No opponent found. Try again!');
+        stopPolling();
+        return;
+      }
+
+      try {
+        const response = await matchmakingAPI.status() as { status: string; match_id?: number };
+        
+        if (response.status === 'matched') {
+          stopPolling();
+          onFindNewMatch(response.match_id!);
+        } else if (response.status === 'queued') {
+          pollForMatch();
+        } else {
+          setSearching(false);
+          stopPolling();
+        }
+      } catch (err) {
+        setSearching(false);
+        stopPolling();
+      }
+    }, 1000);
+  };
+
+  const handleCancelSearch = async () => {
+    stopPolling();
+    try {
+      await matchmakingAPI.leave();
+    } catch (err) {}
+    setSearching(false);
+  };
 
   // Animated rating counter
   useEffect(() => {
@@ -128,7 +211,7 @@ export default function ResultScreen({
       />
 
       {/* Back Button - Top Left */}
-      <div className="relative z-10 p-4 safe-top">
+      <div className="relative z-10 pt-6 px-4">
         <button
           onClick={onBackToLobby}
           className="flex items-center gap-2 text-muted hover:text-player transition-colors group"
@@ -223,7 +306,7 @@ export default function ResultScreen({
         {/* Score comparison */}
         <div className="flex items-center gap-4 mb-4">
           <div className="text-center">
-            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">You</span>
+            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">{myDisplayName}</span>
             <span 
               className={`text-4xl font-mono font-bold ${didWin ? 'text-player' : 'text-primary'}`}
               style={didWin ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
@@ -233,7 +316,7 @@ export default function ResultScreen({
           </div>
           <span className="text-2xl text-muted font-mono">—</span>
           <div className="text-center">
-            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">Opp</span>
+            <span className="text-xs text-muted font-body uppercase tracking-wider block mb-1">{opponentDisplayName}</span>
             <span 
               className={`text-4xl font-mono font-bold ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}
               style={!didWin && !isDraw ? { textShadow: `0 0 15px ${glowColorRgba}0.5)` } : {}}
@@ -292,35 +375,74 @@ export default function ResultScreen({
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="w-full max-w-xs space-y-3">
-          {/* Rematch */}
-          <button
-            onClick={onRematch}
-            disabled={rematchState === 'requested'}
-            className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${
-              rematchState === 'waiting'
-                ? 'bg-success/20 border-2 border-success text-success animate-pulse'
-                : rematchState === 'requested'
-                ? 'bg-elevated border border-grid-line text-muted cursor-not-allowed'
-                : 'bg-player/10 border-2 border-player text-player hover:bg-player/20'
-            }`}
-            style={rematchState === 'idle' ? {
-              boxShadow: '0 0 20px rgba(0,255,255,0.25)',
-            } : {}}
-          >
-            {rematchState === 'idle' && 'Rematch'}
-            {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
-            {rematchState === 'waiting' && '⚔️ Accept Rematch'}
-          </button>
+        {/* Action Buttons / Search UI */}
+        <div className="w-full max-w-xs">
+          {searching ? (
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-surface" />
+                <div 
+                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
+                  style={{ 
+                    boxShadow: '0 0 20px rgba(0,255,255,0.5)',
+                    filter: 'drop-shadow(0 0 10px rgba(0,255,255,0.8))'
+                  }}
+                />
+              </div>
+              
+              <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
+              <p className="text-secondary font-display mb-1">Looking for an opponent</p>
+              <p className="text-player text-lg font-display mb-6">
+                0:{String(30 - attemptsRef.current).padStart(2, '0')}
+              </p>
+              
+              {searchError && (
+                <div 
+                  className="w-full mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
+                  style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
+                >
+                  <p className="text-error text-sm font-display">{searchError}</p>
+                </div>
+              )}
+              
+              <button
+                onClick={handleCancelSearch}
+                className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-error/50 hover:text-error transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Rematch */}
+              <button
+                onClick={onRematch}
+                disabled={rematchState === 'requested'}
+                className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${
+                  rematchState === 'waiting'
+                    ? 'bg-success/20 border-2 border-success text-success animate-pulse'
+                    : rematchState === 'requested'
+                    ? 'bg-elevated border border-grid-line text-muted cursor-not-allowed'
+                    : 'bg-player/10 border-2 border-player text-player hover:bg-player/20'
+                }`}
+                style={rematchState === 'idle' ? {
+                  boxShadow: '0 0 20px rgba(0,255,255,0.25)',
+                } : {}}
+              >
+                {rematchState === 'idle' && 'Rematch'}
+                {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
+                {rematchState === 'waiting' && '⚔️ Accept Rematch'}
+              </button>
 
-          {/* Find New Match */}
-          <button
-            onClick={onBackToLobby}
-            className="w-full py-4 text-lg bg-surface border border-grid-line text-secondary font-body font-semibold uppercase tracking-wider rounded-xl hover:border-player/50 hover:text-player transition-all active:scale-[0.98]"
-          >
-            Find New Match
-          </button>
+              {/* Find New Match */}
+              <button
+                onClick={handleFindNewMatch}
+                className="w-full py-4 text-lg bg-void border-2 border-player text-player font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              >
+                Find New Match
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
