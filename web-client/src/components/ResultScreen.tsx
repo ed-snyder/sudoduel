@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -110,7 +109,6 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
@@ -392,7 +390,8 @@ export default function ResultScreen({
       if (result.status === 'matched' && result.match_id) {
         // Instant match found
         console.log('[ResultScreen] Instant match found:', result.match_id);
-        navigate(`/game/${result.match_id}`);
+        onFindNewMatch(result.match_id);
+        setIsFindingMatch(false);
         return;
       }
       
@@ -411,7 +410,8 @@ export default function ResultScreen({
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
               }
-              navigate(`/game/${status.match_id}`);
+              setIsFindingMatch(false);
+              onFindNewMatch(status.match_id);
             } else if (status.status !== 'queued') {
               // No longer queued and not matched - something went wrong
               console.log('[ResultScreen] Unexpected status:', status.status);
