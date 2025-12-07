@@ -113,16 +113,16 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-void flex flex-col">
+    <div className="min-h-screen bg-void flex flex-col relative z-20">
       <BackgroundEffects />
       
       {/* Header with Logo */}
-      <div className="px-4 pt-32 pb-4 flex flex-col items-center safe-top">
+      <div className="px-4 pt-32 pb-4 flex flex-col items-center safe-top relative z-20">
         <SudoDuelLogo size="xl" />
       </div>
       
       {/* Player Card */}
-      <div className="px-4 py-6">
+      <div className="px-4 py-6 relative z-20">
         <div 
           className="bg-surface rounded-xl p-4 border border-grid-line"
           style={{
@@ -174,7 +174,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Difficulty Selection */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 relative z-20">
         <div className="flex gap-2">
           {difficulties.map((diff) => (
         <button
@@ -201,7 +201,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Stats for Selected Difficulty */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 relative z-20">
         <div className="bg-surface rounded-xl p-4 border border-grid-line space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">Rating</span>
@@ -219,7 +219,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-4 pb-4">
+      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-4 pb-4 relative z-20">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-error/10 border border-error/50 rounded-lg"
@@ -286,7 +286,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
       
       {/* Bottom Buttons */}
       {!searching && (
-        <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom">
+        <div className="px-4 pb-6 pt-2 flex gap-3 safe-bottom relative z-20">
         <button
           onClick={() => setShowMatchHistory(true)}
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface border border-opponent/50 text-opponent font-display font-black rounded-lg hover:border-opponent hover:text-opponent transition-all relative"

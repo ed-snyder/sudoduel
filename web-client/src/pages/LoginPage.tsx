@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-void flex flex-col">
+    <div className="min-h-screen bg-void flex flex-col relative z-20">
       <BackgroundEffects />
       
       {/* Content */}
