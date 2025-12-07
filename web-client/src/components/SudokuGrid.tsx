@@ -66,6 +66,12 @@ function SudokuGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
   
+  // Breathing animation state (5 second cycle)
+  const [breathPhase, setBreathPhase] = useState(0);
+  
+  // Shimmer animation state (8 second travel time)
+  const [shimmerPosition, setShimmerPosition] = useState(-20);
+  
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
   const isSelected = (row: number, col: number) => selectedCell?.row === row && selectedCell?.col === col;
 
@@ -134,6 +140,25 @@ function SudokuGrid({
     }, 1000);
   }, [lastMoveResult, currentStreak]);
 
+  // Breathing animation - 5 second cycle
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBreathPhase((prev) => (prev + 0.015) % (Math.PI * 2));
+    }, 25); // ~40fps, smooth animation
+    return () => clearInterval(interval);
+  }, []);
+
+  // Shimmer animation - 8 second travel time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShimmerPosition((prev) => {
+        const next = prev + 0.4;
+        return next > 120 ? -20 : next;
+      });
+    }, 32); // ~30fps
+    return () => clearInterval(interval);
+  }, []);
+
   const getCellPosition = (row: number, col: number) => {
     const cellPercent = 100 / 9;
     return {
@@ -141,6 +166,11 @@ function SudokuGrid({
       top: row * cellPercent + cellPercent / 2,
     };
   };
+
+  // Calculate breath multipliers (creates 60% → 80% → 60% pulse)
+  const breathMultiplier = 0.7 + Math.sin(breathPhase) * 0.1;
+  const thickBreathMultiplier = 0.85 + Math.sin(breathPhase) * 0.1;
+  const glowBreathMultiplier = 0.8 + Math.sin(breathPhase) * 0.2;
 
   return (
     <div
@@ -194,11 +224,13 @@ function SudokuGrid({
               cellBg = 'rgba(255, 51, 102, 0.4)';
               cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
             } else if (selected) {
+              const glowIntensity = 0.4 * glowBreathMultiplier;
               cellBg = 'rgba(0, 255, 255, 0.35)';
-              cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
+              cellShadow = `inset 0 0 20px rgba(0, 255, 255, ${0.5 * glowBreathMultiplier}), 0 0 15px rgba(0, 255, 255, ${glowIntensity})`;
             } else if (related) {
+              const glowIntensity = 0.15 * glowBreathMultiplier;
               cellBg = 'rgba(0, 255, 255, 0.12)';
-              cellShadow = 'inset 0 0 10px rgba(0, 255, 255, 0.15)';
+              cellShadow = `inset 0 0 10px rgba(0, 255, 255, ${glowIntensity})`;
             } else if (opponentScored) {
               cellBg = 'rgba(255, 0, 255, 0.15)';
             }
@@ -232,10 +264,11 @@ function SudokuGrid({
                     className={`font-heading font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
                     style={{ 
                       fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
+                      fontFamily: 'Industry, Orbitron, sans-serif',
                       color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
                       textShadow: isInitial 
-                        ? '0 0 10px rgba(255, 255, 255, 0.3)' 
-                        : '0 0 12px rgba(0, 255, 255, 0.7)',
+                        ? `0 0 ${8 + Math.sin(breathPhase) * 4}px rgba(255, 255, 255, ${0.3 + Math.sin(breathPhase) * 0.1}), 0 0 ${16 + Math.sin(breathPhase) * 4}px rgba(255, 255, 255, ${0.2 + Math.sin(breathPhase) * 0.05})`
+                        : `0 0 ${12 + Math.sin(breathPhase) * 4}px rgba(0, 255, 255, ${0.6 + Math.sin(breathPhase) * 0.15})`,
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
                       pointerEvents: 'none',
@@ -275,6 +308,26 @@ function SudokuGrid({
       {/* White wireframe grid lines overlay */}
       <div className="absolute inset-0 pointer-events-none">
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          <defs>
+            {/* Soft glow for thick lines and border */}
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            
+            {/* Shimmer gradient - will be animated */}
+            <linearGradient id="shimmerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="white" stopOpacity="0" />
+              <stop offset={`${Math.max(0, shimmerPosition - 10)}%`} stopColor="white" stopOpacity="0" />
+              <stop offset={`${shimmerPosition}%`} stopColor="white" stopOpacity="0.8" />
+              <stop offset={`${Math.min(100, shimmerPosition + 10)}%`} stopColor="white" stopOpacity="0" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
           {/* Outer border / perimeter */}
           <rect
             x="1"
@@ -284,8 +337,10 @@ function SudokuGrid({
             fill="none"
             stroke="rgba(255, 255, 255, 0.9)"
             strokeWidth="2"
+            strokeOpacity={thickBreathMultiplier}
             rx="4"
             ry="4"
+            filter="url(#softGlow)"
           />
 
           {/* Thin white lines - between regular cells */}
@@ -298,6 +353,7 @@ function SudokuGrid({
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth="1"
+              strokeOpacity={breathMultiplier}
             />
           ))}
           {[1, 2, 4, 5, 7, 8].map((i) => (
@@ -309,6 +365,7 @@ function SudokuGrid({
               y2="100%"
               stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth="1"
+              strokeOpacity={breathMultiplier}
             />
           ))}
 
@@ -322,6 +379,8 @@ function SudokuGrid({
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth="2"
+              strokeOpacity={thickBreathMultiplier}
+              filter="url(#softGlow)"
             />
           ))}
           {[3, 6].map((i) => (
@@ -333,8 +392,46 @@ function SudokuGrid({
               y2="100%"
               stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth="2"
+              strokeOpacity={thickBreathMultiplier}
+              filter="url(#softGlow)"
             />
           ))}
+
+          {/* Shimmer overlay - renders on top of base lines */}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <line
+              key={`h-shimmer-${i}`}
+              x1="0"
+              y1={`${(i / 9) * 100}%`}
+              x2="100%"
+              y2={`${(i / 9) * 100}%`}
+              stroke="url(#shimmerGradient)"
+              strokeWidth={i === 3 || i === 6 ? 3 : 2}
+            />
+          ))}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <line
+              key={`v-shimmer-${i}`}
+              x1={`${(i / 9) * 100}%`}
+              y1="0"
+              x2={`${(i / 9) * 100}%`}
+              y2="100%"
+              stroke="url(#shimmerGradient)"
+              strokeWidth={i === 3 || i === 6 ? 3 : 2}
+            />
+          ))}
+          {/* Border shimmer */}
+          <rect
+            x="1"
+            y="1"
+            width="calc(100% - 2px)"
+            height="calc(100% - 2px)"
+            fill="none"
+            stroke="url(#shimmerGradient)"
+            strokeWidth="3"
+            rx="4"
+            ry="4"
+          />
         </svg>
       </div>
 
