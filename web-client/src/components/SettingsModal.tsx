@@ -1,83 +1,91 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogout: () => void;
-  user?: { display_name?: string } | null;
-  refreshUser?: () => Promise<void>;
 }
 
-export default function SettingsModal({ isOpen, onClose, onLogout, user, refreshUser }: SettingsModalProps) {
-  const [soundEnabled, setSoundEnabled] = useState(true);
+export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const { logout } = useAuth();
   const [hapticEnabled, setHapticEnabled] = useState(true);
-  const [displayName, setDisplayName] = useState('');
-  const [isSavingName, setIsSavingName] = useState(false);
-  const [nameSaved, setNameSaved] = useState(false);
+  const [simplifyGraphics, setSimplifyGraphics] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(70);
+  const [sfxVolume, setSfxVolume] = useState(80);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Load settings from localStorage
   useEffect(() => {
-    if (isOpen) {
-      const sound = localStorage.getItem('soundEnabled');
-      const haptic = localStorage.getItem('hapticEnabled');
-      setSoundEnabled(sound !== 'false');
-      setHapticEnabled(haptic !== 'false');
-    }
+    const savedHaptic = localStorage.getItem('hapticEnabled');
+    if (savedHaptic !== null) setHapticEnabled(savedHaptic === 'true');
+    
+    const savedSimplify = localStorage.getItem('simplifyGraphics');
+    if (savedSimplify !== null) setSimplifyGraphics(savedSimplify === 'true');
+    
+    const savedMusic = localStorage.getItem('musicVolume');
+    if (savedMusic !== null) setMusicVolume(parseInt(savedMusic, 10));
+    
+    const savedSfx = localStorage.getItem('sfxVolume');
+    if (savedSfx !== null) setSfxVolume(parseInt(savedSfx, 10));
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen && user?.display_name) {
-      setDisplayName(user.display_name);
-      setNameSaved(false);
-    }
-  }, [isOpen, user?.display_name]);
-
-  const handleSoundToggle = (enabled: boolean) => {
-    setSoundEnabled(enabled);
-    localStorage.setItem('soundEnabled', enabled.toString());
+  const handleHapticToggle = () => {
+    const newValue = !hapticEnabled;
+    setHapticEnabled(newValue);
+    localStorage.setItem('hapticEnabled', String(newValue));
   };
 
-  const handleHapticToggle = (enabled: boolean) => {
-    setHapticEnabled(enabled);
-    localStorage.setItem('hapticEnabled', enabled.toString());
+  const handleSimplifyToggle = () => {
+    const newValue = !simplifyGraphics;
+    setSimplifyGraphics(newValue);
+    localStorage.setItem('simplifyGraphics', String(newValue));
   };
 
-  const handleSaveDisplayName = async () => {
-    if (!displayName.trim() || displayName === user?.display_name) return;
-    
-    setIsSavingName(true);
-    try {
-      const { api } = await import('../config');
-      await api.patch('/api/player/profile', { display_name: displayName.trim() });
-      
-      setNameSaved(true);
-      // Refresh user data
-      if (refreshUser) {
-        await refreshUser();
-      }
-      setTimeout(() => setNameSaved(false), 2000);
-    } catch (error) {
-      console.error('Failed to update display name:', error);
-    } finally {
-      setIsSavingName(false);
-    }
+  const handleMusicVolume = (value: number) => {
+    setMusicVolume(value);
+    localStorage.setItem('musicVolume', String(value));
+  };
+
+  const handleSfxVolume = (value: number) => {
+    setSfxVolume(value);
+    localStorage.setItem('sfxVolume', String(value));
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    logout();
+    onClose();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-end justify-center z-50 p-4 pb-20 animate-fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      
+      {/* Modal */}
       <div 
-        className="bg-surface border border-grid-line rounded-xl w-full max-w-md shadow-2xl animate-scale-in"
-        style={{ 
-          boxShadow: '0 0 20px rgba(255, 0, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2), 0 0 60px rgba(255, 0, 255, 0.1)'
-        }}
+        className="relative bg-surface border border-grid-line rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+        style={{ boxShadow: '0 0 30px rgba(139,0,255,0.2)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-grid-line flex items-center justify-between">
-          <h2 className="text-xl font-heading font-semibold text-primary tracking-wide">SETTINGS</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line">
+          <h2 className="font-heading font-bold text-lg text-primary">Settings</h2>
           <button
             onClick={onClose}
-            className="text-muted hover:text-player transition-colors p-1"
+            className="text-muted hover:text-player transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -86,108 +94,160 @@ export default function SettingsModal({ isOpen, onClose, onLogout, user, refresh
         </div>
 
         {/* Content */}
-        <div className="px-5 py-5 space-y-6">
-          {/* Display Name */}
-          <div className="p-4 border-b border-grid-line">
-            <label className="block text-sm text-muted font-body mb-2">Display Name</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
-                maxLength={20}
-                className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-primary font-body focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all"
-                placeholder="Enter name..."
-              />
-              <button
-                onClick={handleSaveDisplayName}
-                disabled={isSavingName || !displayName.trim() || displayName === user?.display_name}
-                className="px-4 py-2 rounded-lg font-body font-semibold text-sm transition-all disabled:opacity-40"
-                style={{
-                  background: nameSaved ? 'rgba(0,255,136,0.2)' : 'rgb(15, 10, 25)',
-                  border: nameSaved ? '2px solid #00FF88' : '2px solid rgba(0,255,255,0.5)',
-                  color: nameSaved ? '#00FF88' : '#00FFFF',
-                }}
-              >
-                {isSavingName ? '...' : nameSaved ? '✓' : 'Save'}
-              </button>
+        <div className="divide-y divide-grid-line">
+          {/* Music Volume */}
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-body text-primary">Music Volume</span>
+              <span className="font-mono text-sm text-muted">{musicVolume}%</span>
             </div>
-            <p className="text-xs text-muted font-body mt-1">Max 20 characters</p>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={musicVolume}
+              onChange={(e) => handleMusicVolume(parseInt(e.target.value, 10))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #00FFFF 0%, #00FFFF ${musicVolume}%, rgba(139,0,255,0.3) ${musicVolume}%, rgba(139,0,255,0.3) 100%)`,
+              }}
+            />
           </div>
 
-          {/* Toggles */}
-          <div className="space-y-4">
-            {/* Sound Effects */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-body font-medium text-primary">Sound Effects</div>
-                <div className="text-sm text-muted font-body">Play sounds for moves</div>
-              </div>
-              <button
-                onClick={() => handleSoundToggle(!soundEnabled)}
-                className={`relative w-14 h-8 rounded-full transition-all duration-200 ${
-                  soundEnabled 
-                    ? 'bg-player/30 border-2 border-player shadow-glow-player-subtle' 
-                    : 'bg-elevated border-2 border-grid-line'
-                }`}
-              >
-                <div
-                  className={`absolute top-1 left-1 w-5 h-5 rounded-full transition-all duration-200 ${
-                    soundEnabled 
-                      ? 'translate-x-6 bg-player shadow-glow-player-subtle' 
-                      : 'translate-x-0 bg-muted'
-                  }`}
-                />
-              </button>
+          {/* SFX Volume */}
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-body text-primary">SFX Volume</span>
+              <span className="font-mono text-sm text-muted">{sfxVolume}%</span>
             </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sfxVolume}
+              onChange={(e) => handleSfxVolume(parseInt(e.target.value, 10))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #00FFFF 0%, #00FFFF ${sfxVolume}%, rgba(139,0,255,0.3) ${sfxVolume}%, rgba(139,0,255,0.3) 100%)`,
+              }}
+            />
+          </div>
 
-            {/* Haptic Feedback */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-body font-medium text-primary">Haptic Feedback</div>
-                <div className="text-sm text-muted font-body">Vibrate on incorrect moves</div>
-              </div>
-              <button
-                onClick={() => handleHapticToggle(!hapticEnabled)}
-                className={`relative w-14 h-8 rounded-full transition-all duration-200 ${
+          {/* Haptic Feedback Toggle */}
+          <div className="px-4 py-4 flex items-center justify-between">
+            <span className="font-body text-primary">Haptic Feedback</span>
+            <button
+              onClick={handleHapticToggle}
+              className={`relative w-12 h-7 rounded-full transition-all ${
+                hapticEnabled 
+                  ? 'bg-player/30 border border-player' 
+                  : 'bg-elevated border border-grid-line'
+              }`}
+              style={{
+                boxShadow: hapticEnabled ? '0 0 10px rgba(0,255,255,0.3)' : 'none',
+              }}
+            >
+              <div 
+                className={`absolute top-1 w-5 h-5 rounded-full transition-all ${
                   hapticEnabled 
-                    ? 'bg-player/30 border-2 border-player shadow-glow-player-subtle' 
-                    : 'bg-elevated border-2 border-grid-line'
+                    ? 'right-1 bg-player' 
+                    : 'left-1 bg-muted'
                 }`}
-              >
-                <div
-                  className={`absolute top-1 left-1 w-5 h-5 rounded-full transition-all duration-200 ${
-                    hapticEnabled 
-                      ? 'translate-x-6 bg-player shadow-glow-player-subtle' 
-                      : 'translate-x-0 bg-muted'
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
+          </div>
+
+          {/* Simplify Graphics Toggle */}
+          <div className="px-4 py-4 flex items-center justify-between">
+            <span className="font-body text-primary">Simplify Graphics</span>
+            <button
+              onClick={handleSimplifyToggle}
+              className={`relative w-12 h-7 rounded-full transition-all ${
+                simplifyGraphics 
+                  ? 'bg-player/30 border border-player' 
+                  : 'bg-elevated border border-grid-line'
+              }`}
+              style={{
+                boxShadow: simplifyGraphics ? '0 0 10px rgba(0,255,255,0.3)' : 'none',
+              }}
+            >
+              <div 
+                className={`absolute top-1 w-5 h-5 rounded-full transition-all ${
+                  simplifyGraphics 
+                    ? 'right-1 bg-player' 
+                    : 'left-1 bg-muted'
+                }`}
+              />
+            </button>
           </div>
 
           {/* About */}
-          <div className="pt-4 border-t border-grid-line">
-            <div className="text-sm text-muted font-body">
-              <div className="font-medium text-secondary mb-1">About</div>
-              <div className="font-mono text-xs">SudoDuel v1.0.0</div>
-            </div>
+          <div className="px-4 py-4">
+            <span className="font-body text-muted text-sm">SudoDuel v1.0.0</span>
           </div>
 
-          {/* Log Out */}
-          <div className="pt-4">
+          {/* Logout */}
+          <div className="px-4 py-4">
             <button
-              onClick={() => {
-                onLogout();
-                onClose();
+              onClick={handleLogoutClick}
+              className="w-full py-3 rounded-lg font-body font-semibold transition-all"
+              style={{
+                background: 'rgba(255,51,102,0.1)',
+                border: '2px solid rgba(255,51,102,0.5)',
+                color: '#FF3366',
               }}
-              className="w-full py-3 bg-transparent border-2 border-error text-error font-body font-semibold rounded-lg hover:bg-error/20 hover:shadow-glow-error transition-all"
             >
               Log Out
             </button>
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          onClick={handleLogoutCancel}
+        >
+          <div className="absolute inset-0 bg-void/80" />
+          <div 
+            className="relative bg-surface border border-error/50 rounded-xl p-6 max-w-xs w-full animate-scale-in"
+            style={{ boxShadow: '0 0 30px rgba(255,51,102,0.2)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-heading font-bold text-lg text-primary text-center mb-2">
+              Log Out?
+            </h3>
+            <p className="text-secondary font-body text-sm text-center mb-6">
+              Are you sure you want to log out of your account?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleLogoutCancel}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
+                style={{
+                  background: 'rgb(20, 12, 30)',
+                  border: '2px solid rgba(139,0,255,0.4)',
+                  color: 'rgba(255,255,255,0.8)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogoutConfirm}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
+                style={{
+                  background: 'rgba(255,51,102,0.2)',
+                  border: '2px solid #FF3366',
+                  color: '#FF3366',
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
