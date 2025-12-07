@@ -25,7 +25,6 @@ interface FloatingFeedback {
   streak?: number;
 }
 
-// Play error sound using Web Audio API
 const playErrorSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -64,7 +63,6 @@ function SudokuGrid({
   currentStreak = 0,
 }: SudokuGridProps) {
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
-  const cellRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
   
@@ -106,7 +104,6 @@ function SudokuGrid({
     );
   };
 
-  // Handle floating feedback when lastMoveResult changes
   useEffect(() => {
     if (!lastMoveResult) return;
 
@@ -142,138 +139,152 @@ function SudokuGrid({
     return {
       left: col * cellPercent + cellPercent / 2,
       top: row * cellPercent + cellPercent / 2,
-      usePercent: true,
-      offsetTop: -15,
     };
   };
 
   return (
     <div
       ref={gridRef}
-      className="grid grid-cols-9 relative"
+      className="relative"
       style={{
         aspectRatio: '1 / 1',
         maxHeight: 'min(100%, calc(100vh - 280px))',
         maxWidth: '100%',
-        background: 'rgba(15, 10, 25, 0.9)',
-        border: '3px solid',
-        borderImage: 'linear-gradient(135deg, #00FFFF, #8B00FF, #FF00FF) 1',
-        boxShadow: '0 0 30px rgba(139,0,255,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-        borderRadius: '4px',
+        padding: '3px',
+        background: 'linear-gradient(135deg, #00FFFF 0%, #8B00FF 50%, #FF00FF 100%)',
+        borderRadius: '8px',
+        boxShadow: '0 0 30px rgba(139,0,255,0.4), 0 0 60px rgba(0,255,255,0.2)',
       }}
     >
-      {grid.map((row, rowIndex) =>
-        row.map((cell, colIndex) => {
-          const isInitial = isInitialCell(rowIndex, colIndex);
-          const selected = isSelected(rowIndex, colIndex);
-          const related =
-            !selected &&
-            hasSelectedValue &&
-            (isSameRowOrCol(rowIndex, colIndex) ||
-              isSameBox(rowIndex, colIndex) ||
-              isSameNumberAsSelected(rowIndex, colIndex));
+      {/* Inner container for the actual grid */}
+      <div
+        className="w-full h-full grid grid-cols-9 gap-0 overflow-hidden"
+        style={{
+          background: 'rgb(12, 8, 20)',
+          borderRadius: '5px',
+        }}
+      >
+        {grid.map((row, rowIndex) =>
+          row.map((cell, colIndex) => {
+            const isInitial = isInitialCell(rowIndex, colIndex);
+            const selected = isSelected(rowIndex, colIndex);
+            const related =
+              !selected &&
+              hasSelectedValue &&
+              (isSameRowOrCol(rowIndex, colIndex) ||
+                isSameBox(rowIndex, colIndex) ||
+                isSameNumberAsSelected(rowIndex, colIndex));
 
-          // 3x3 box borders - thicker purple
-          const isRightBoxEdge = (colIndex + 1) % 3 === 0 && colIndex < 8;
-          const isBottomBoxEdge = (rowIndex + 1) % 3 === 0 && rowIndex < 8;
-          
-          const cellKey = `${rowIndex}-${colIndex}`;
-          const cellNotes = notes.get(cellKey) || [];
-          const hasValue = cell !== 0;
-          const showNotes = !hasValue && cellNotes.length > 0;
-          const opponentScored = opponentScoredCells.has(cellKey) && !hasValue && !isInitial;
-          const isJustScored = lastScoredCell?.row === rowIndex && lastScoredCell?.col === colIndex;
-          const isCompleted = completedCells.has(cellKey);
-          const isAlmostComplete = almostCompleteCells.has(cellKey);
+            const cellKey = `${rowIndex}-${colIndex}`;
+            const cellNotes = notes.get(cellKey) || [];
+            const hasValue = cell !== 0;
+            const showNotes = !hasValue && cellNotes.length > 0;
+            const opponentScored = opponentScoredCells.has(cellKey) && !hasValue && !isInitial;
+            const isJustScored = lastScoredCell?.row === rowIndex && lastScoredCell?.col === colIndex;
+            const isCompleted = completedCells.has(cellKey);
+            const isAlmostComplete = almostCompleteCells.has(cellKey);
+            const isError = isErrorFlash(rowIndex, colIndex);
 
-          // Determine cell background
-          let cellBg = 'rgba(20, 12, 30, 0.8)'; // Default dark
-          if (lockedOut) {
-            cellBg = 'rgba(30, 20, 40, 0.5)';
-          } else if (isErrorFlash(rowIndex, colIndex)) {
-            cellBg = 'rgba(255, 51, 102, 0.4)';
-          } else if (selected) {
-            cellBg = 'rgba(0, 255, 255, 0.25)';
-          } else if (related) {
-            cellBg = 'rgba(0, 255, 255, 0.08)';
-          } else if (opponentScored) {
-            cellBg = 'rgba(255, 0, 255, 0.1)';
-          }
+            // Determine cell background
+            let cellBg = 'rgba(25, 15, 40, 0.95)';
+            if (lockedOut) {
+              cellBg = 'rgba(40, 30, 50, 0.6)';
+            } else if (isError) {
+              cellBg = 'rgba(255, 51, 102, 0.35)';
+            } else if (selected) {
+              cellBg = 'rgba(0, 255, 255, 0.2)';
+            } else if (related) {
+              cellBg = 'rgba(0, 255, 255, 0.06)';
+            } else if (opponentScored) {
+              cellBg = 'rgba(255, 0, 255, 0.08)';
+            }
 
-          return (
-            <button
-              key={cellKey}
-              ref={(el) => {
-                if (el) cellRefs.current.set(cellKey, el);
-                else cellRefs.current.delete(cellKey);
-              }}
-              onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
-              onTouchStart={(e) => {
-                if (!lockedOut) {
-                  e.preventDefault();
-                  onCellClick(rowIndex, colIndex);
-                }
-              }}
-              disabled={lockedOut}
-              className={`
-                relative flex items-center justify-center
-                transition-colors duration-75 touch-manipulation
-                ${isCompleted ? 'completion-flash' : ''}
-                ${isAlmostComplete ? 'almost-complete-glow' : ''}
-                ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
-              `}
-              style={{
-                aspectRatio: '1 / 1',
-                background: cellBg,
-                borderRight: isRightBoxEdge 
-                  ? '2px solid rgba(139, 0, 255, 0.8)' 
-                  : '1px solid rgba(139, 0, 255, 0.25)',
-                borderBottom: isBottomBoxEdge 
-                  ? '2px solid rgba(139, 0, 255, 0.8)' 
-                  : '1px solid rgba(139, 0, 255, 0.25)',
-                boxShadow: selected 
-                  ? 'inset 0 0 15px rgba(0, 255, 255, 0.4), 0 0 10px rgba(0, 255, 255, 0.3)' 
-                  : isErrorFlash(rowIndex, colIndex)
-                  ? 'inset 0 0 15px rgba(255, 51, 102, 0.5)'
-                  : 'none',
-                willChange: 'background-color',
-              }}
-            >
-              {hasValue ? (
-                <span
-                  className={`font-mono font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
-                  style={{ 
-                    fontSize: 'clamp(1.125rem, 5vw, 2rem)',
-                    color: isInitial ? 'rgba(255, 255, 255, 0.9)' : '#00FFFF',
-                    textShadow: isInitial 
-                      ? 'none' 
-                      : '0 0 10px rgba(0, 255, 255, 0.6)',
-                  }}
-                >
-                  {cell}
-                </span>
-              ) : showNotes ? (
-                <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                    <span
-                      key={num}
-                      className={`w-full h-full flex items-center justify-center font-mono ${
-                        cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      style={{
-                        fontSize: 'clamp(0.5rem, 2vw, 0.75rem)',
-                        color: 'rgba(0, 255, 255, 0.7)',
-                      }}
-                    >
-                      {num}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </button>
-          );
-        })
-      )}
+            // Border logic - only right and bottom to avoid doubles
+            // Thicker borders for 3x3 box edges
+            const isRightEdge = colIndex === 8;
+            const isBottomEdge = rowIndex === 8;
+            const is3x3RightEdge = (colIndex + 1) % 3 === 0 && colIndex !== 8;
+            const is3x3BottomEdge = (rowIndex + 1) % 3 === 0 && rowIndex !== 8;
+
+            const borderRight = isRightEdge 
+              ? 'none' 
+              : is3x3RightEdge 
+                ? '2px solid rgba(139, 0, 255, 0.9)' 
+                : '1px solid rgba(139, 0, 255, 0.3)';
+            
+            const borderBottom = isBottomEdge 
+              ? 'none' 
+              : is3x3BottomEdge 
+                ? '2px solid rgba(139, 0, 255, 0.9)' 
+                : '1px solid rgba(139, 0, 255, 0.3)';
+
+            return (
+              <button
+                key={cellKey}
+                onClick={() => !lockedOut && onCellClick(rowIndex, colIndex)}
+                onTouchStart={(e) => {
+                  if (!lockedOut) {
+                    e.preventDefault();
+                    onCellClick(rowIndex, colIndex);
+                  }
+                }}
+                disabled={lockedOut}
+                className={`
+                  relative flex items-center justify-center
+                  transition-colors duration-75 touch-manipulation
+                  ${isCompleted ? 'completion-flash' : ''}
+                  ${isAlmostComplete ? 'almost-complete-glow' : ''}
+                  ${!lockedOut ? 'cursor-pointer active:scale-95' : 'cursor-default'}
+                `}
+                style={{
+                  aspectRatio: '1 / 1',
+                  background: cellBg,
+                  borderRight,
+                  borderBottom,
+                  boxShadow: selected 
+                    ? 'inset 0 0 12px rgba(0, 255, 255, 0.5)' 
+                    : isError
+                    ? 'inset 0 0 12px rgba(255, 51, 102, 0.6)'
+                    : 'none',
+                  willChange: 'background-color',
+                }}
+              >
+                {hasValue ? (
+                  <span
+                    className={`font-mono font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
+                    style={{ 
+                      fontSize: 'clamp(1.25rem, 5.5vw, 2rem)',
+                      color: isInitial ? 'rgba(255, 255, 255, 0.85)' : '#00FFFF',
+                      textShadow: isInitial 
+                        ? '0 1px 2px rgba(0,0,0,0.5)' 
+                        : '0 0 12px rgba(0, 255, 255, 0.7)',
+                    }}
+                  >
+                    {cell}
+                  </span>
+                ) : showNotes ? (
+                  <div className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      <span
+                        key={num}
+                        className={`w-full h-full flex items-center justify-center font-mono font-medium ${
+                          cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        style={{
+                          fontSize: 'clamp(0.5rem, 2vw, 0.7rem)',
+                          color: 'rgba(0, 255, 255, 0.8)',
+                        }}
+                      >
+                        {num}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </button>
+            );
+          })
+        )}
+      </div>
       
       {/* Floating feedback elements */}
       {floatingFeedbacks.map((feedback) => {
@@ -282,26 +293,24 @@ function SudokuGrid({
         return (
           <div
             key={feedback.id}
-            className="floating-feedback absolute"
+            className="floating-feedback absolute pointer-events-none"
             style={{
               left: `${position.left}%`,
-              top: `calc(${position.top}% + ${position.offsetTop}px)`,
-              pointerEvents: 'none',
-              zIndex: 1000,
-              textAlign: 'center',
-              transformOrigin: 'center center',
+              top: `${position.top}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
             }}
           >
             <span
               className="whitespace-nowrap block font-mono font-bold"
               style={{
                 fontSize: feedback.correct 
-                  ? (feedback.streak && feedback.streak >= 8 ? '1.5rem' : feedback.streak && feedback.streak >= 5 ? '1.25rem' : '1rem')
-                  : '1rem',
+                  ? (feedback.streak && feedback.streak >= 8 ? '1.5rem' : feedback.streak && feedback.streak >= 5 ? '1.25rem' : '1.1rem')
+                  : '1.1rem',
                 color: feedback.correct ? '#00FFFF' : '#FF3366',
                 textShadow: feedback.correct
-                  ? '0 0 15px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4)'
-                  : '0 0 15px rgba(255, 51, 102, 0.8)',
+                  ? '0 0 15px rgba(0, 255, 255, 0.9), 0 0 30px rgba(0, 255, 255, 0.5)'
+                  : '0 0 15px rgba(255, 51, 102, 0.9)',
               }}
             >
               {feedback.text}
