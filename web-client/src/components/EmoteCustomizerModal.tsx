@@ -113,29 +113,30 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
 
           {/* Edit input - shows when editing */}
           {editingIndex !== null && (
-            <div className="space-y-3 animate-fade-in">
-              <p className="text-xs text-muted font-body text-center">
+            <div className="space-y-2 animate-fade-in">
+              <p className="text-[10px] text-muted font-body text-center">
                 Select 1-2 emojis for slot {editingIndex + 1}
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={handleInputChange}
                   placeholder="Tap to select"
                   autoFocus
-                  className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-2xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all emote-input-placeholder"
-                  style={{ caretColor: 'transparent', minHeight: '48px' }}
+                  className="flex-1 px-2 py-1.5 bg-elevated border border-grid-line rounded-lg text-xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all placeholder:text-muted/50 placeholder:text-sm emote-input-placeholder"
+                  style={{ caretColor: 'transparent', height: '40px' }}
                 />
                 <button
                   onClick={handleSaveEmote}
                   disabled={!inputValue}
-                  className="px-3 py-2 rounded-lg font-body font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-lg font-body font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40"
                   style={{
                     background: 'rgb(15, 10, 25)',
                     border: '2px solid #00FFFF',
                     color: '#00FFFF',
                     boxShadow: '0 0 10px rgba(0,255,255,0.2)',
+                    height: '40px',
                   }}
                 >
                   Save
@@ -143,7 +144,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
               </div>
               <button
                 onClick={() => { setEditingIndex(null); setInputValue(''); }}
-                className="w-full py-2 text-muted text-sm font-body hover:text-secondary transition-colors"
+                className="w-full py-1.5 text-muted text-xs font-body hover:text-secondary transition-colors"
               >
                 Cancel
               </button>
