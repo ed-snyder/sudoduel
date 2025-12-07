@@ -7,10 +7,9 @@ interface PlayerInfoModalProps {
   onClose: () => void;
   onOpenStats: () => void;
   onOpenHistory: () => void;
-  onOpenEmotes: () => void;
 }
 
-export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHistory, onOpenEmotes }: PlayerInfoModalProps) {
+export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHistory }: PlayerInfoModalProps) {
   const { user, refreshUser } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
@@ -113,11 +112,6 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
   const handleHistoryClick = () => {
     onClose();
     onOpenHistory();
-  };
-
-  const handleEmotesClick = () => {
-    onClose();
-    onOpenEmotes();
   };
 
   const getInputBorderColor = () => {
@@ -237,7 +231,7 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
           </div>
 
           {/* Action Buttons Grid */}
-          <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             {/* Stats */}
             <button
               onClick={handleStatsClick}
@@ -268,20 +262,6 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-xs font-body font-semibold text-secondary">History</span>
-            </button>
-
-            {/* Emotes */}
-            <button
-              onClick={handleEmotesClick}
-              className="flex flex-col items-center gap-2 py-4 rounded-lg transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: 'rgba(139,0,255,0.1)',
-                border: '2px solid rgba(139,0,255,0.3)',
-                boxShadow: '0 0 10px rgba(139,0,255,0.1)',
-              }}
-            >
-              <span className="text-2xl">😂</span>
-              <span className="text-xs font-body font-semibold text-secondary">Emotes</span>
             </button>
           </div>
         </div>
