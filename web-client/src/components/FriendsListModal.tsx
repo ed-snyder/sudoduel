@@ -44,7 +44,18 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     }
   }, [isOpen]);
 
-  // Poll for match request updates when waiting
+  // Always poll for incoming match requests when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const interval = setInterval(() => {
+      loadMatchRequests();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  // Separate polling for outgoing request status (when waiting for response)
   useEffect(() => {
     if (!isOpen || !matchRequestPolling) return;
     
