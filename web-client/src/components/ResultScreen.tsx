@@ -378,8 +378,7 @@ export default function ResultScreen({
       
       if (result.status === 'matched' && result.match_id) {
         // Navigate to new game
-        onFindNewMatch(result.match_id);
-        setIsFindingMatch(false);
+        window.location.href = `/game/${result.match_id}`;
       } else if (result.status === 'queued') {
         // Poll for match
         const pollInterval = setInterval(async () => {
@@ -387,8 +386,7 @@ export default function ResultScreen({
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
             if (status.status === 'matched' && status.match_id) {
               clearInterval(pollInterval);
-              onFindNewMatch(status.match_id);
-              setIsFindingMatch(false);
+              window.location.href = `/game/${status.match_id}`;
             }
           } catch (err) {
             console.error('Polling error:', err);
@@ -821,46 +819,55 @@ export default function ResultScreen({
           </div>
         </div>
 
-        {/* Action Buttons / Search UI */}
-        <div className="w-full max-w-xs">
-          {searching ? (
-            <div className="text-center">
-              <div className="relative w-20 h-20 mx-auto mb-6">
-                <div className="absolute inset-0 rounded-full border-4 border-surface" />
-                <div 
-                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
-                  style={{ 
-                    boxShadow: '0 0 20px rgba(0,255,255,0.5)',
-                    filter: 'drop-shadow(0 0 10px rgba(0,255,255,0.8))'
-                  }}
-                />
-              </div>
+        {/* Action Buttons */}
+        <div className="w-full max-w-xs space-y-3">
+          {isFindingMatch ? (
+            /* Finding Match State - replaces buttons */
+            <div className="flex flex-col items-center">
+              {/* Searching spinner */}
+              <div 
+                className="w-16 h-16 mb-4 rounded-full animate-spin"
+                style={{
+                  border: '3px solid rgba(0,255,255,0.2)',
+                  borderTopColor: '#00FFFF',
+                  boxShadow: '0 0 20px rgba(0,255,255,0.3)',
+                }}
+              />
               
-              <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
-              <p className="text-secondary font-display mb-1">Looking for an opponent</p>
-              <p className="text-player text-lg font-display mb-6">
-                0:{String(30 - attemptsRef.current).padStart(2, '0')}
+              {/* Searching text */}
+              <p 
+                className="font-heading font-bold text-lg text-player mb-2 uppercase tracking-widest"
+                style={{ textShadow: '0 0 15px rgba(0,255,255,0.5)' }}
+              >
+                Finding Match
               </p>
               
-              {searchError && (
-                <div 
-                  className="w-full mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
-                  style={{ boxShadow: '0 0 15px rgba(255,51,102,0.2)' }}
-                >
-                  <p className="text-error text-sm font-display">{searchError}</p>
-                </div>
-              )}
+              {/* Timer */}
+              <p 
+                className="font-mono text-2xl text-primary mb-6"
+                style={{ textShadow: '0 0 10px rgba(0,255,255,0.3)' }}
+              >
+                {Math.floor(searchTime / 60)}:{(searchTime % 60).toString().padStart(2, '0')}
+              </p>
               
+              {/* Cancel button */}
               <button
                 onClick={handleCancelSearch}
-                className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-error/50 hover:text-error transition-all"
+                className="w-full py-3 font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                style={{
+                  background: 'rgb(20, 12, 30)',
+                  border: '3px solid rgba(255,51,102,0.5)',
+                  color: '#FF3366',
+                  boxShadow: '0 0 10px rgba(255,51,102,0.2), 0 4px 12px rgba(0,0,0,0.5)',
+                }}
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Rematch - Solid with thick glowing border */}
+            /* Normal button state */
+            <>
+              {/* Rematch */}
               <button
                 onClick={() => { handleButtonPress(); onRematch(); }}
                 disabled={rematchState === 'requested'}
@@ -896,46 +903,20 @@ export default function ResultScreen({
                 {rematchState === 'waiting' && '⚔️ Accept Rematch'}
               </button>
 
-              {/* Find New Match - Solid secondary with matching border thickness */}
-              {isFindingMatch ? (
-                <div className="w-full text-center">
-                  <div className="relative w-20 h-20 mx-auto mb-4">
-                    <div className="absolute inset-0 rounded-full border-4 border-surface" />
-                    <div 
-                      className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
-                      style={{ 
-                        boxShadow: '0 0 20px rgba(0,255,255,0.5)',
-                        filter: 'drop-shadow(0 0 10px rgba(0,255,255,0.8))'
-                      }}
-                    />
-                  </div>
-                  <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
-                  <p className="text-secondary font-display mb-1">Looking for an opponent</p>
-                  <p className="text-player text-lg font-display mb-4">
-                    {Math.floor(searchTime / 60)}:{String(searchTime % 60).padStart(2, '0')}
-                  </p>
-                  <button
-                    onClick={handleCancelSearch}
-                    className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-error/50 hover:text-error transition-all"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleFindNewMatch}
-                  className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
-                  style={{
-                    background: 'rgb(20, 12, 30)',
-                    border: '3px solid rgba(139,0,255,0.5)',
-                    color: 'rgba(255,255,255,0.8)',
-                    boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-                  }}
-                >
-                  Find New Match
-                </button>
-              )}
-            </div>
+              {/* Find New Match - stays on result screen and starts matchmaking */}
+              <button
+                onClick={handleFindNewMatch}
+                className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                style={{
+                  background: 'rgb(20, 12, 30)',
+                  border: '3px solid rgba(139,0,255,0.5)',
+                  color: 'rgba(255,255,255,0.8)',
+                  boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+                }}
+              >
+                Find New Match
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1059,11 +1040,12 @@ export default function ResultScreen({
                 </p>
               </div>
 
-              {/* Play Again */}
+              {/* Add Friend */}
               <button
                 onClick={() => {
                   setShowOpponentModal(false);
-                  onRematch();
+                  // TODO: Implement add friend functionality
+                  vibrate([10, 5, 10]);
                 }}
                 className="w-full mt-4 py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95"
                 style={{
@@ -1073,7 +1055,7 @@ export default function ResultScreen({
                   boxShadow: '0 0 15px rgba(255,0,255,0.2)',
                 }}
               >
-                Challenge Again
+                Add Friend
               </button>
             </div>
           </div>
