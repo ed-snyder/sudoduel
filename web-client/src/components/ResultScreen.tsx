@@ -99,7 +99,7 @@ const playFinalSound = (isGain: boolean) => {
 export default function ResultScreen({
   didWin,
   isDraw,
-  reason,
+  reason: _reason,
   myResult,
   opponentResult,
   onRematch,
