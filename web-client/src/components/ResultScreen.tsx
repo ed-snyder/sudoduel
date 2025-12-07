@@ -762,24 +762,28 @@ export default function ResultScreen({
         </div>
 
         {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center justify-center gap-4 mb-6">
           {/* Your score box */}
           <div 
-            className="flex flex-col items-center justify-center px-4 py-3 rounded-lg"
+            className="flex flex-col items-center justify-center rounded-lg"
             style={{
               background: 'rgba(0,255,255,0.08)',
               border: '2px solid rgba(0,255,255,0.4)',
               boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
               width: '140px',
               height: '140px',
+              padding: '12px 8px',
             }}
           >
             <span 
-              className="text-xs font-body uppercase tracking-widest mb-2 truncate w-full text-center"
-              style={{ color: 'rgba(0,255,255,0.9)' }}
+              className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+              style={{ 
+                color: 'rgba(0,255,255,0.9)',
+                fontSize: myName.length > 12 ? '9px' : myName.length > 8 ? '10px' : '11px',
+              }}
               title={myName}
             >
-              {myName.length > 10 ? myName.slice(0, 10) + '…' : myName}
+              {myName}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-player"
@@ -799,21 +803,25 @@ export default function ResultScreen({
           {/* Opponent score box - clickable */}
           <button
             onClick={() => setShowOpponentModal(true)}
-            className="flex flex-col items-center justify-center px-4 py-3 rounded-lg transition-all hover:scale-105 active:scale-95"
+            className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
             style={{
               background: 'rgba(255,0,255,0.08)',
               border: '2px solid rgba(255,0,255,0.4)',
               boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
               width: '140px',
               height: '140px',
+              padding: '12px 8px',
             }}
           >
             <span 
-              className="text-xs font-body uppercase tracking-widest mb-2 truncate w-full text-center"
-              style={{ color: 'rgba(255,0,255,0.9)' }}
+              className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+              style={{ 
+                color: 'rgba(255,0,255,0.9)',
+                fontSize: opponentName.length > 12 ? '9px' : opponentName.length > 8 ? '10px' : '11px',
+              }}
               title={opponentName}
             >
-              {opponentName.length > 10 ? opponentName.slice(0, 10) + '…' : opponentName}
+              {opponentName}
             </span>
             <span 
               className="text-5xl font-mono font-bold text-opponent"
