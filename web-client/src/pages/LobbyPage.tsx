@@ -201,17 +201,17 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           <span className="text-sm font-body text-secondary">Friends</span>
         </button>
 
-        {/* Emotes Button - Cyan border with shimmer */}
+        {/* Emotes Button - Magenta border with shimmer */}
         <button
           onClick={() => setShowEmoteCustomizer(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 shimmer-button cyan-glow-pulse"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 shimmer-button magenta-glow-pulse"
           style={{
-            background: 'rgba(0, 255, 255, 0.08)',
-            border: '2px solid rgba(0, 255, 255, 0.6)',
+            background: 'rgba(255, 0, 255, 0.08)',
+            border: '2px solid rgba(255, 0, 255, 0.6)',
           }}
         >
           <span className="text-lg">😂</span>
-          <span className="text-sm font-body text-player font-semibold">Emotes</span>
+          <span className="text-sm font-body font-semibold" style={{ color: '#FF00FF' }}>Emotes</span>
         </button>
 
         {/* Settings Button */}

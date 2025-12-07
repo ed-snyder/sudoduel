@@ -1104,7 +1104,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 255, 255, 0.15) 50%,
+    rgba(255, 0, 255, 0.15) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -1113,18 +1113,18 @@
   border-radius: inherit;
 }
 
-/* Subtle glow pulse for the border */
-@keyframes cyan-glow-pulse {
+/* Subtle glow pulse for the border - Magenta */
+@keyframes magenta-glow-pulse {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), 0 0 20px rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.3), 0 0 20px rgba(255, 0, 255, 0.1);
   }
   50% {
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), 0 0 30px rgba(255, 0, 255, 0.2);
   }
 }
 
-.cyan-glow-pulse {
-  animation: cyan-glow-pulse 2s ease-in-out infinite;
+.magenta-glow-pulse {
+  animation: magenta-glow-pulse 2s ease-in-out infinite;
 }
 
 /* =========================================
