@@ -162,7 +162,7 @@ export default function ResultScreen({
         {/* Result Header */}
         <div className="text-center mb-6">
           <h1 
-            className={`text-4xl sm:text-5xl font-heading font-bold mb-2 uppercase tracking-wider ${
+            className={`text-4xl sm:text-5xl font-display font-black mb-2 uppercase tracking-widest ${
               isDraw 
                 ? 'text-secondary' 
                 : didWin 
@@ -178,12 +178,12 @@ export default function ResultScreen({
             {isDraw ? 'DRAW' : didWin ? 'VICTORY' : 'DEFEAT'}
           </h1>
           
-          <p className="text-secondary font-body text-sm">
+          <p className="text-secondary font-display text-sm uppercase tracking-wider">
             {getReasonText()}
           </p>
           
           {wasClose && (
-            <p className="text-player text-sm font-body mt-2 animate-pulse">
+            <p className="text-player text-sm font-display mt-2 animate-pulse uppercase tracking-wider">
               So close! {cellDifference} more cell{cellDifference !== 1 ? 's' : ''} would've won.
             </p>
           )}
@@ -196,9 +196,9 @@ export default function ResultScreen({
           }`}
         >
           <div className="text-center">
-            <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">You</div>
+            <div className="text-xs text-muted font-display uppercase tracking-widest mb-1 font-black">You</div>
             <div 
-              className={`text-3xl font-mono font-bold ${didWin ? 'text-player' : 'text-primary'}`}
+              className={`text-3xl font-mono font-black ${didWin ? 'text-player' : 'text-primary'}`}
               style={didWin ? { textShadow: '0 0 10px rgba(0,255,255,0.5)' } : {}}
             >
               {myResult.cellsCompleted}
@@ -206,12 +206,12 @@ export default function ResultScreen({
             <div className="text-xs text-muted font-mono">/81</div>
           </div>
           
-          <div className="text-2xl text-muted font-body">vs</div>
+          <div className="text-2xl text-muted font-display font-black uppercase tracking-widest">vs</div>
           
           <div className="text-center">
-            <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Opponent</div>
+            <div className="text-xs text-muted font-display uppercase tracking-widest mb-1 font-black">Opponent</div>
             <div 
-              className={`text-3xl font-mono font-bold ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}
+              className={`text-3xl font-mono font-black ${!didWin && !isDraw ? 'text-opponent' : 'text-primary'}`}
               style={!didWin && !isDraw ? { textShadow: '0 0 10px rgba(255,0,255,0.5)' } : {}}
             >
               {opponentResult.cellsCompleted}
@@ -230,19 +230,19 @@ export default function ResultScreen({
           <div className={`bg-elevated rounded-lg p-3 border ${
             didWin ? 'border-player/30' : 'border-grid-line'
           }`}>
-            <p className={`font-body font-semibold mb-2 text-sm uppercase tracking-wider ${
+            <p className={`font-display font-black mb-2 text-sm uppercase tracking-widest ${
               didWin ? 'text-player' : 'text-secondary'
             }`}>
               You
             </p>
-            <div className="space-y-1 text-xs font-body">
+            <div className="space-y-1 text-xs font-display">
               <div className="flex justify-between">
-                <span className="text-muted">Mistakes</span>
-                <span className="font-mono text-primary">{myResult.mistakes}</span>
+                <span className="text-muted uppercase tracking-wider">Mistakes</span>
+                <span className="font-mono font-black text-primary">{myResult.mistakes}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Time Left</span>
-                <span className="font-mono text-primary">{formatTime(myResult.timeRemaining)}</span>
+                <span className="text-muted uppercase tracking-wider">Time Left</span>
+                <span className="font-mono font-black text-primary">{formatTime(myResult.timeRemaining)}</span>
               </div>
             </div>
           </div>
@@ -251,19 +251,19 @@ export default function ResultScreen({
           <div className={`bg-elevated rounded-lg p-3 border ${
             !didWin && !isDraw ? 'border-opponent/30' : 'border-grid-line'
           }`}>
-            <p className={`font-body font-semibold mb-2 text-sm uppercase tracking-wider ${
+            <p className={`font-display font-black mb-2 text-sm uppercase tracking-widest ${
               !didWin && !isDraw ? 'text-opponent' : 'text-secondary'
             }`}>
               Opponent
             </p>
-            <div className="space-y-1 text-xs font-body">
+            <div className="space-y-1 text-xs font-display">
               <div className="flex justify-between">
-                <span className="text-muted">Mistakes</span>
-                <span className="font-mono text-primary">{opponentResult.mistakes}</span>
+                <span className="text-muted uppercase tracking-wider">Mistakes</span>
+                <span className="font-mono font-black text-primary">{opponentResult.mistakes}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Time Left</span>
-                <span className="font-mono text-primary">{formatTime(opponentResult.timeRemaining)}</span>
+                <span className="text-muted uppercase tracking-wider">Time Left</span>
+                <span className="font-mono font-black text-primary">{formatTime(opponentResult.timeRemaining)}</span>
               </div>
             </div>
           </div>
@@ -289,16 +289,16 @@ export default function ResultScreen({
           }}
         >
           <div className="text-center">
-            <div className="text-xs text-muted font-body uppercase tracking-wider mb-2">Rating</div>
+            <div className="text-xs text-muted font-display uppercase tracking-widest mb-2 font-black">Rating</div>
             <div className="flex items-center justify-center gap-3">
               <span 
-                className="text-3xl font-mono font-bold text-player"
+                className="text-3xl font-mono font-black text-player"
                 style={{ textShadow: '0 0 10px rgba(0,255,255,0.3)' }}
               >
                 {Math.round(displayedRating)}
               </span>
               <span 
-                className={`text-xl font-mono font-bold ${
+                className={`text-xl font-mono font-black ${
                   ratingChange > 0 ? 'text-success' : ratingChange < 0 ? 'text-error' : 'text-muted'
                 }`}
               >
@@ -318,7 +318,7 @@ export default function ResultScreen({
           <button
             onClick={onRematch}
             disabled={rematchState === 'requested'}
-            className={`w-full py-3 font-body font-bold uppercase tracking-widest rounded-lg transition-all ${
+            className={`w-full py-3 font-display font-black uppercase tracking-widest rounded-lg transition-all ${
               rematchState === 'waiting'
                 ? 'bg-success/20 border-2 border-success text-success hover:bg-success/30 animate-pulse'
                 : rematchState === 'requested'
@@ -337,7 +337,7 @@ export default function ResultScreen({
           {/* Back to Lobby */}
           <button
             onClick={onBackToLobby}
-            className="w-full py-3 bg-surface border border-grid-line text-secondary font-body font-semibold uppercase tracking-wider rounded-lg hover:border-player/50 hover:text-player transition-all"
+            className="w-full py-3 bg-surface border border-grid-line text-secondary font-display font-black uppercase tracking-widest rounded-lg hover:border-player/50 hover:text-player transition-all"
           >
             Back to Lobby
           </button>
