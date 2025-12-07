@@ -1725,7 +1725,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
       {/* Emote Picker - Below toolbar */}
       {showEmotePicker && (
-        <div className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in" style={{ top: 'calc(50vh + 340px)' }}>
+        <div 
+          className="absolute left-0 right-0 flex items-center justify-center gap-1 sm:gap-2 px-6 sm:px-8 py-3 bg-gray-50 border-t border-gray-200 animate-fade-in z-50" 
+          style={{ 
+            top: 'calc(50vh + 340px)',
+            position: 'fixed',
+            bottom: 'auto',
+          }}
+        >
           {EMOTES.map((emote) => (
             <button
               key={emote}
