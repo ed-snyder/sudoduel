@@ -844,9 +844,9 @@ export default function ResultScreen({
                 className="w-full py-4 text-lg font-body font-semibold uppercase tracking-wider rounded-xl transition-all active:scale-95"
                 style={{
                   background: 'rgb(20, 12, 30)',
-                  border: '3px solid rgba(139,0,255,0.5)',
-                  color: 'rgba(255,255,255,0.8)',
-                  boxShadow: '0 0 10px rgba(139,0,255,0.2), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  border: '5px solid rgba(139,0,255,0.9)',
+                  color: 'rgba(255,255,255,1)',
+                  boxShadow: '0 0 20px rgba(139,0,255,0.5), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
                 }}
               >
                 Find New Match

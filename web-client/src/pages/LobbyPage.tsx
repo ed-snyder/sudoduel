@@ -267,7 +267,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
                 </button>
                 <button
                   onClick={() => alert('Coming Soon')}
-                  className="flex-1 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all flex items-center justify-center"
+                  className="flex-1 py-3 bg-surface border-2 border-player/50 text-player font-display font-black rounded-lg hover:border-player hover:shadow-glow-player-subtle active:scale-[0.98] transition-all flex items-center justify-center"
                 >
                   Practice Mode
                 </button>
