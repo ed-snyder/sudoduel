@@ -188,8 +188,12 @@ export default function ResultScreen({
     // Title slam-in IMMEDIATE
     setShowTitle(true);
 
-    // Particles IMMEDIATE
-    setParticles(generateParticles(didWin && !isDraw));
+    // Particles IMMEDIATE - only for victory
+    if (didWin && !isDraw) {
+      setParticles(generateParticles(true));
+    } else {
+      setParticles([]);
+    }
   }, [didWin, isDraw, isBigWin, hapticVictory, hapticBigWin, vibrate, generateParticles]);
 
   // Grid breathing animation
@@ -412,12 +416,13 @@ export default function ResultScreen({
         }}
       />
 
-      {/* Geometric Particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-        {particles.map((particle) => (
+      {/* Geometric Particles - Victory only */}
+      {particles.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+          {particles.map((particle) => (
           <div
             key={particle.id}
-            className={didWin && !isDraw ? 'animate-particle-burst' : 'animate-particle-fall'}
+            className="animate-particle-burst"
             style={{
               position: 'absolute',
               left: `${particle.x}%`,
@@ -475,29 +480,9 @@ export default function ResultScreen({
             )}
           </div>
         ))}
-      </div>
-
-      {/* Floating sparkles around title (victory only) */}
-      {didWin && !isDraw && (
-        <div className="absolute inset-0 pointer-events-none z-20">
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-sparkle"
-              style={{
-                left: `${20 + Math.random() * 60}%`,
-                top: `${20 + Math.random() * 25}%`,
-                animationDelay: `${i * 150}ms`,
-              }}
-            >
-              <div 
-                className="w-1 h-1 bg-white rounded-full"
-                style={{ boxShadow: '0 0 6px #FFFFFF, 0 0 12px #00FFFF' }}
-              />
-            </div>
-          ))}
         </div>
       )}
+
 
       {/* Back Button */}
       <div className="relative z-10 pt-14 pl-4 safe-top">
@@ -526,7 +511,7 @@ export default function ResultScreen({
         >
           {/* Outer glow layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -541,7 +526,7 @@ export default function ResultScreen({
 
           {/* Inner glow layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -556,7 +541,7 @@ export default function ResultScreen({
 
           {/* White stroke layer */}
           <span
-            className="absolute inset-0 text-5xl sm:text-6xl select-none pointer-events-none"
+            className="absolute inset-0 text-8xl sm:text-9xl select-none pointer-events-none"
             style={{
               ...titleStyle,
               color: 'transparent',
@@ -569,7 +554,7 @@ export default function ResultScreen({
 
           {/* Fill gradient */}
           <span
-            className="relative text-5xl sm:text-6xl select-none"
+            className="relative text-8xl sm:text-9xl select-none"
             style={{
               ...titleStyle,
               background: isDraw 

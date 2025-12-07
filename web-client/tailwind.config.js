@@ -235,7 +235,7 @@ export default {
         'glitch-text': 'glitch-text 0.6s ease-out forwards',
         
         // Result screen animations
-        'slam-in': 'slam-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'slam-in': 'slam-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'particle-burst': 'particle-burst 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
         'particle-fall': 'particle-fall 4s linear forwards',
         'sparkle': 'sparkle 1.5s ease-in-out infinite',

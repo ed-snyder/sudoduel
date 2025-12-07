@@ -966,7 +966,7 @@
 }
 
 .animate-slam-in {
-  animation: slam-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: slam-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 /* Particle burst (victory) */
