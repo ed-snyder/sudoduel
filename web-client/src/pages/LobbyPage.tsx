@@ -115,7 +115,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
     <div className="min-h-screen bg-void flex flex-col">
       {/* Header with Logo */}
       <div className="px-4 pt-32 pb-4 flex flex-col items-center safe-top">
-        <SudoDuelLogo size="lg" />
+        <SudoDuelLogo size="xl" />
       </div>
       
       {/* Player Card */}
