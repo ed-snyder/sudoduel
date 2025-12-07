@@ -5,6 +5,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
+import ResultScreen from '../components/ResultScreen';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
