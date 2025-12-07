@@ -124,7 +124,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
                   onChange={handleInputChange}
                   placeholder="Tap to select"
                   autoFocus
-                  className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-2xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all placeholder:font-heading"
+                  className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-2xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all emote-input-placeholder"
                   style={{ caretColor: 'transparent', minHeight: '48px' }}
                 />
                 <button
