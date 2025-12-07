@@ -258,10 +258,10 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
                   Upgrade to SudoDuel+
                 </button>
                 <button
-                  onClick={() => alert('Coming Soon to SudoDuel+')}
+                  onClick={() => alert('Coming Soon')}
                   className="flex-1 py-3 bg-surface border border-grid-line text-secondary font-display font-black rounded-lg hover:border-player/50 hover:text-player transition-all flex items-center justify-center"
                 >
-                  Daily Challenge
+                  Practice Mode
                 </button>
               </div>
             </div>
