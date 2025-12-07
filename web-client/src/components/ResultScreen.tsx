@@ -118,8 +118,6 @@ export default function ResultScreen({
   const [ratingLanded, setRatingLanded] = useState(false);
   const [gridHue, setGridHue] = useState(0);
   const [breathePhase, setBreathePhase] = useState(0);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState('');
   const [showOpponentModal, setShowOpponentModal] = useState(false);
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
@@ -342,8 +340,7 @@ export default function ResultScreen({
         try {
           await matchmakingAPI.leave();
         } catch (e) {}
-        setSearching(false);
-        setSearchError('No opponent found. Try again!');
+        setIsFindingMatch(false);
         stopPolling();
         return;
       }
@@ -357,11 +354,11 @@ export default function ResultScreen({
         } else if (response.status === 'queued') {
           pollForMatch();
         } else {
-          setSearching(false);
+          setIsFindingMatch(false);
           stopPolling();
         }
       } catch (err) {
-        setSearching(false);
+        setIsFindingMatch(false);
         stopPolling();
       }
     }, 1000);
