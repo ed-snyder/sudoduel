@@ -229,6 +229,10 @@ export default {
         'comet-streak': 'comet-streak 2s linear forwards',
         'grid-flash': 'grid-flash 0.6s ease-out forwards',
         'pulse-slow': 'pulse-slow 8s ease-in-out infinite',
+        
+        // Victory/Result screen
+        'victory-burst': 'victory-burst 0.8s ease-out forwards',
+        'glitch-text': 'glitch-text 0.6s ease-out forwards',
       },
       
       keyframes: {
@@ -320,6 +324,18 @@ export default {
         'pulse-slow': {
           '0%, 100%': { opacity: '0.3', transform: 'scale(1)' },
           '50%': { opacity: '0.6', transform: 'scale(1.15)' },
+        },
+        'victory-burst': {
+          '0%': { opacity: '0', transform: 'scale(0.8)' },
+          '50%': { opacity: '1', transform: 'scale(1.1)' },
+          '100%': { opacity: '0.6', transform: 'scale(1)' },
+        },
+        'glitch-text': {
+          '0%': { transform: 'translate(0)', textShadow: '-2px 0 #FF00FF, 2px 0 #00FFFF' },
+          '20%': { transform: 'translate(-3px, 2px)', textShadow: '2px 0 #FF00FF, -2px 0 #00FFFF' },
+          '40%': { transform: 'translate(3px, -1px)', textShadow: '-2px 0 #FF00FF, 2px 0 #00FFFF' },
+          '60%': { transform: 'translate(-2px, 1px)', textShadow: '2px 0 #FF00FF, -2px 0 #00FFFF' },
+          '80%, 100%': { transform: 'translate(0)', textShadow: '0 0 10px #00FFFF, 0 0 20px #00FFFF, 0 0 40px #FF00FF' },
         },
       },
       
