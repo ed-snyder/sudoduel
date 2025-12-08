@@ -292,17 +292,18 @@ function SudokuGrid({
               cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
             } else if (isAlmostComplete && !hasValue) {
               // Almost complete - second priority (only for empty cells)
-              cellBg = 'rgba(0, 255, 136, 0.1)';
+              // Fill cell completely with green background
+              cellBg = 'rgba(0, 255, 136, 0.3)';
               cellBorder = '2px solid #00FF88';
               cellClassName = 'almost-complete-glow';
             } else if (related) {
               // Enhanced highlighting for related cells (same row/col/box or matching number)
               // Uniform solid background - no gradient or inset shadows
-              cellBg = 'rgba(0, 255, 255, 0.22)';
+              cellBg = 'rgba(0, 255, 255, 0.35)';
               cellClassName = 'selected-number-highlight';
             } else if (opponentScored) {
-              // Bright magenta pulsing effect for opponent-placed cells
-              cellBg = 'rgba(255, 0, 255, 0.25)';
+              // Bright magenta static effect for opponent-placed cells
+              cellBg = 'rgba(255, 0, 255, 0.4)';
               cellClassName = 'opponent-scored-glow';
             }
 

@@ -1926,11 +1926,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     letterSpacing: '-0.1em',
                     background: 'rgba(255, 255, 255, 0.95)',
-                    padding: '8px 12px',
-                    borderRadius: '12px',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
                     boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
                   }}
                 >
@@ -1953,11 +1955,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     transform: 'translateY(-50%)',
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     letterSpacing: '-0.1em',
                     background: 'rgba(255, 255, 255, 0.95)',
-                    padding: '8px 12px',
-                    borderRadius: '12px',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
                     boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
                   }}
                 >

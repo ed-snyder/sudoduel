@@ -335,15 +335,13 @@ html, body, #root {
 @keyframes almost-complete-pulse {
   0%, 100% { 
     box-shadow: 
-      0 0 8px rgba(0, 255, 136, 0.4),
-      0 0 15px rgba(0, 255, 136, 0.2),
-      inset 0 0 10px rgba(0, 255, 136, 0.1);
+      0 0 12px rgba(0, 255, 136, 0.6),
+      0 0 20px rgba(0, 255, 136, 0.4);
   }
   50% { 
     box-shadow: 
-      0 0 15px rgba(0, 255, 136, 0.6),
-      0 0 25px rgba(0, 255, 136, 0.4),
-      inset 0 0 15px rgba(0, 255, 136, 0.2);
+      0 0 18px rgba(0, 255, 136, 0.8),
+      0 0 30px rgba(0, 255, 136, 0.6);
   }
 }
 
@@ -495,47 +493,21 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 8px rgba(240, 230, 255, 0.4);
 }
 
-/* Selected Number Highlighting - Pulsing Glow */
-@keyframes selected-number-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 0 8px rgba(0, 255, 255, 0.5),
-      0 0 15px rgba(0, 255, 255, 0.3);
-  }
-  50% {
-    box-shadow: 
-      0 0 15px rgba(0, 255, 255, 0.7),
-      0 0 25px rgba(0, 255, 255, 0.5);
-  }
-}
-
+/* Selected Number Highlighting - Static Neon Blue Glow */
 .selected-number-highlight {
-  background-color: rgba(0, 255, 255, 0.22) !important;
-  animation: selected-number-pulse 1.5s ease-in-out infinite;
+  background-color: rgba(0, 255, 255, 0.35) !important;
+  box-shadow: 
+    0 0 12px rgba(0, 255, 255, 0.6),
+    0 0 20px rgba(0, 255, 255, 0.4);
 }
 
-/* Opponent Scored Cell - Bright Magenta Pulsing Glow */
-@keyframes opponent-scored-pulse {
-  0%, 100% {
-    box-shadow: 
-      inset 0 0 20px rgba(255, 0, 255, 0.4),
-      0 0 15px rgba(255, 0, 255, 0.5),
-      0 0 25px rgba(255, 0, 255, 0.4),
-      0 0 35px rgba(255, 0, 255, 0.3);
-  }
-  50% {
-    box-shadow: 
-      inset 0 0 30px rgba(255, 0, 255, 0.6),
-      0 0 25px rgba(255, 0, 255, 0.7),
-      0 0 40px rgba(255, 0, 255, 0.6),
-      0 0 50px rgba(255, 0, 255, 0.5);
-  }
-}
-
+/* Opponent Scored Cell - Bright Magenta Static Glow */
 .opponent-scored-glow {
-  background: rgba(255, 0, 255, 0.25) !important;
-  animation: opponent-scored-pulse 1s ease-in-out infinite;
-  border: 1px solid rgba(255, 0, 255, 0.5);
+  background: rgba(255, 0, 255, 0.4) !important;
+  box-shadow: 
+    0 0 12px rgba(255, 0, 255, 0.7),
+    0 0 20px rgba(255, 0, 255, 0.5);
+  border: 1px solid rgba(255, 0, 255, 0.6);
 }
 
 
