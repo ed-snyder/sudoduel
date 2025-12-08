@@ -1198,7 +1198,82 @@
 }
 
 /* =========================================
-   22. BATTLEFIELD BLOB ANIMATIONS
+   22. BREATHING ANIMATIONS (Grid Lines)
+   ========================================= */
+
+/* Breathing animation for thin grid lines */
+@keyframes breathe-line {
+  0%, 100% {
+    stroke-opacity: 0.15;
+  }
+  50% {
+    stroke-opacity: 0.25;
+  }
+}
+
+/* Breathing animation for thick grid lines and border */
+@keyframes breathe-line-thick {
+  0%, 100% {
+    stroke-opacity: 0.75;
+  }
+  50% {
+    stroke-opacity: 0.95;
+  }
+}
+
+/* Breathing animation for grid glow */
+@keyframes breathe-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05), 0 0 20px rgba(255, 255, 255, 0.03);
+  }
+  50% {
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 20px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Breathing animation for prefilled number text glow */
+@keyframes breathe-text-glow {
+  0%, 100% {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.2), 0 0 12px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Breathing animation for player-placed number text glow (cyan) */
+@keyframes breathe-cyan-glow {
+  0%, 100% {
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.45);
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(0, 255, 255, 0.75);
+  }
+}
+
+/* CSS classes for breathing animations */
+.breathing-line {
+  animation: breathe-line 5s ease-in-out infinite;
+}
+
+.breathing-line-thick {
+  animation: breathe-line-thick 5s ease-in-out infinite;
+}
+
+.breathing-glow {
+  animation: breathe-glow 5s ease-in-out infinite;
+}
+
+.breathing-text {
+  animation: breathe-text-glow 5s ease-in-out infinite;
+}
+
+.breathing-cyan-text {
+  animation: breathe-cyan-glow 5s ease-in-out infinite;
+}
+
+/* =========================================
+   23. BATTLEFIELD BLOB ANIMATIONS
    ========================================= */
 
 /* Battlefield blob animations - faster than lobby */

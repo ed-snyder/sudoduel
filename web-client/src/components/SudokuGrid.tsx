@@ -109,9 +109,6 @@ function SudokuGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
   
-  // Breathing animation state (5 second cycle)
-  const [breathPhase, setBreathPhase] = useState(0);
-  
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
   const isSelected = (row: number, col: number) => selectedCell?.row === row && selectedCell?.col === col;
 
@@ -189,15 +186,6 @@ function SudokuGrid({
     console.log(`[PERF] useEffect lastMoveResult END: ${(performance.now() - effectStart).toFixed(2)}ms`);
   }, [lastMoveResult, currentStreak]);
 
-  // Breathing animation - synchronized glow pulse
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBreathPhase((prev) => (prev + 0.02) % (Math.PI * 2));
-    }, 50); // 20fps is enough for smooth breathing
-    return () => clearInterval(interval);
-  }, []);
-
-
   const getCellPosition = (row: number, col: number) => {
     const cellPercent = 100 / 9;
     return {
@@ -205,14 +193,6 @@ function SudokuGrid({
       top: row * cellPercent + cellPercent / 2,
     };
   };
-
-  // Breathing: oscillates between 0.6 and 0.8 for thin lines, 0.8 and 1.0 for thick
-  const thinLineOpacity = 0.2 + Math.sin(breathPhase) * 0.05; // 0.15 to 0.25
-  const thickLineOpacity = 0.85 + Math.sin(breathPhase) * 0.1; // 0.75 to 0.95
-  const glowIntensity = 0.1 + Math.sin(breathPhase) * 0.05; // 0.05 to 0.15
-  const textGlowOpacity = 0.3 + Math.sin(breathPhase) * 0.1; // 0.2 to 0.4
-  const cyanGlowOpacity = 0.6 + Math.sin(breathPhase) * 0.15; // 0.45 to 0.75
-  const cellBreathFactor = 0.85 + Math.sin(breathPhase) * 0.15; // 0.7 to 1.0
 
   const renderEnd = performance.now();
   const renderTime = renderEnd - renderStart;
@@ -294,13 +274,11 @@ function SudokuGrid({
               cellBg = 'rgba(255, 51, 102, 0.4)';
               cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
             } else if (selected) {
-              const glowIntensity = 0.4 * cellBreathFactor;
-              cellBg = `rgba(0, 255, 255, ${0.35 * cellBreathFactor})`;
-              cellShadow = `inset 0 0 20px rgba(0, 255, 255, ${0.5 * cellBreathFactor}), 0 0 15px rgba(0, 255, 255, ${glowIntensity})`;
+              cellBg = 'rgba(0, 255, 255, 0.35)';
+              cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
             } else if (related) {
-              const glowIntensity = 0.15 * cellBreathFactor;
-              cellBg = `rgba(0, 255, 255, ${0.12 * cellBreathFactor})`;
-              cellShadow = `inset 0 0 10px rgba(0, 255, 255, ${glowIntensity})`;
+              cellBg = 'rgba(0, 255, 255, 0.12)';
+              cellShadow = 'inset 0 0 10px rgba(0, 255, 255, 0.15)';
             } else if (opponentScored) {
               cellBg = 'rgba(255, 0, 255, 0.15)';
             }
@@ -331,14 +309,11 @@ function SudokuGrid({
               >
                 {hasValue ? (
                   <span
-                    className={`font-heading font-bold ${isJustScored ? 'cell-score-pop' : ''}`}
+                    className={`font-heading font-bold ${isJustScored ? 'cell-score-pop' : ''} ${isInitial ? 'breathing-text' : 'breathing-cyan-text'}`}
                     style={{ 
                       fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
                       fontFamily: 'Industry, Orbitron, sans-serif',
                       color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
-                      textShadow: isInitial 
-                        ? `0 0 8px rgba(255, 255, 255, ${textGlowOpacity}), 0 0 16px rgba(255, 255, 255, ${textGlowOpacity * 0.5})`
-                        : `0 0 12px rgba(0, 255, 255, ${cyanGlowOpacity})`,
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
                       pointerEvents: 'none',
@@ -377,13 +352,8 @@ function SudokuGrid({
 
       {/* White wireframe grid lines overlay */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Glow container - CSS glow instead of SVG filter */}
-        <div 
-          className="absolute inset-0 rounded"
-          style={{
-            boxShadow: `inset 0 0 15px rgba(255, 255, 255, ${glowIntensity}), 0 0 20px rgba(255, 255, 255, ${glowIntensity * 0.7})`,
-          }}
-        />
+        {/* Glow container - CSS glow with breathing animation */}
+        <div className="absolute inset-0 rounded breathing-glow" />
         
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           {/* Outer border / perimeter */}
@@ -393,10 +363,11 @@ function SudokuGrid({
             width="calc(100% - 2px)"
             height="calc(100% - 2px)"
             fill="none"
-            stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
+            stroke="rgb(255, 255, 255)"
             strokeWidth={2}
             rx="4"
             ry="4"
+            className="breathing-line-thick"
           />
 
           {/* Thin horizontal lines - between cells (NOT at box boundaries) */}
@@ -407,8 +378,9 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke={`rgba(255, 255, 255, ${thinLineOpacity})`}
+              stroke="rgb(255, 255, 255)"
               strokeWidth={1}
+              className="breathing-line"
             />
           ))}
 
@@ -420,8 +392,9 @@ function SudokuGrid({
               y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke={`rgba(255, 255, 255, ${thinLineOpacity})`}
+              stroke="rgb(255, 255, 255)"
               strokeWidth={1}
+              className="breathing-line"
             />
           ))}
 
@@ -433,8 +406,9 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
+              stroke="rgb(255, 255, 255)"
               strokeWidth={2}
+              className="breathing-line-thick"
             />
           ))}
 
@@ -446,8 +420,9 @@ function SudokuGrid({
               y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
+              stroke="rgb(255, 255, 255)"
               strokeWidth={2}
+              className="breathing-line-thick"
             />
           ))}
         </svg>
