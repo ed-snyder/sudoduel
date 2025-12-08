@@ -11,21 +11,42 @@ function AppContent() {
   // Warm up renderer immediately on app load (earlier initialization)
   useEffect(() => {
     const warmUp = () => {
-      const div = document.createElement('div');
-      div.style.cssText = 'position:fixed;left:-9999px;visibility:hidden;';
-      div.innerHTML = `
-        <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:#00FFFF;text-shadow:0 0 12px rgba(0,255,255,0.7);">123456789</span>
-        <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:rgba(255,255,255,0.95);">123456789</span>
-      `;
-      document.body.appendChild(div);
-      void div.offsetHeight; // Force layout
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (div.parentNode) {
-            document.body.removeChild(div);
+      try {
+        // Ensure document.body exists before accessing it
+        if (!document.body) {
+          // Wait for DOM to be ready
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', warmUp, { once: true });
+            return;
           }
+          // If still not ready, try again on next frame
+          requestAnimationFrame(warmUp);
+          return;
+        }
+
+        const div = document.createElement('div');
+        div.style.cssText = 'position:fixed;left:-9999px;visibility:hidden;';
+        div.innerHTML = `
+          <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:#00FFFF;text-shadow:0 0 12px rgba(0,255,255,0.7);">123456789</span>
+          <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:rgba(255,255,255,0.95);">123456789</span>
+        `;
+        document.body.appendChild(div);
+        void div.offsetHeight; // Force layout
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            try {
+              if (div.parentNode) {
+                document.body.removeChild(div);
+              }
+            } catch (e) {
+              // Ignore cleanup errors
+            }
+          });
         });
-      });
+      } catch (e) {
+        // Silently fail - warm-up is non-critical
+        console.warn('[PERF] Warm-up failed:', e);
+      }
     };
     warmUp();
   }, []);

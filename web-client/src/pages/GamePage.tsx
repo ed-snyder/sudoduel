@@ -118,41 +118,57 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     if (warmUpDoneRef.current) return;
     warmUpDoneRef.current = true;
     
-    console.log('[PERF] Starting renderer warm-up...');
-    
-    // 1. Pre-warm font rendering by forcing layout calculation
-    const warmUpDiv = document.createElement('div');
-    warmUpDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
-    warmUpDiv.innerHTML = `
-      <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: rgba(255, 255, 255, 0.95);">123456789</span>
-      <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: #00FFFF; text-shadow: 0 0 12px rgba(0,255,255,0.7);">123456789</span>
-    `;
-    document.body.appendChild(warmUpDiv);
-    
-    // Force layout calculation
-    void warmUpDiv.offsetHeight;
-    
-    // 2. Pre-warm CSS animations by triggering them
-    warmUpDiv.innerHTML += `
-      <div class="breathing-line" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:1;"></div>
-      <div class="breathing-line-thick" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:2;"></div>
-      <div class="breathing-glow" style="width:100px;height:100px;"></div>
-      <span class="breathing-text" style="font-family: Industry, Orbitron, sans-serif; color: rgba(255, 255, 255, 0.95);">1</span>
-      <span class="breathing-cyan-text" style="font-family: Industry, Orbitron, sans-serif; color: #00FFFF;">1</span>
-    `;
-    
-    // Force style recalc
-    void warmUpDiv.offsetHeight;
-    
-    // Clean up after browser has processed
-    requestAnimationFrame(() => {
+    try {
+      // Ensure document.body exists before accessing it
+      if (!document.body) {
+        console.warn('[PERF] document.body not ready, skipping warm-up');
+        return;
+      }
+
+      console.log('[PERF] Starting renderer warm-up...');
+      
+      // 1. Pre-warm font rendering by forcing layout calculation
+      const warmUpDiv = document.createElement('div');
+      warmUpDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
+      warmUpDiv.innerHTML = `
+        <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: rgba(255, 255, 255, 0.95);">123456789</span>
+        <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: #00FFFF; text-shadow: 0 0 12px rgba(0,255,255,0.7);">123456789</span>
+      `;
+      document.body.appendChild(warmUpDiv);
+      
+      // Force layout calculation
+      void warmUpDiv.offsetHeight;
+      
+      // 2. Pre-warm CSS animations by triggering them
+      warmUpDiv.innerHTML += `
+        <div class="breathing-line" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:1;"></div>
+        <div class="breathing-line-thick" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:2;"></div>
+        <div class="breathing-glow" style="width:100px;height:100px;"></div>
+        <span class="breathing-text" style="font-family: Industry, Orbitron, sans-serif; color: rgba(255, 255, 255, 0.95);">1</span>
+        <span class="breathing-cyan-text" style="font-family: Industry, Orbitron, sans-serif; color: #00FFFF;">1</span>
+      `;
+      
+      // Force style recalc
+      void warmUpDiv.offsetHeight;
+      
+      // Clean up after browser has processed
       requestAnimationFrame(() => {
-        if (warmUpDiv.parentNode) {
-          document.body.removeChild(warmUpDiv);
-        }
-        console.log('[PERF] Renderer warm-up complete');
+        requestAnimationFrame(() => {
+          try {
+            if (warmUpDiv.parentNode) {
+              document.body.removeChild(warmUpDiv);
+            }
+            console.log('[PERF] Renderer warm-up complete');
+          } catch (e) {
+            // Ignore cleanup errors
+            console.warn('[PERF] Warm-up cleanup failed:', e);
+          }
+        });
       });
-    });
+    } catch (e) {
+      // Silently fail - warm-up is non-critical
+      console.warn('[PERF] Warm-up failed:', e);
+    }
   }, []);
 
   // Warm up renderer when game becomes 'playing'
