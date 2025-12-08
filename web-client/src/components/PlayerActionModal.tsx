@@ -51,7 +51,7 @@ export default function PlayerActionModal({
   };
 
   const handleReport = () => {
-    onReport(playerId);
+    onReport();
     onClose();
   };
 
