@@ -252,7 +252,7 @@ function SudokuGrid({
                       fontFamily: 'Industry, Orbitron, sans-serif',
                       color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
                       textShadow: isInitial 
-                        ? `0 0 ${8 + Math.sin(breathPhase) * 4}px rgba(255, 255, 255, ${0.3 + Math.sin(breathPhase) * 0.1}), 0 0 ${16 + Math.sin(breathPhase) * 4}px rgba(255, 255, 255, ${0.2 + Math.sin(breathPhase) * 0.05})`
+                        ? '0 0 8px rgba(255, 255, 255, 0.4), 0 0 16px rgba(255, 255, 255, 0.2)'
                         : `0 0 ${12 + Math.sin(breathPhase) * 4}px rgba(0, 255, 255, ${0.6 + Math.sin(breathPhase) * 0.15})`,
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
@@ -292,6 +292,14 @@ function SudokuGrid({
 
       {/* White wireframe grid lines overlay */}
       <div className="absolute inset-0 pointer-events-none">
+        {/* Glow container - CSS glow instead of SVG filter */}
+        <div 
+          className="absolute inset-0 rounded"
+          style={{
+            boxShadow: 'inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 20px rgba(255, 255, 255, 0.1)',
+          }}
+        />
+        
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           {/* Outer border / perimeter */}
           <rect
