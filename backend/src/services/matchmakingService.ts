@@ -74,7 +74,7 @@ export const MatchmakingService = {
       DEFAULT_LADDER_ID,
       playerRating,
       RATING_WINDOW,
-      req.userId // Pass userId to exclude blocked users
+      userId // Pass userId to exclude blocked users
     );
 
     if (opponent) {
