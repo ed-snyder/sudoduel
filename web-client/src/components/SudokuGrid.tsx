@@ -493,7 +493,8 @@ function SudokuGrid({
               strokeWidth={1}
               className="breathing-line"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: 1000,
+                strokeDasharray: '1000',
+                strokeDashoffset: '1000',
                 animation: 'draw-line 0.3s ease-out forwards',
                 animationDelay: `${0.7 + ([1,2,4,5,7,8].indexOf(i) * 0.05)}s`,
               } : {}}
@@ -512,7 +513,8 @@ function SudokuGrid({
               strokeWidth={1}
               className="breathing-line"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: 1000,
+                strokeDasharray: '1000',
+                strokeDashoffset: '1000',
                 animation: 'draw-line 0.3s ease-out forwards',
                 animationDelay: `${0.7 + ([1,2,4,5,7,8].indexOf(i) * 0.05)}s`,
               } : {}}
@@ -531,8 +533,9 @@ function SudokuGrid({
               strokeWidth={2}
               className="breathing-line-thick"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: 2000,
-                animation: 'draw-line 0.5s ease-out forwards',
+                strokeDasharray: '2000',
+                strokeDashoffset: '2000',
+                animation: 'draw-line-border 0.5s ease-out forwards',
                 animationDelay: `${0.6 + ([3,6].indexOf(i) * 0.1)}s`,
               } : {}}
             />
@@ -550,8 +553,9 @@ function SudokuGrid({
               strokeWidth={2}
               className="breathing-line-thick"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: 2000,
-                animation: 'draw-line 0.5s ease-out forwards',
+                strokeDasharray: '2000',
+                strokeDashoffset: '2000',
+                animation: 'draw-line-border 0.5s ease-out forwards',
                 animationDelay: `${0.6 + ([3,6].indexOf(i) * 0.1)}s`,
               } : {}}
             />
