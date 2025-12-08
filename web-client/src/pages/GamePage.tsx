@@ -1254,8 +1254,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Create new grid with the number placed
         const newGrid = myGrid.map((r) => [...r]);
         newGrid[row][col] = num;
+        const beforeSetState = performance.now();
         setMyGrid(newGrid);
-        console.log(`[PERF] After setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
+        console.log(`[PERF] After setMyGrid (scheduled): ${(performance.now() - startTime).toFixed(2)}ms`);
+        
+        // Measure when React actually commits the render
+        requestAnimationFrame(() => {
+          const afterRAF = performance.now();
+          console.log(`[PERF] After requestAnimationFrame (paint scheduled): ${(afterRAF - startTime).toFixed(2)}ms (${(afterRAF - beforeSetState).toFixed(2)}ms after setState)`);
+          
+          requestAnimationFrame(() => {
+            const afterSecondRAF = performance.now();
+            console.log(`[PERF] After second requestAnimationFrame (painted): ${(afterSecondRAF - startTime).toFixed(2)}ms (${(afterSecondRAF - beforeSetState).toFixed(2)}ms after setState)`);
+          });
+        });
       
         // IMMEDIATELY check for completions using the NEW grid state (not stale myGrid)
         // This ensures the flash happens instantly, not after server response

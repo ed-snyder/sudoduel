@@ -214,7 +214,33 @@ function SudokuGrid({
   const cyanGlowOpacity = 0.6 + Math.sin(breathPhase) * 0.15; // 0.45 to 0.75
   const cellBreathFactor = 0.85 + Math.sin(breathPhase) * 0.15; // 0.7 to 1.0
 
-  console.log(`[PERF] SudokuGrid render took: ${(performance.now() - renderStart).toFixed(2)}ms`);
+  const renderEnd = performance.now();
+  const renderTime = renderEnd - renderStart;
+  console.log(`[PERF] SudokuGrid render took: ${renderTime.toFixed(2)}ms`);
+  
+  // Track when grid changes (cell placement) actually commits to DOM
+  const prevGridRef = useRef(grid);
+  useEffect(() => {
+    // Only track if grid actually changed (cell was placed)
+    const gridChanged = prevGridRef.current !== grid;
+    prevGridRef.current = grid;
+    
+    if (gridChanged) {
+      const commitTime = performance.now();
+      console.log(`[PERF] SudokuGrid GRID CHANGE COMMITTED to DOM: ${commitTime.toFixed(2)}ms (render started at ${renderStart.toFixed(2)}ms)`);
+      
+      // Measure paint time
+      requestAnimationFrame(() => {
+        const paintScheduled = performance.now();
+        console.log(`[PERF] SudokuGrid GRID CHANGE paint SCHEDULED: ${paintScheduled.toFixed(2)}ms`);
+        
+        requestAnimationFrame(() => {
+          const paintComplete = performance.now();
+          console.log(`[PERF] SudokuGrid GRID CHANGE paint COMPLETE: ${paintComplete.toFixed(2)}ms (${(paintComplete - renderStart).toFixed(2)}ms from render start)`);
+        });
+      });
+    }
+  }, [grid, renderStart]);
 
   return (
     <div
