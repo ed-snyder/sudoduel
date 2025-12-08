@@ -356,6 +356,19 @@ function SudokuGrid({
         {/* Glow container - CSS glow with breathing animation */}
         <div className="absolute inset-0 rounded breathing-glow" />
         
+        {/* Inner shadow for 3D recessed effect */}
+        <div 
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{
+            boxShadow: `
+              inset 0 2px 10px rgba(0, 0, 0, 0.5),
+              inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+              inset 3px 0 8px rgba(0, 0, 0, 0.25),
+              inset -3px 0 8px rgba(0, 0, 0, 0.25)
+            `,
+          }}
+        />
+        
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           {/* Outer border / perimeter */}
           <rect
