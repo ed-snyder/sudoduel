@@ -136,11 +136,12 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch global rank
+  // Fetch global rank - refresh when user data changes (e.g., after a game)
   useEffect(() => {
     const loadRank = async () => {
       if (!token) return;
       
+      setRankLoading(true);
       try {
         const data = await playerAPI.getRank();
         setRankData(data);
@@ -152,7 +153,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
     };
     
     loadRank();
-  }, [token]);
+  }, [token, user?.rating]); // Refresh when rating changes
 
   const handleAcceptMatchRequest = async () => {
     if (!incomingMatchRequest || matchRequestActionLoading) return;
