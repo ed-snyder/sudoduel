@@ -1968,20 +1968,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         </div>
       </div>
 
-      {/* Depth of field blur behind grid */}
-      <div 
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        style={{
-          width: 'min(100vw - 16px, 420px)',
-          height: 'min(100vw - 16px, 420px)',
-          background: 'radial-gradient(ellipse at center, rgba(13, 2, 33, 0.85) 30%, rgba(13, 2, 33, 0.4) 60%, transparent 80%)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          borderRadius: '16px',
-          zIndex: 5,
-        }}
-      />
-
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
         <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ pointerEvents: 'auto' }}>
