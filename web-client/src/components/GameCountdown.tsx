@@ -4,10 +4,6 @@ import './GameCountdown.css';
 export type CountdownPhase = 'hidden' | 'countdown' | 'go' | 'complete';
 
 interface GameCountdownProps {
-  playerName: string;
-  playerRating: number;
-  opponentName: string;
-  opponentRating: number;
   onPhaseChange?: (phase: CountdownPhase) => void;
   onCountdownNumberChange?: (number: number | null) => void;
   onComplete?: () => void;
@@ -15,16 +11,12 @@ interface GameCountdownProps {
 }
 
 export default function GameCountdown({
-  playerName,
-  playerRating,
-  opponentName,
-  opponentRating,
   onPhaseChange,
   onCountdownNumberChange,
   onComplete,
   isActive,
 }: GameCountdownProps) {
-  const [phase, setPhase] = useState<CountdownPhase>('hidden');
+  const [_phase, setPhase] = useState<CountdownPhase>('hidden');
   const hasStartedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
