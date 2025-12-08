@@ -1304,10 +1304,10 @@ export default function ResultScreen({
           onClose={() => setShowReportModal(false)}
           playerName={opponentName}
           playerId={opponentResult.playerId}
-          onSubmitReport={async (playerId: number, reason: string, details?: string) => {
-            if (!token) throw new Error('Not authenticated');
-            await reportUser(token, playerId, reason, details);
-          }}
+        onSubmitReport={async (playerId: number, reason: string) => {
+          if (!token) throw new Error('Not authenticated');
+          await reportUser(token, playerId, reason);
+        }}
         />
       )}
     </div>

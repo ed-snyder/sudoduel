@@ -5,7 +5,7 @@ interface ReportModalProps {
   onClose: () => void;
   playerName: string;
   playerId: number;
-  onSubmitReport: (playerId: number, reason: string, details?: string) => Promise<void>;
+  onSubmitReport: (playerId: number, reason: string) => Promise<void>;
 }
 
 const REPORT_REASONS = [
@@ -36,7 +36,7 @@ export default function ReportModal({
     setErrorMessage('');
     
     try {
-      await onSubmitReport(playerId, selectedReason, details.trim() || undefined);
+      await onSubmitReport(playerId, selectedReason);
       setStatus('success');
       // Auto-close after success
       setTimeout(() => {
@@ -55,7 +55,6 @@ export default function ReportModal({
     // Reset state after close
     setTimeout(() => {
       setSelectedReason(null);
-      setDetails('');
       setStatus('idle');
       setErrorMessage('');
     }, 200);
@@ -141,28 +140,6 @@ export default function ReportModal({
                     </div>
                   </button>
                 ))}
-              </div>
-              
-              {/* Optional Details */}
-              <div className="space-y-2">
-                <label className="font-body text-sm text-secondary">
-                  Additional details (optional)
-                </label>
-                <textarea
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                  placeholder="Describe what happened..."
-                  maxLength={500}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl font-body text-sm text-primary placeholder-muted resize-none"
-                  style={{
-                    background: 'rgba(26, 6, 64, 0.8)',
-                    border: '2px solid rgba(139, 0, 255, 0.3)',
-                  }}
-                />
-                <div className="text-right font-mono text-xs text-muted">
-                  {details.length}/500
-                </div>
               </div>
               
               {/* Submit Button */}

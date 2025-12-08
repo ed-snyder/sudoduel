@@ -26,12 +26,11 @@ export async function sendFriendRequest(token: string, targetUserId: number): Pr
   return data;
 }
 
-// Report a user
+// Report a user - simplified without details
 export async function reportUser(
   token: string, 
   targetUserId: number, 
-  reason: string, 
-  details?: string
+  reason: string
 ): Promise<ApiResponse> {
   const response = await fetch(`${API_URL}/api/reports`, {
     method: 'POST',
@@ -42,7 +41,6 @@ export async function reportUser(
     body: JSON.stringify({ 
       target_user_id: targetUserId,
       reason,
-      details: details || null,
     }),
   });
   

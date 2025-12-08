@@ -90,17 +90,13 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
   };
 
   const handleOpenReport = (playerId: number) => {
-    if (selectedPlayer) {
-      setReportPlayerId(playerId);
-      setReportPlayerName(selectedPlayer.name);
-      setShowPlayerModal(false);
-      setShowReportModal(true);
-    }
+    setShowPlayerModal(false);
+    setShowReportModal(true);
   };
 
-  const handleSubmitReport = async (playerId: number, reason: string, details?: string) => {
+  const handleSubmitReport = async (playerId: number, reason: string) => {
     if (!token) throw new Error('Not authenticated');
-    await reportUser(token, playerId, reason, details);
+    await reportUser(token, playerId, reason);
   };
 
   if (!isOpen) return null;
@@ -149,9 +145,11 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
           ) : (
             <div className="space-y-2">
               {matches.map((match) => (
-                <div
+                <button
                   key={match.match_id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-elevated/50 border border-grid-line/50 hover:border-player/30 transition-all"
+                  onClick={() => handlePlayerClick(match.opponent_id, match.opponent_name)}
+                  disabled={match.opponent_id === user?.id}
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-lg bg-elevated/50 border border-grid-line/50 hover:border-player/30 transition-all touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {/* Result badge */}
                   <div
@@ -170,13 +168,9 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-display font-black text-primary">vs </span>
-                      <button
-                        onClick={() => handlePlayerClick(match.opponent_id, match.opponent_name)}
-                        className="font-display font-black text-opponent hover:underline text-left truncate disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={match.opponent_id === user?.id}
-                      >
+                      <span className="font-display font-black text-opponent truncate">
                         {match.opponent_name}
-                      </button>
+                      </span>
                       <span className="text-xs text-muted font-display">{formatDate(match.date)}</span>
                     </div>
                     <div className="text-xs text-muted font-display mt-1">
@@ -197,7 +191,7 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
                     {match.rating_change > 0 ? '+' : ''}
                     {Math.round(match.rating_change)}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -220,17 +214,19 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
       )}
 
       {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => {
-          setShowReportModal(false);
-          setReportPlayerId(null);
-          setReportPlayerName('');
-        }}
-        playerName={reportPlayerName}
-        playerId={reportPlayerId || 0}
-        onSubmitReport={handleSubmitReport}
-      />
+      {selectedPlayer && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportPlayerId(null);
+            setReportPlayerName('');
+          }}
+          playerName={selectedPlayer.name}
+          playerId={selectedPlayer.id}
+          onSubmitReport={handleSubmitReport}
+        />
+      )}
     </div>
   );
 }
