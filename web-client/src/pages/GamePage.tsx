@@ -2040,10 +2040,180 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           {showGameCountdown && countdownPhase !== 'hidden' && countdownPhase !== 'complete' ? (
             <div className="countdown-number-container">
               {countdownPhase === 'countdown' && countdownNumber !== null && (
-                <span className="countdown-number" key={countdownNumber}>{countdownNumber}!</span>
+                <div className="countdown-text-container" key={countdownNumber}>
+                  {/* Outer glow layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '8px #00FFFF',
+                      filter: 'blur(12px)',
+                      opacity: 0.5,
+                    }}
+                    aria-hidden="true"
+                  >
+                    {countdownNumber}!
+                  </span>
+                  {/* Inner glow layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '5px #00FFFF',
+                      filter: 'blur(4px)',
+                      opacity: 0.7,
+                    }}
+                    aria-hidden="true"
+                  >
+                    {countdownNumber}!
+                  </span>
+                  {/* White stroke layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '3px rgba(255,255,255,0.9)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {countdownNumber}!
+                  </span>
+                  {/* Fill gradient - main visible text */}
+                  <span
+                    className="relative countdown-text-fill"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      background: 'linear-gradient(180deg, #FF7FFF 0%, #FF00FF 50%, #B300B3 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}
+                  >
+                    {countdownNumber}!
+                  </span>
+                  {/* Shimmer overlay */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      background: 'linear-gradient(120deg, transparent 0%, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%, transparent 100%)',
+                      backgroundSize: '200% 100%',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      animation: 'logo-shimmer 3s ease-in-out infinite',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {countdownNumber}!
+                  </span>
+                </div>
               )}
               {countdownPhase === 'go' && (
-                <span className="countdown-number countdown-number-go">GO!</span>
+                <div className="countdown-text-container countdown-text-go">
+                  {/* Outer glow layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '8px #00FFFF',
+                      filter: 'blur(12px)',
+                      opacity: 0.5,
+                    }}
+                    aria-hidden="true"
+                  >
+                    GO!
+                  </span>
+                  {/* Inner glow layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '5px #00FFFF',
+                      filter: 'blur(4px)',
+                      opacity: 0.7,
+                    }}
+                    aria-hidden="true"
+                  >
+                    GO!
+                  </span>
+                  {/* White stroke layer */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      color: 'transparent',
+                      WebkitTextStroke: '3px rgba(255,255,255,0.9)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    GO!
+                  </span>
+                  {/* Fill gradient - main visible text */}
+                  <span
+                    className="relative countdown-text-fill"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      background: 'linear-gradient(180deg, #FF7FFF 0%, #FF00FF 50%, #B300B3 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}
+                  >
+                    GO!
+                  </span>
+                  {/* Shimmer overlay */}
+                  <span
+                    className="absolute inset-0 countdown-text-layer"
+                    style={{
+                      fontFamily: "'Industry', 'Orbitron', sans-serif",
+                      fontWeight: 900,
+                      fontStyle: 'italic',
+                      letterSpacing: '-0.02em',
+                      background: 'linear-gradient(120deg, transparent 0%, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%, transparent 100%)',
+                      backgroundSize: '200% 100%',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      animation: 'logo-shimmer 3s ease-in-out infinite',
+                    }}
+                    aria-hidden="true"
+                  >
+                    GO!
+                  </span>
+                </div>
               )}
             </div>
           ) : bannerMessage ? (
