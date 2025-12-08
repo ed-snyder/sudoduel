@@ -1298,16 +1298,18 @@ export default function ResultScreen({
       )}
 
       {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        playerName={opponentName}
-        playerId={opponentResult.playerId}
-        onSubmitReport={async (playerId: number, reason: string, details?: string) => {
-          if (!token) throw new Error('Not authenticated');
-          await reportUser(token, playerId, reason, details);
-        }}
-      />
+      {token && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          playerName={opponentName}
+          playerId={opponentResult.playerId}
+          onSubmitReport={async (playerId: number, reason: string, details?: string) => {
+            if (!token) throw new Error('Not authenticated');
+            await reportUser(token, playerId, reason, details);
+          }}
+        />
+      )}
     </div>
   );
 }
