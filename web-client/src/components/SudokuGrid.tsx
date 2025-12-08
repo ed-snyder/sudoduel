@@ -343,8 +343,8 @@ function SudokuGrid({
             filter="url(#softGlow)"
           />
 
-          {/* Thin white lines - between regular cells */}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
+          {/* Thin lines - between cells (ALL 8 positions) */}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
               x1="0"
@@ -356,7 +356,7 @@ function SudokuGrid({
               strokeOpacity={breathMultiplier}
             />
           ))}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <line
               key={`v-thin-${i}`}
               x1={`${(i / 9) * 100}%`}
@@ -369,7 +369,7 @@ function SudokuGrid({
             />
           ))}
 
-          {/* Thick white lines - 3x3 box boundaries */}
+          {/* Thick lines - 3x3 box boundaries (positions 3 and 6) - overlay on top of thin lines */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
