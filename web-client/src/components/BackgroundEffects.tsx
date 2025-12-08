@@ -54,30 +54,6 @@ export default function BackgroundEffects() {
         />
       </div>
 
-      {/* Animated grid - hue and opacity shift with phase */}
-      <div 
-        className="absolute inset-0 transition-all duration-500"
-        style={{
-          backgroundImage: `
-            linear-gradient(hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px),
-            linear-gradient(90deg, hsla(${gridHue}, 80%, 50%, ${gridOpacity}) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-        }}
-      />
-
-      {/* Secondary grid layer - offset timing for depth */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(hsla(${(gridHue + 40) % 360}, 70%, 50%, ${gridOpacity * 0.4}) 1px, transparent 1px),
-            linear-gradient(90deg, hsla(${(gridHue + 40) % 360}, 70%, 50%, ${gridOpacity * 0.4}) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-          transform: 'translate(25px, 25px)',
-        }}
-      />
     </div>
   );
 }
