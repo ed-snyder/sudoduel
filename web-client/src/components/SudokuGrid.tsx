@@ -69,9 +69,6 @@ function SudokuGrid({
   // Breathing animation state (5 second cycle)
   const [breathPhase, setBreathPhase] = useState(0);
   
-  // Shimmer animation state (8 second travel time)
-  const [shimmerPosition, setShimmerPosition] = useState(-20);
-  
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
   const isSelected = (row: number, col: number) => selectedCell?.row === row && selectedCell?.col === col;
 
@@ -148,16 +145,6 @@ function SudokuGrid({
     return () => clearInterval(interval);
   }, []);
 
-  // Shimmer animation - 8 second travel time
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShimmerPosition((prev) => {
-        const next = prev + 0.4;
-        return next > 120 ? -20 : next;
-      });
-    }, 32); // ~30fps
-    return () => clearInterval(interval);
-  }, []);
 
   const getCellPosition = (row: number, col: number) => {
     const cellPercent = 100 / 9;
@@ -167,8 +154,7 @@ function SudokuGrid({
     };
   };
 
-  // Calculate breath multipliers (creates 60% → 80% → 60% pulse)
-  const breathMultiplier = 0.7 + Math.sin(breathPhase) * 0.1;
+  // Calculate breath multiplier for glow effects (creates 60% → 100% → 60% pulse)
   const glowBreathMultiplier = 0.8 + Math.sin(breathPhase) * 0.2;
 
   return (
@@ -307,153 +293,70 @@ function SudokuGrid({
       {/* White wireframe grid lines overlay */}
       <div className="absolute inset-0 pointer-events-none">
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-          <defs>
-            {/* Soft glow for thick lines and border */}
-            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            
-            {/* Shimmer gradient - will be animated */}
-            <linearGradient id="shimmerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="white" stopOpacity="0" />
-              <stop offset={`${Math.max(0, shimmerPosition - 10)}%`} stopColor="white" stopOpacity="0" />
-              <stop offset={`${shimmerPosition}%`} stopColor="white" stopOpacity="0.8" />
-              <stop offset={`${Math.min(100, shimmerPosition + 10)}%`} stopColor="white" stopOpacity="0" />
-              <stop offset="100%" stopColor="white" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-
-          {/* 1. Outer border / perimeter */}
+          {/* Outer border / perimeter */}
           <rect
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
+            x="1"
+            y="1"
+            width="calc(100% - 2px)"
+            height="calc(100% - 2px)"
             fill="none"
-            stroke="rgba(255, 255, 255, 1)"
+            stroke="rgba(255, 255, 255, 0.9)"
             strokeWidth={2}
-            strokeOpacity={1}
             rx="4"
             ry="4"
-            filter="url(#softGlow)"
           />
 
-          {/* 3. Thin internal lines - cell boundaries (positions 1, 2, 4, 5, 7, 8) - SKIP 3 and 6 where thick lines go */}
+          {/* Thin horizontal lines - between cells (NOT at box boundaries) */}
           {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
-              x1="0"
+              x1="0%"
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth={1}
-              strokeOpacity={breathMultiplier}
             />
           ))}
+
+          {/* Thin vertical lines - between cells (NOT at box boundaries) */}
           {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`v-thin-${i}`}
               x1={`${(i / 9) * 100}%`}
-              y1="0"
+              y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="rgba(255, 255, 255, 0.25)"
               strokeWidth={1}
-              strokeOpacity={breathMultiplier}
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border */}
+          {/* Thick horizontal lines - 3x3 box boundaries */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
-              x1="0"
+              x1="0%"
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="rgba(255, 255, 255, 1)"
+              stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth={2}
-              strokeOpacity={1}
-              filter="url(#softGlow)"
             />
           ))}
+
+          {/* Thick vertical lines - 3x3 box boundaries */}
           {[3, 6].map((i) => (
             <line
               key={`v-thick-${i}`}
               x1={`${(i / 9) * 100}%`}
-              y1="0"
+              y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="rgba(255, 255, 255, 1)"
-              strokeWidth={2}
-              strokeOpacity={1}
-              filter="url(#softGlow)"
-            />
-          ))}
-
-          {/* Shimmer overlay - renders on top of THIN lines only (skip positions 3,6 where thick lines are) */}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
-            <line
-              key={`h-shimmer-${i}`}
-              x1="0"
-              y1={`${(i / 9) * 100}%`}
-              x2="100%"
-              y2={`${(i / 9) * 100}%`}
-              stroke="url(#shimmerGradient)"
-              strokeWidth={1}
-            />
-          ))}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
-            <line
-              key={`v-shimmer-${i}`}
-              x1={`${(i / 9) * 100}%`}
-              y1="0"
-              x2={`${(i / 9) * 100}%`}
-              y2="100%"
-              stroke="url(#shimmerGradient)"
-              strokeWidth={1}
-            />
-          ))}
-          {/* Shimmer overlay for thick lines (positions 3,6) - renders on top of thick lines */}
-          {[3, 6].map((i) => (
-            <line
-              key={`h-shimmer-thick-${i}`}
-              x1="0"
-              y1={`${(i / 9) * 100}%`}
-              x2="100%"
-              y2={`${(i / 9) * 100}%`}
-              stroke="url(#shimmerGradient)"
+              stroke="rgba(255, 255, 255, 0.9)"
               strokeWidth={2}
             />
           ))}
-          {[3, 6].map((i) => (
-            <line
-              key={`v-shimmer-thick-${i}`}
-              x1={`${(i / 9) * 100}%`}
-              y1="0"
-              x2={`${(i / 9) * 100}%`}
-              y2="100%"
-              stroke="url(#shimmerGradient)"
-              strokeWidth={2}
-            />
-          ))}
-          {/* Border shimmer */}
-          <rect
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
-            fill="none"
-            stroke="url(#shimmerGradient)"
-            strokeWidth={2}
-            rx="4"
-            ry="4"
-          />
         </svg>
       </div>
 
