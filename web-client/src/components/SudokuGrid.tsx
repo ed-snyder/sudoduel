@@ -292,8 +292,8 @@ function SudokuGrid({
               cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
             } else if (isAlmostComplete && !hasValue) {
               // Almost complete - second priority (only for empty cells)
-              // Fill cell completely with green background
-              cellBg = 'rgba(0, 255, 136, 0.3)';
+              // Fill cell completely with green background - higher opacity for more green
+              cellBg = 'rgba(0, 255, 136, 0.5)';
               cellBorder = '2px solid #00FF88';
               cellClassName = 'almost-complete-glow';
             } else if (related) {
@@ -328,6 +328,7 @@ function SudokuGrid({
                   background: cellBg,
                   boxShadow: cellShadow,
                   border: cellBorder,
+                  zIndex: isAlmostComplete ? 20 : 1,
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
                   WebkitTapHighlightColor: 'transparent',
@@ -377,7 +378,7 @@ function SudokuGrid({
       </div>
 
       {/* White wireframe grid lines overlay */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
         {/* Glow container - CSS glow with breathing animation */}
         <div className="absolute inset-0 rounded breathing-glow" />
         

@@ -1916,27 +1916,34 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {/* Player emote - absolutely positioned to the right of timer, closer to center */}
               {myEmote && (
                 <div 
-                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
                   style={{ 
                     zIndex: 10,
                     left: '100%',
                     marginLeft: '25px',
-                    top: '12%',
+                    top: '50%',
                     transform: 'translateY(-50%)',
-                    lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    letterSpacing: '-0.1em',
                     background: 'rgba(255, 255, 255, 0.95)',
                     padding: '4px 8px',
                     borderRadius: '8px',
                     boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
+                    height: 'calc(1.25rem + 0.5rem)',
                   }}
                 >
-                  {myEmote}
+                  <span style={{ 
+                    fontSize: 'clamp(1rem, 4vw, 1.25rem)',
+                    lineHeight: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {myEmote}
+                  </span>
                 </div>
               )}
             </div>
@@ -1945,27 +1952,34 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {/* Opponent emote - absolutely positioned to the left of timer, closer to center */}
               {opponentEmote && (
                 <div 
-                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
                   style={{ 
                     zIndex: 10,
                     right: '100%',
                     marginRight: '25px',
-                    top: '12%',
+                    top: '50%',
                     transform: 'translateY(-50%)',
-                    lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    letterSpacing: '-0.1em',
                     background: 'rgba(255, 255, 255, 0.95)',
                     padding: '4px 8px',
                     borderRadius: '8px',
                     boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
+                    height: 'calc(1.25rem + 0.5rem)',
                   }}
                 >
-                  {opponentEmote}
+                  <span style={{ 
+                    fontSize: 'clamp(1rem, 4vw, 1.25rem)',
+                    lineHeight: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {opponentEmote}
+                  </span>
                 </div>
               )}
               <div className={`px-2 py-1 rounded-lg border-2 ${

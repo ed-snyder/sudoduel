@@ -347,6 +347,21 @@ html, body, #root {
 
 .almost-complete-glow {
   animation: almost-complete-pulse 1s ease-in-out infinite;
+  position: relative;
+}
+
+.almost-complete-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid #00FF88;
+  border-radius: 2px;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: 
+    0 0 12px rgba(0, 255, 136, 0.6),
+    0 0 20px rgba(0, 255, 136, 0.4);
+  animation: almost-complete-pulse 1s ease-in-out infinite;
 }
 
 /* Event banner animation - subtle scale pulse + fade in */
