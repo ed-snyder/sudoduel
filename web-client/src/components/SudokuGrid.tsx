@@ -169,7 +169,6 @@ function SudokuGrid({
 
   // Calculate breath multipliers (creates 60% → 80% → 60% pulse)
   const breathMultiplier = 0.7 + Math.sin(breathPhase) * 0.1;
-  const thickBreathMultiplier = 0.85 + Math.sin(breathPhase) * 0.1;
   const glowBreathMultiplier = 0.8 + Math.sin(breathPhase) * 0.2;
 
   return (
