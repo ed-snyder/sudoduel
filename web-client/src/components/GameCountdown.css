@@ -124,15 +124,15 @@
   will-change: stroke-dashoffset;
 }
 
-/* NUMBER SLAM ANIMATION */
+/* NUMBER SLAM ANIMATION - Hard impact, minimal bounce */
 .cell-number-animate {
   opacity: 0;
-  transform: translateY(-200%) scale(1.2);
+  transform: translateY(-300%) scale(1.3);  /* Start higher, slightly larger */
   will-change: transform, opacity;
 }
 
 .cell-number-slam {
-  animation: number-slam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: number-slam 0.18s cubic-bezier(0.2, 0, 0.8, 1) forwards;  /* Faster, harder easing */
 }
 
 /* KEYFRAMES */
@@ -184,20 +184,31 @@
 }
 
 @keyframes draw-line {
-  from { stroke-dashoffset: 1000; }
+  from { stroke-dashoffset: 500; }
   to { stroke-dashoffset: 0; }
 }
 
-@keyframes draw-line-border {
+@keyframes draw-line-long {
   from { stroke-dashoffset: 2000; }
   to { stroke-dashoffset: 0; }
 }
 
 @keyframes number-slam {
-  0% { opacity: 0; transform: translateY(-200%) scale(1.2); }
-  60% { opacity: 1; transform: translateY(10%) scale(0.95); }
-  80% { transform: translateY(-5%) scale(1.02); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(-300%) scale(1.3);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(3%) scale(0.98);  /* Minimal overshoot - hard stop */
+  }
+  85% {
+    transform: translateY(-1%) scale(1.01);  /* Tiny rebound */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .grid-drawing-glow {

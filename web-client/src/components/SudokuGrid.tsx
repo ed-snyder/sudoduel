@@ -153,15 +153,19 @@ function SudokuGrid({
   useEffect(() => {
     if (!animateIn) return;
 
+    // Grid lines complete at ~0.9s (faster drawing)
     const gridTimer = setTimeout(() => {
       console.log('[GRID ANIM] Grid lines complete');
       setGridAnimationComplete(true);
-    }, 1200);
+    }, 900);
 
+    // Numbers complete at ~2.0s
+    // 0.4s start + (40 prefilled cells * 0.025s) + 0.18s animation = ~1.6s
+    // Add buffer for safety
     const numbersTimer = setTimeout(() => {
       console.log('[GRID ANIM] Numbers complete');
       setNumbersAnimationComplete(true);
-    }, 2500);
+    }, 2000);
 
     return () => {
       clearTimeout(gridTimer);
@@ -176,8 +180,9 @@ function SudokuGrid({
     const cellInfo = prefilledCells.find(c => c.row === row && c.col === col);
     if (!cellInfo) return null;
     
-    // Start after grid finishes drawing (~1.0s), stagger by 0.04s per cell
-    return 1.0 + (cellInfo.index * 0.04);
+    // Start at 0.4s (while grid is still drawing), rapid succession with 0.025s between each
+    // This creates an overlapping effect where numbers slam in as grid draws
+    return 0.4 + (cellInfo.index * 0.025);
   }, [animateIn, numbersAnimationComplete, prefilledCells]);
   
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
@@ -337,7 +342,7 @@ function SudokuGrid({
             const isAlmostComplete = almostCompleteCells.has(cellKey);
             const isError = isErrorFlash(rowIndex, colIndex);
 
-            // IMPORTANT: During countdown animation, don't show any highlights except for initial cells
+            // IMPORTANT: During countdown animation, ALL cells are transparent - no highlights whatsoever
             const isAnimatingIn = animateIn && !numbersAnimationComplete;
 
             // Cell background - transparent by default, bright cyan for selection
@@ -347,40 +352,42 @@ function SudokuGrid({
             let cellClassName = '';
             let cellBorder = 'none';
             
-            // Only calculate "related" highlighting if NOT animating and a cell is selected
-            const related = !isAnimatingIn && selectedCell && hasSelectedValue && (
-              (isSameNumberAsSelected(rowIndex, colIndex) && hasValue) ||
-              isSameBox(rowIndex, colIndex) ||
-              isSameRowOrCol(rowIndex, colIndex)
-            );
-            
-            if (lockedOut) {
-              cellBg = 'rgba(100, 100, 100, 0.2)';
-            } else if (isError) {
-              cellBg = 'rgba(255, 51, 102, 0.4)';
-              cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
-            } else if (selected && !isAnimatingIn) {
-              // Selected cell - highest priority (don't show during animation)
-              cellBg = 'rgba(0, 255, 255, 0.35)';
-              cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
-            } else if (isAlmostComplete && !hasValue && !isAnimatingIn) {
-              // Almost complete - second priority (only for empty cells, not during animation)
-              // Fill cell completely with green background - higher opacity for more green
-              cellBg = 'rgba(0, 255, 136, 0.5)';
-              cellBorder = '2px solid #00FF88';
-              cellClassName = 'almost-complete-glow';
-            } else if (related) {
-              // Enhanced highlighting for related cells (same row/col/box or matching number)
-              // Uniform solid background - no gradient or inset shadows
-              // related already checks !isAnimatingIn
-              cellBg = 'rgba(0, 255, 255, 0.35)';
-              cellClassName = 'selected-number-highlight';
-            } else if (opponentScored && !isAnimatingIn) {
-              // Bright magenta static effect for opponent-placed cells (not during animation)
-              cellBg = 'rgba(255, 0, 255, 0.4)';
-              cellClassName = 'opponent-scored-glow';
+            // ONLY apply cell styling if NOT animating
+            if (!isAnimatingIn) {
+              // Only calculate "related" highlighting if NOT animating and a cell is selected
+              const related = selectedCell && hasSelectedValue && (
+                (isSameNumberAsSelected(rowIndex, colIndex) && hasValue) ||
+                isSameBox(rowIndex, colIndex) ||
+                isSameRowOrCol(rowIndex, colIndex)
+              );
+              
+              if (lockedOut) {
+                cellBg = 'rgba(100, 100, 100, 0.2)';
+              } else if (isError) {
+                cellBg = 'rgba(255, 51, 102, 0.4)';
+                cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
+              } else if (selected) {
+                // Selected cell - highest priority
+                cellBg = 'rgba(0, 255, 255, 0.35)';
+                cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
+              } else if (isAlmostComplete && !hasValue) {
+                // Almost complete - second priority (only for empty cells)
+                // Fill cell completely with green background - higher opacity for more green
+                cellBg = 'rgba(0, 255, 136, 0.5)';
+                cellBorder = '2px solid #00FF88';
+                cellClassName = 'almost-complete-glow';
+              } else if (related) {
+                // Enhanced highlighting for related cells (same row/col/box or matching number)
+                // Uniform solid background - no gradient or inset shadows
+                cellBg = 'rgba(0, 255, 255, 0.35)';
+                cellClassName = 'selected-number-highlight';
+              } else if (opponentScored) {
+                // Bright magenta static effect for opponent-placed cells
+                cellBg = 'rgba(255, 0, 255, 0.4)';
+                cellClassName = 'opponent-scored-glow';
+              }
             }
-            // else cellBg stays 'transparent'
+            // If isAnimatingIn is true, cellBg stays 'transparent', cellShadow stays 'none'
 
             return (
               <button
@@ -502,7 +509,7 @@ function SudokuGrid({
             style={animateIn && !gridAnimationComplete ? {
               strokeDasharray: '2000',
               strokeDashoffset: '2000',
-              animation: 'draw-line-border 0.6s ease-out forwards',
+              animation: 'draw-line-long 0.6s ease-out forwards',
             } : {}}
           />
 
@@ -518,10 +525,10 @@ function SudokuGrid({
               strokeWidth={1}
               className="breathing-line"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: '1000',
-                strokeDashoffset: '1000',
-                animation: 'draw-line 0.3s ease-out forwards',
-                animationDelay: `${0.3 + (idx * 0.08)}s`,
+                strokeDasharray: '500',
+                strokeDashoffset: '500',
+                animation: 'draw-line 0.25s ease-out forwards',
+                animationDelay: `${0.3 + (idx * 0.06)}s`,
               } : {}}
             />
           ))}
@@ -538,10 +545,10 @@ function SudokuGrid({
               strokeWidth={1}
               className="breathing-line"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: '1000',
-                strokeDashoffset: '1000',
-                animation: 'draw-line 0.3s ease-out forwards',
-                animationDelay: `${0.6 + (idx * 0.08)}s`,
+                strokeDasharray: '500',
+                strokeDashoffset: '500',
+                animation: 'draw-line 0.25s ease-out forwards',
+                animationDelay: `${0.3 + (idx * 0.06)}s`,
               } : {}}
             />
           ))}
@@ -558,10 +565,10 @@ function SudokuGrid({
               strokeWidth={2}
               className="breathing-line-thick"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: '1000',
-                strokeDashoffset: '1000',
-                animation: 'draw-line 0.4s ease-out forwards',
-                animationDelay: `${0.15 + (idx * 0.1)}s`,
+                strokeDasharray: '500',
+                strokeDashoffset: '500',
+                animation: 'draw-line 0.3s ease-out forwards',
+                animationDelay: `${0.15 + (idx * 0.08)}s`,
               } : {}}
             />
           ))}
@@ -578,10 +585,10 @@ function SudokuGrid({
               strokeWidth={2}
               className="breathing-line-thick"
               style={animateIn && !gridAnimationComplete ? {
-                strokeDasharray: '1000',
-                strokeDashoffset: '1000',
-                animation: 'draw-line 0.4s ease-out forwards',
-                animationDelay: `${0.25 + (idx * 0.1)}s`,
+                strokeDasharray: '500',
+                strokeDashoffset: '500',
+                animation: 'draw-line 0.3s ease-out forwards',
+                animationDelay: `${0.15 + (idx * 0.08)}s`,
               } : {}}
             />
           ))}
