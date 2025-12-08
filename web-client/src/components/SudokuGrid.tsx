@@ -171,21 +171,16 @@ function SudokuGrid({
         { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
       ]);
     } else {
-      const cellKey = `${row}-${col}`;
-      const isFirstError = !erroredCells.has(cellKey);
-      
       console.log(`[PERF] useEffect lastMoveResult - before playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       playErrorSound();
       console.log(`[PERF] useEffect lastMoveResult - after playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
       
-      // Only show "-30s" animation on first error
-      if (isFirstError) {
-        setFloatingFeedbacks((prev) => [
-          ...prev,
-          { id: feedbackId, row, col, text: '-30s', correct: false },
-        ]);
-      }
+      // Show "-30s" animation on EVERY incorrect guess
+      setFloatingFeedbacks((prev) => [
+        ...prev,
+        { id: feedbackId, row, col, text: '-30s', correct: false },
+      ]);
     }
 
     setTimeout(() => {
@@ -470,13 +465,11 @@ function SudokuGrid({
         return (
           <div
             key={feedback.id}
-            className="floating-feedback absolute pointer-events-none"
+            className={feedback.correct ? "floating-feedback-correct absolute pointer-events-none" : "floating-feedback absolute pointer-events-none"}
             style={{
               left: `${position.left}%`,
               top: `${position.top}%`,
-              transform: feedback.correct 
-                ? 'translate(-50%, calc(-100% - 12px))' // Higher position for "+5s!"
-                : 'translate(-50%, -100%)',
+              transform: 'translate(-50%, -100%)',
               zIndex: 100,
             }}
           >

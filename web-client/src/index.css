@@ -82,9 +82,31 @@ html, body, #root {
   }
 }
 
+/* Floating feedback animation for correct moves (starts higher) */
+@keyframes float-up-correct {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -12px) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -32px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -52px) scale(0.8);
+  }
+}
+
 .floating-feedback {
-  animation: float-up 800ms ease-out forwards;
   animation: float-up 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 1000;
+  transform-origin: center center;
+}
+
+.floating-feedback-correct {
+  animation: float-up-correct 0.8s ease-out forwards;
   pointer-events: none;
   z-index: 1000;
   transform-origin: center center;
@@ -422,7 +444,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 900;
 }
 
-/* Premium Player Name Styling (Cyan Chrome) */
+/* Premium Player Name Styling (Cyan Chrome with Magenta Outline) */
 @keyframes premium-name-shimmer {
   0% {
     background-position: -200% center;
@@ -443,7 +465,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
-  animation: premium-name-shimmer 2s linear infinite;
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.4), 0 0 8px rgba(255, 0, 255, 0.2);
+  animation: premium-name-shimmer 4s linear infinite;
 }
 
 /* Premium Opponent Name Styling (Magenta with Blue Outline) */
@@ -459,7 +482,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
   text-shadow: 0 0 4px rgba(0, 255, 255, 0.4), 0 0 8px rgba(0, 255, 255, 0.2);
-  animation: premium-name-shimmer 2s linear infinite;
+  animation: premium-name-shimmer 4s linear infinite;
 }
 
 /* Non-Premium Name Styling */
