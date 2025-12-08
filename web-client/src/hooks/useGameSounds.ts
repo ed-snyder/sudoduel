@@ -29,6 +29,23 @@ export function useGameSounds() {
     }
   }, []);
 
+  // Pre-initialize AudioContext on first user interaction to avoid cold start delay
+  useEffect(() => {
+    const initOnInteraction = () => {
+      initAudio();
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('click', initOnInteraction);
+    };
+    
+    document.addEventListener('touchstart', initOnInteraction, { once: true });
+    document.addEventListener('click', initOnInteraction, { once: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('click', initOnInteraction);
+    };
+  }, [initAudio]);
+
   // Load audio files on mount
   useEffect(() => {
     const loadSound = async (url: string): Promise<AudioBuffer | null> => {

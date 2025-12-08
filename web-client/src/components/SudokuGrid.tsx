@@ -25,23 +25,47 @@ interface FloatingFeedback {
   streak?: number;
 }
 
+// Shared AudioContext for error sound - initialized on first user interaction
+let errorAudioContext: AudioContext | null = null;
+let errorAudioContextInitialized = false;
+
+const initErrorAudioContext = () => {
+  if (!errorAudioContextInitialized) {
+    try {
+      errorAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      errorAudioContextInitialized = true;
+    } catch (error) {
+      console.warn('Could not initialize error audio context:', error);
+    }
+  }
+};
+
 const playErrorSound = () => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    if (!errorAudioContext) {
+      initErrorAudioContext();
+    }
+    if (!errorAudioContext) return;
+    
+    // Resume if suspended
+    if (errorAudioContext.state === 'suspended') {
+      errorAudioContext.resume();
+    }
+    
+    const oscillator = errorAudioContext.createOscillator();
+    const gainNode = errorAudioContext.createGain();
     
     oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    gainNode.connect(errorAudioContext.destination);
     
-    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(150, errorAudioContext.currentTime);
     oscillator.type = 'square';
     
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    gainNode.gain.setValueAtTime(0.3, errorAudioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, errorAudioContext.currentTime + 0.15);
     
     oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.15);
+    oscillator.stop(errorAudioContext.currentTime + 0.15);
   } catch (error) {
     console.warn('Could not play error sound:', error);
   }
@@ -62,6 +86,22 @@ function SudokuGrid({
   almostCompleteCells = new Set(),
   currentStreak = 0,
 }: SudokuGridProps) {
+  // Pre-initialize error audio context on first user interaction
+  useEffect(() => {
+    const initOnInteraction = () => {
+      initErrorAudioContext();
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('click', initOnInteraction);
+    };
+    
+    document.addEventListener('touchstart', initOnInteraction, { once: true });
+    document.addEventListener('click', initOnInteraction, { once: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('click', initOnInteraction);
+    };
+  }, []);
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
