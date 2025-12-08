@@ -1974,10 +1974,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     alignItems: 'center',
                     justifyContent: 'center',
                     letterSpacing: '-0.1em',
-                    background: 'rgba(255, 255, 255, 0.95)',
+                    background: 'rgba(139,0,255,0.1)',
+                    border: '2px solid rgba(139,0,255,0.3)',
                     padding: '4px 8px',
                     borderRadius: '8px',
-                    boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   }}
                 >
                   {myEmote}
@@ -2003,10 +2004,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     alignItems: 'center',
                     justifyContent: 'center',
                     letterSpacing: '-0.1em',
-                    background: 'rgba(255, 255, 255, 0.95)',
+                    background: 'rgba(139,0,255,0.1)',
+                    border: '2px solid rgba(139,0,255,0.3)',
                     padding: '4px 8px',
                     borderRadius: '8px',
-                    boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   }}
                 >
                   {opponentEmote}
