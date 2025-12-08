@@ -234,6 +234,9 @@ function SudokuGrid({
         WebkitUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',
+        // Subtle gradient background for depth
+        background: 'radial-gradient(ellipse at center, rgba(20, 12, 35, 0.95) 0%, rgba(13, 2, 33, 1) 70%)',
+        borderRadius: '8px',
       }}
     >
       {/* 9x9 Grid of cells - transparent backgrounds */}
@@ -352,9 +355,17 @@ function SudokuGrid({
       </div>
 
       {/* White wireframe grid lines overlay */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none shimmer-sweep">
         {/* Glow container - CSS glow with breathing animation */}
         <div className="absolute inset-0 rounded breathing-glow" />
+        
+        {/* Inner shadow for recessed/inset panel effect */}
+        <div 
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{
+            boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 -1px 4px rgba(0, 0, 0, 0.2), inset 2px 0 6px rgba(0, 0, 0, 0.15), inset -2px 0 6px rgba(0, 0, 0, 0.15)',
+          }}
+        />
         
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           {/* Outer border / perimeter */}
@@ -381,7 +392,8 @@ function SudokuGrid({
               y2={`${(i / 9) * 100}%`}
               stroke="rgb(255, 255, 255)"
               strokeWidth={1}
-              className="breathing-line"
+              className="breathing-line grid-line-shimmer"
+              style={{ animationDelay: `${i * 0.2}s` }}
             />
           ))}
 
@@ -395,7 +407,8 @@ function SudokuGrid({
               y2="100%"
               stroke="rgb(255, 255, 255)"
               strokeWidth={1}
-              className="breathing-line"
+              className="breathing-line grid-line-shimmer"
+              style={{ animationDelay: `${i * 0.2 + 0.1}s` }}
             />
           ))}
 
