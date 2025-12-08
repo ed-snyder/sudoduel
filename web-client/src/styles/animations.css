@@ -1312,3 +1312,28 @@
   66% { transform: translate(-10vw, 10vh) scale(0.95); }
   100% { transform: translate(0, 0) scale(1); }
 }
+
+/* =========================================
+   23. ADDITIONAL BACKGROUND BLOBS (Game Page)
+   ========================================= */
+
+/* Deep Purple - largest, slowest, deepest layer */
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(15%, 10%) scale(1.1); }
+  66% { transform: translate(5%, -5%) scale(0.95); }
+}
+
+/* Accent Purple - medium size, mid layer */
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-20%, -15%) scale(1.15); }
+}
+
+/* Dark Magenta - smaller, adds variety */
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(-10%, 10%) scale(1.05) rotate(5deg); }
+  50% { transform: translate(-15%, -5%) scale(0.95) rotate(-5deg); }
+  75% { transform: translate(5%, -10%) scale(1.1) rotate(3deg); }
+}

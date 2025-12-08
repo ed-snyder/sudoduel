@@ -227,6 +227,7 @@ function SudokuGrid({
       ref={gridRef}
       className="relative select-none"
       style={{
+        zIndex: 10,
         aspectRatio: '1 / 1',
         width: '100%',
         maxWidth: 'min(100vw - 24px, 400px)',

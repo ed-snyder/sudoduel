@@ -1723,7 +1723,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px' }}>
+    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1 }}>
       {/* Battlefield Background */}
       <GameBackgroundEffects 
         playerScored={bgPlayerScored}

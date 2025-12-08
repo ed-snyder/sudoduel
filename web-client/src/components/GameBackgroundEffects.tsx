@@ -48,7 +48,7 @@ export default function GameBackgroundEffects({
   const vignetteIntensity = isCritical ? 0.7 : isWarning ? 0.5 : 0.3;
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -1 }}>
       
       {/* Drifting gradient blobs - 5 total, faster than lobby */}
       <div className="absolute inset-0">
@@ -113,6 +113,60 @@ export default function GameBackgroundEffects({
             left: '30%',
             animation: 'drift-battle-5 20s ease-in-out infinite',
             animationDelay: '-10s',
+          }}
+        />
+        
+        {/* Deep Purple - largest, slowest, deepest layer */}
+        <div 
+          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            top: '10%',
+            left: '-20%',
+            width: '80vw',
+            height: '80vw',
+            maxWidth: '600px',
+            maxHeight: '600px',
+            background: 'radial-gradient(circle, rgba(61, 21, 128, 0.2) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(60px)',
+            animation: 'blob-drift-1 35s ease-in-out infinite',
+            pointerEvents: 'none',
+          }}
+        />
+        
+        {/* Accent Purple - medium size, mid layer */}
+        <div 
+          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            bottom: '15%',
+            right: '-15%',
+            width: '50vw',
+            height: '50vw',
+            maxWidth: '400px',
+            maxHeight: '400px',
+            background: 'radial-gradient(circle, rgba(139, 0, 255, 0.12) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(50px)',
+            animation: 'blob-drift-2 25s ease-in-out infinite',
+            pointerEvents: 'none',
+          }}
+        />
+        
+        {/* Dark Magenta - smaller, adds variety */}
+        <div 
+          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+          style={{
+            top: '50%',
+            right: '10%',
+            width: '35vw',
+            height: '35vw',
+            maxWidth: '300px',
+            maxHeight: '300px',
+            background: 'radial-gradient(circle, rgba(92, 0, 128, 0.15) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(45px)',
+            animation: 'blob-drift-3 20s ease-in-out infinite',
+            pointerEvents: 'none',
           }}
         />
       </div>
