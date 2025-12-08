@@ -37,21 +37,40 @@ export const MatchmakingQueueModel = {
     );
   },
 
-  // Find opponent within rating range
+  // Find opponent within rating range (excluding blocked users)
   async findOpponent(
     playerId: number,
     ladderId: number,
     rating: number,
-    ratingWindow: number
+    ratingWindow: number,
+    userId?: number // Optional: user_id to check blocked users
   ): Promise<QueueEntry | null> {
+    // Build query with blocked users exclusion if userId is provided
+    let blockedUsersClause = '';
+    const queryParams: any[] = [ladderId, playerId, rating - ratingWindow, rating + ratingWindow];
+    
+    if (userId) {
+      blockedUsersClause = `
+        AND player_id NOT IN (
+          SELECT blocked_user_id FROM blocked_users WHERE user_id = $5
+        )
+        AND $5 NOT IN (
+          SELECT user_id FROM blocked_users 
+          JOIN player_profiles ON player_profiles.user_id = blocked_users.user_id
+          WHERE blocked_users.blocked_user_id = player_id
+        )`;
+      queryParams.push(userId);
+    }
+    
     const result = await query(
-      `SELECT * FROM matchmaking_queue
-       WHERE ladder_id = $1
-       AND player_id != $2
-       AND rating_snapshot BETWEEN $3 AND $4
-       ORDER BY enqueued_at ASC
+      `SELECT mq.* FROM matchmaking_queue mq
+       WHERE mq.ladder_id = $1
+       AND mq.player_id != $2
+       AND mq.rating_snapshot BETWEEN $3 AND $4
+       ${blockedUsersClause}
+       ORDER BY mq.enqueued_at ASC
        LIMIT 1`,
-      [ladderId, playerId, rating - ratingWindow, rating + ratingWindow]
+      queryParams
     );
     return result.rows[0] || null;
   },

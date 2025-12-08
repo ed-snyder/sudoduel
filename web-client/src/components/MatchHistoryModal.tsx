@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { playerAPI } from '../services/api';
 import PlayerActionModal from './PlayerActionModal';
 import ReportModal from './ReportModal';
-import { sendFriendRequest, reportUser } from '../services/socialService';
+import { sendFriendRequest, reportUser, blockUser } from '../services/socialService';
 import { useAuth } from '../context/AuthContext';
 
 interface MatchHistoryEntry {
@@ -85,6 +85,11 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
   const handleAddFriend = async (playerId: number) => {
     if (!token) throw new Error('Not authenticated');
     await sendFriendRequest(token, playerId);
+  };
+
+  const handleBlock = async (playerId: number) => {
+    if (!token) throw new Error('Not authenticated');
+    await blockUser(token, playerId);
   };
 
   const handleOpenReport = () => {
@@ -207,6 +212,7 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
           playerName={selectedPlayer.name}
           playerId={selectedPlayer.id}
           onAddFriend={handleAddFriend}
+          onBlock={handleBlock}
           onReport={handleOpenReport}
         />
       )}

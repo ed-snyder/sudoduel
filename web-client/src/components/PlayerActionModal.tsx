@@ -6,6 +6,7 @@ interface PlayerActionModalProps {
   playerName: string;
   playerId: number;
   onAddFriend: (playerId: number) => Promise<void>;
+  onBlock: (playerId: number) => Promise<void>;
   onReport: () => void; // Opens report modal
 }
 
@@ -15,16 +16,19 @@ export default function PlayerActionModal({
   playerName,
   playerId,
   onAddFriend,
+  onBlock,
   onReport,
 }: PlayerActionModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error' | 'already_friends' | 'pending'>('idle');
+  const [action, setAction] = useState<'none' | 'friend' | 'block'>('none');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error' | 'already_friends' | 'pending' | 'already_blocked'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
 
   const handleAddFriend = async () => {
     setIsLoading(true);
+    setAction('friend');
     setStatus('idle');
     setErrorMessage('');
     
@@ -34,20 +38,53 @@ export default function PlayerActionModal({
       // Auto-close after success
       setTimeout(() => {
         onClose();
-        setStatus('idle');
+        resetState();
       }, 1500);
     } catch (error: any) {
-      if (error.message?.includes('already friends')) {
+      const message = error.message || '';
+      if (message.toLowerCase().includes('already friends')) {
         setStatus('already_friends');
-      } else if (error.message?.includes('pending')) {
+      } else if (message.toLowerCase().includes('pending')) {
         setStatus('pending');
       } else {
         setStatus('error');
-        setErrorMessage(error.message || 'Failed to send friend request');
+        setErrorMessage(message || 'Failed to send friend request');
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBlock = async () => {
+    setIsLoading(true);
+    setAction('block');
+    setStatus('idle');
+    setErrorMessage('');
+    
+    try {
+      await onBlock(playerId);
+      setStatus('success');
+      setTimeout(() => {
+        onClose();
+        resetState();
+      }, 1500);
+    } catch (error: any) {
+      const message = error.message || '';
+      if (message.toLowerCase().includes('already blocked')) {
+        setStatus('already_blocked');
+      } else {
+        setStatus('error');
+        setErrorMessage(message || 'Failed to block user');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetState = () => {
+    setStatus('idle');
+    setAction('none');
+    setErrorMessage('');
   };
 
   const handleReport = () => {
@@ -58,7 +95,7 @@ export default function PlayerActionModal({
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
-      setStatus('idle');
+      resetState();
     }
   };
 
@@ -89,9 +126,15 @@ export default function PlayerActionModal({
         {/* Content */}
         <div className="p-4 space-y-3">
           {/* Status Messages */}
-          {status === 'success' && (
+          {status === 'success' && action === 'friend' && (
             <div className="text-center py-2 text-success font-body">
               ✓ Friend request sent!
+            </div>
+          )}
+          
+          {status === 'success' && action === 'block' && (
+            <div className="text-center py-2 text-warning font-body">
+              ✓ User blocked
             </div>
           )}
           
@@ -104,6 +147,12 @@ export default function PlayerActionModal({
           {status === 'pending' && (
             <div className="text-center py-2 text-warning font-body">
               Request already pending
+            </div>
+          )}
+          
+          {status === 'already_blocked' && (
+            <div className="text-center py-2 text-warning font-body">
+              User already blocked
             </div>
           )}
           
@@ -128,7 +177,21 @@ export default function PlayerActionModal({
                   boxShadow: '0 0 15px rgba(0, 255, 255, 0.2)',
                 }}
               >
-                {isLoading ? 'Sending...' : '+ Add Friend'}
+                {isLoading && action === 'friend' ? 'Sending...' : '+ Add Friend'}
+              </button>
+              
+              {/* Block Button */}
+              <button
+                onClick={handleBlock}
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-50"
+                style={{
+                  background: 'rgba(255, 184, 0, 0.15)',
+                  border: '2px solid rgba(255, 184, 0, 0.5)',
+                  color: '#FFB800',
+                }}
+              >
+                {isLoading && action === 'block' ? 'Blocking...' : '🚫 Block User'}
               </button>
               
               {/* Report Button */}
@@ -142,7 +205,7 @@ export default function PlayerActionModal({
                   color: '#FF3366',
                 }}
               >
-                Report Player
+                ⚠️ Report Player
               </button>
             </>
           )}
@@ -151,7 +214,7 @@ export default function PlayerActionModal({
           <button
             onClick={() => {
               onClose();
-              setStatus('idle');
+              resetState();
             }}
             className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
             style={{

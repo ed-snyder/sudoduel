@@ -67,13 +67,14 @@ export const MatchmakingService = {
     // Not in queue yet - proceed with joining
     console.log(`📋 Not in queue, joining...`);
     
-    // Try to find an opponent first
+    // Try to find an opponent first (excluding blocked users)
     console.log(`🔍 Looking for opponent...`);
     const opponent = await MatchmakingQueueModel.findOpponent(
       profile.id,
       DEFAULT_LADDER_ID,
       playerRating,
-      RATING_WINDOW
+      RATING_WINDOW,
+      req.userId // Pass userId to exclude blocked users
     );
 
     if (opponent) {
@@ -124,7 +125,8 @@ export const MatchmakingService = {
       profile.id,
       DEFAULT_LADDER_ID,
       playerRating,
-      RATING_WINDOW
+      RATING_WINDOW,
+      userId // Pass userId to exclude blocked users
     );
 
     if (opponentAfterEnqueue) {
@@ -193,7 +195,8 @@ export const MatchmakingService = {
         profile.id,
         DEFAULT_LADDER_ID,
         playerRating,
-        RATING_WINDOW
+        RATING_WINDOW,
+        userId // Pass userId to exclude blocked users
       );
 
       if (opponent) {

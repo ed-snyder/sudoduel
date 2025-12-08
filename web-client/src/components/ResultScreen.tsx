@@ -4,7 +4,7 @@ import { matchmakingAPI, friendsAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReportModal from './ReportModal';
-import { reportUser } from '../services/socialService';
+import { reportUser, blockUser } from '../services/socialService';
 
 interface PlayerResult {
   playerId: number;
@@ -127,6 +127,8 @@ export default function ResultScreen({
   const [breathePhase, setBreathePhase] = useState(0);
   const [showOpponentModal, setShowOpponentModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [blockStatus, setBlockStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,6 +209,21 @@ export default function ResultScreen({
       }
     } finally {
       setFriendActionLoading(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!token || !opponentResult.playerId) return;
+    
+    setIsBlocking(true);
+    setBlockStatus('idle');
+    try {
+      await blockUser(token, opponentResult.playerId);
+      setBlockStatus('success');
+    } catch (error: any) {
+      setBlockStatus('error');
+    } finally {
+      setIsBlocking(false);
     }
   };
 
@@ -1277,21 +1294,38 @@ export default function ResultScreen({
                 )}
               </button>
 
-              {/* Report Button */}
-              <button
-                onClick={() => {
-                  setShowOpponentModal(false);
-                  setShowReportModal(true);
-                }}
-                className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
-                style={{
-                  background: 'rgba(255, 51, 102, 0.15)',
-                  border: '2px solid rgba(255, 51, 102, 0.5)',
-                  color: '#FF3366',
-                }}
-              >
-                Report Player
-              </button>
+              {/* Block and Report Buttons */}
+              <div className="flex gap-2">
+                {/* Block Button */}
+                <button
+                  onClick={handleBlock}
+                  disabled={isBlocking || blockStatus === 'success'}
+                  className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-50"
+                  style={{
+                    background: blockStatus === 'success' ? 'rgba(255, 184, 0, 0.3)' : 'rgba(255, 184, 0, 0.15)',
+                    border: '2px solid rgba(255, 184, 0, 0.5)',
+                    color: '#FFB800',
+                  }}
+                >
+                  {blockStatus === 'success' ? '✓ Blocked' : isBlocking ? 'Blocking...' : 'Block'}
+                </button>
+                
+                {/* Report Button */}
+                <button
+                  onClick={() => {
+                    setShowOpponentModal(false);
+                    setShowReportModal(true);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
+                  style={{
+                    background: 'rgba(255, 51, 102, 0.15)',
+                    border: '2px solid rgba(255, 51, 102, 0.5)',
+                    color: '#FF3366',
+                  }}
+                >
+                  Report
+                </button>
+              </div>
             </div>
           </div>
         </div>

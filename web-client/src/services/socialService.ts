@@ -51,3 +51,47 @@ export async function reportUser(
   
   return data;
 }
+
+// Block a user
+export async function blockUser(token: string, targetUserId: number): Promise<ApiResponse> {
+  const response = await fetch(`${API_URL}/api/users/block`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ 
+      target_user_id: targetUserId,
+    }),
+  });
+  
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Failed to block user');
+  }
+  
+  return data;
+}
+
+// Unblock a user (for future use)
+export async function unblockUser(token: string, targetUserId: number): Promise<ApiResponse> {
+  const response = await fetch(`${API_URL}/api/users/unblock`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ 
+      target_user_id: targetUserId,
+    }),
+  });
+  
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Failed to unblock user');
+  }
+  
+  return data;
+}

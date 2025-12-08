@@ -8,6 +8,7 @@ import puzzleRoutes from './routes/puzzle';
 import matchmakingRoutes from './routes/matchmaking';
 import friendsRoutes from './routes/friends';
 import reportsRoutes from './routes/reports';
+import usersRoutes from './routes/users';
 import { setupWebSocketServer } from './services/websocketServer';
 import { warmupDatabase } from './config/database';
 import { cache } from './services/cacheService';
@@ -78,6 +79,7 @@ app.use('/api/puzzle', puzzleRoutes);
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/users', usersRoutes);
 
 // Create HTTP server
 const server = createServer(app);
