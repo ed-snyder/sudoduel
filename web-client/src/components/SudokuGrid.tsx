@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
 import '../components/GameCountdown.css';
+import { log } from '../utils/logger';
 
 interface SudokuGridProps {
   grid: number[][];
@@ -94,7 +95,7 @@ function SudokuGrid({
   countdownPhase = 'complete',
 }: SudokuGridProps) {
   const renderStart = performance.now();
-  console.log(`[PERF] SudokuGrid render START`);
+  log.perf(`SudokuGrid render START`);
 
   // Pre-initialize error audio context on first user interaction
   useEffect(() => {
@@ -115,6 +116,7 @@ function SudokuGrid({
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
+  const feedbackTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   
   // Track animation state - start as true, reset when animateIn changes
   const [gridAnimationComplete, setGridAnimationComplete] = useState(true);
@@ -123,7 +125,7 @@ function SudokuGrid({
   // Reset animation states when animateIn changes
   useEffect(() => {
     if (animateIn) {
-      console.log('[GRID ANIM] Starting animation');
+      log.grid('Starting animation');
       // Immediately set both to false to prevent any highlighting
       setGridAnimationComplete(false);
       setNumbersAnimationComplete(false);
@@ -158,14 +160,14 @@ function SudokuGrid({
 
     // Grid lines complete at ~3.0s (50% slower drawing - 4.5 second total animation)
     const gridTimer = setTimeout(() => {
-      console.log('[GRID ANIM] Grid lines complete');
+      log.grid('Grid lines complete');
       setGridAnimationComplete(true);
     }, 3000);
 
     // Numbers complete at ~3.0s (slower slamming - 3 second total animation)
     // This ensures cells are NEVER highlighted during countdown
     const numbersTimer = setTimeout(() => {
-      console.log('[GRID ANIM] Numbers complete - preventing highlights');
+      log.grid('Numbers complete - preventing highlights');
       setNumbersAnimationComplete(true);
     }, 3000);
 
@@ -225,11 +227,19 @@ function SudokuGrid({
     );
   };
 
+  // Cleanup feedback timeouts on unmount
+  useEffect(() => {
+    return () => {
+      feedbackTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      feedbackTimeoutsRef.current.clear();
+    };
+  }, []);
+
   useEffect(() => {
     if (!lastMoveResult) return;
 
     const effectStart = performance.now();
-    console.log(`[PERF] useEffect lastMoveResult START: ${effectStart.toFixed(2)}ms`);
+    log.perf(`useEffect lastMoveResult START: ${effectStart.toFixed(2)}ms`);
 
     const { row, col, correct } = lastMoveResult;
     
@@ -244,32 +254,41 @@ function SudokuGrid({
     }
     // For incorrect moves, don't check lastProcessedMoveRef - always show feedback
     
-    console.log(`[PERF] useEffect lastMoveResult - before feedback: ${(performance.now() - effectStart).toFixed(2)}ms`);
+    log.perf(`useEffect lastMoveResult - before feedback: ${(performance.now() - effectStart).toFixed(2)}ms`);
     
     if (correct) {
-      setFloatingFeedbacks((prev) => [
-        ...prev,
-        { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
-      ]);
+      // Limit feedback array size to prevent memory growth
+      setFloatingFeedbacks((prev) => {
+        const newFeedback = { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak };
+        const updated = [...prev, newFeedback];
+        // Keep only last 10 feedbacks max
+        return updated.slice(-10);
+      });
     } else {
-      console.log(`[PERF] useEffect lastMoveResult - before playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
+      log.perf(`useEffect lastMoveResult - before playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       playErrorSound();
-      console.log(`[PERF] useEffect lastMoveResult - after playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
+      log.perf(`useEffect lastMoveResult - after playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
       
       // Show "-30s" animation on EVERY incorrect guess
-      setFloatingFeedbacks((prev) => [
-        ...prev,
-        { id: feedbackId, row, col, text: '-30s', correct: false },
-      ]);
+      // Limit feedback array size to prevent memory growth
+      setFloatingFeedbacks((prev) => {
+        const newFeedback = { id: feedbackId, row, col, text: '-30s', correct: false };
+        const updated = [...prev, newFeedback];
+        // Keep only last 10 feedbacks max
+        return updated.slice(-10);
+      });
     }
 
-    setTimeout(() => {
+    // Track timeout for cleanup
+    const timeoutId = setTimeout(() => {
       setFloatingFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
+      feedbackTimeoutsRef.current.delete(feedbackId);
     }, 1000);
+    feedbackTimeoutsRef.current.set(feedbackId, timeoutId);
     
-    console.log(`[PERF] useEffect lastMoveResult END: ${(performance.now() - effectStart).toFixed(2)}ms`);
-  }, [lastMoveResult, currentStreak, erroredCells]);
+    log.perf(`useEffect lastMoveResult END: ${(performance.now() - effectStart).toFixed(2)}ms`);
+  }, [lastMoveResult, currentStreak, erroredCells, playErrorSound]);
 
   const getCellPosition = (row: number, col: number) => {
     const cellPercent = 100 / 9;
@@ -281,7 +300,7 @@ function SudokuGrid({
 
   const renderEnd = performance.now();
   const renderTime = renderEnd - renderStart;
-  console.log(`[PERF] SudokuGrid render took: ${renderTime.toFixed(2)}ms`);
+  log.perf(`SudokuGrid render took: ${renderTime.toFixed(2)}ms`);
   
   // Track when grid changes (cell placement) actually commits to DOM
   const prevGridRef = useRef(grid);
@@ -292,16 +311,16 @@ function SudokuGrid({
     
     if (gridChanged) {
       const commitTime = performance.now();
-      console.log(`[PERF] SudokuGrid GRID CHANGE COMMITTED to DOM: ${commitTime.toFixed(2)}ms (render started at ${renderStart.toFixed(2)}ms)`);
+      log.perf(`SudokuGrid GRID CHANGE COMMITTED to DOM: ${commitTime.toFixed(2)}ms (render started at ${renderStart.toFixed(2)}ms)`);
       
       // Measure paint time
       requestAnimationFrame(() => {
         const paintScheduled = performance.now();
-        console.log(`[PERF] SudokuGrid GRID CHANGE paint SCHEDULED: ${paintScheduled.toFixed(2)}ms`);
+        log.perf(`SudokuGrid GRID CHANGE paint SCHEDULED: ${paintScheduled.toFixed(2)}ms`);
         
         requestAnimationFrame(() => {
           const paintComplete = performance.now();
-          console.log(`[PERF] SudokuGrid GRID CHANGE paint COMPLETE: ${paintComplete.toFixed(2)}ms (${(paintComplete - renderStart).toFixed(2)}ms from render start)`);
+          log.perf(`SudokuGrid GRID CHANGE paint COMPLETE: ${paintComplete.toFixed(2)}ms (${(paintComplete - renderStart).toFixed(2)}ms from render start)`);
         });
       });
     }

@@ -14,6 +14,7 @@ import '../components/GameCountdown.css';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
+import { log } from '../utils/logger';
 
 const DEFAULT_EMOTES = ['😂', '😢', '😍', '💩'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
@@ -75,9 +76,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Synchronized feedback function - all feedback fires together
   const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
     const now = performance.now();
-    if (import.meta.env.DEV) {
-      console.log(`[FEEDBACK] Triggered at ${now}ms for streak ${streak}`);
-    }
+    log.feedback(`Triggered at ${now}ms for streak ${streak}`);
     
     // 1. Haptic (fires first as it has hardware latency)
     // Use patterns with rhythm - gaps are as important as vibrations
@@ -156,7 +155,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         return;
       }
 
-      console.log('[PERF] Starting renderer warm-up...');
+      log.perf('Starting renderer warm-up...');
       
       // Pre-warm haptics engine - do a silent/minimal haptic
       Haptics.impact({ style: ImpactStyle.Light }).catch(() => {
@@ -194,7 +193,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             if (warmUpDiv.parentNode) {
               document.body.removeChild(warmUpDiv);
             }
-            console.log('[PERF] Renderer warm-up complete');
+            log.perf('Renderer warm-up complete');
           } catch (e) {
             // Ignore cleanup errors
             console.warn('[PERF] Warm-up cleanup failed:', e);
@@ -550,7 +549,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Countdown handlers
   const handleCountdownPhaseChange = useCallback((phase: CountdownPhase) => {
-    console.log('[COUNTDOWN] Phase:', phase);
+    log.countdown('Phase:', phase);
     setCountdownPhase(phase);
     
     if (phase === 'countdown') {
@@ -562,7 +561,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }, []);
 
   const handleCountdownComplete = useCallback(() => {
-    console.log('[COUNTDOWN] Complete');
+    log.countdown('Complete');
     setShowGameCountdown(false);
     setGridAnimateIn(false);
     setCountdownPhase('complete');
@@ -570,16 +569,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
-    console.log('[REMATCH] handleRematchRequest called, state:', rematchState);
+    log.rematch('handleRematchRequest called, state:', rematchState);
     if (!wsRef.current) {
-      console.log('[REMATCH] No WebSocket connection');
+      log.rematch('No WebSocket connection');
       return;
     }
     
     // If opponent already requested rematch, accept it by sending REMATCH_REQUEST
     // Backend will detect both players requested and create new match
     if (rematchState === 'waiting') {
-      console.log('[REMATCH] Accepting rematch request');
+      log.rematch('Accepting rematch request');
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
       // State will be updated by REMATCH_ACCEPTED message
       return;
@@ -587,7 +586,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // If idle, request rematch
     if (rematchState === 'idle') {
-      console.log('[REMATCH] Requesting rematch');
+      log.rematch('Requesting rematch');
       setRematchState('requested');
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
       
@@ -866,7 +865,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         // Check if game ended - trigger end game handling immediately
         if (game_ended) {
-          console.log(`[GamePage] Game ended from MOVE_RESULT, waiting for GAME_END message`);
+          log.game('Game ended from MOVE_RESULT, waiting for GAME_END message');
           // The GAME_END message will be sent by the backend, but we can prepare for it
         }
         break;
@@ -874,18 +873,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       case 'TIME_SYNC':
         // Skip TIME_SYNC processing for 200ms after cell placement to allow paint to complete
         if (Date.now() - lastCellPlacementRef.current < 200) {
-          console.log(`[GamePage] TIME_SYNC throttled - recent cell placement`);
+          log.game('TIME_SYNC throttled - recent cell placement');
           break;
         }
         
         // Update both timers and lock status from server
         // Don't update state if mySlot hasn't been set yet (wait for GAME_STATE)
         if (mySlotRef.current === 0) {
-          console.log(`[GamePage] TIME_SYNC ignored: mySlot not set yet (waiting for GAME_STATE)`);
+          log.game('TIME_SYNC ignored: mySlot not set yet (waiting for GAME_STATE)');
           break;
         }
         
-        console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlotRef.current}`);
+        log.game(`TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlotRef.current}`);
         if (mySlotRef.current === 1) {
           const myServerTime = message.data.player1_time;
           const myLocked = message.data.player1_locked;
@@ -898,7 +897,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           // Correct if drift > 1 second
           setMyTimeRemaining(prev => {
             if (Math.abs(prev - myServerTime) > 1) {
-              console.log(`[TIMER] Correcting drift: local=${prev} server=${myServerTime}`);
+              log.timer(`Correcting drift: local=${prev} server=${myServerTime}`);
               return myServerTime;
             }
             return prev;
@@ -924,7 +923,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               score: myScore !== undefined ? myScore : prev.score,
               cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
             };
-            console.log(`[GamePage] Updating myState (slot 1): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
+            log.game(`Updating myState (slot 1): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
             return newState;
           });
           
@@ -959,7 +958,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           // Correct if drift > 1 second
           setMyTimeRemaining(prev => {
             if (Math.abs(prev - myServerTime) > 1) {
-              console.log(`[TIMER] Correcting drift: local=${prev} server=${myServerTime}`);
+              log.timer(`Correcting drift: local=${prev} server=${myServerTime}`);
               return myServerTime;
             }
             return prev;
@@ -985,7 +984,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               score: myScore !== undefined ? myScore : prev.score,
               cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
             };
-            console.log(`[GamePage] Updating myState (slot 2): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
+            log.game(`Updating myState (slot 2): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
             return newState;
           });
           
@@ -1132,26 +1131,26 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         break;
 
       case 'REMATCH_PENDING':
-        console.log('[REMATCH] REMATCH_PENDING received, requested_by:', message.data.requested_by, 'mySlot:', mySlotRef.current);
+        log.rematch('REMATCH_PENDING received, requested_by:', message.data.requested_by, 'mySlot:', mySlotRef.current);
         if (message.data.requested_by !== mySlotRef.current) {
-          console.log('[REMATCH] Setting state to waiting');
+          log.rematch('Setting state to waiting');
           setRematchState('waiting');
         }
         break;
 
       case 'REMATCH_ACCEPTED':
-        console.log('[REMATCH] REMATCH_ACCEPTED received, new_match_id:', message.data.new_match_id);
-        console.log('[REMATCH] Current rematchState:', rematchState);
+        log.rematch('REMATCH_ACCEPTED received, new_match_id:', message.data.new_match_id);
+        log.rematch('Current rematchState:', rematchState);
         // Navigate to new match
         if (message.data.new_match_id) {
-          console.log('[REMATCH] Navigating to new match...');
+          log.rematch('Navigating to new match...');
           if (onRematch) {
             // Use callback if provided (preferred)
-            console.log('[REMATCH] Using onRematch callback');
+            log.rematch('Using onRematch callback');
             onRematch(message.data.new_match_id);
           } else {
             // Fallback to window.location for compatibility
-            console.log('[REMATCH] Using window.location fallback');
+            log.rematch('Using window.location fallback');
             window.location.href = `/game/${message.data.new_match_id}`;
           }
         } else {
@@ -1168,30 +1167,30 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   const handleCellClick = useCallback((row: number, col: number) => {
     const startTime = performance.now();
-    console.log(`[PERF] Cell click START: ${startTime.toFixed(2)}ms`);
+    log.perf(`Cell click START: ${startTime.toFixed(2)}ms`);
 
     if (countdownPhase !== 'complete') return; // Block during countdown
     if (gameStatus !== 'playing' || myState?.is_locked) {
-      console.log(`[PERF] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
+      log.perf(`Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
       return;
     }
 
-    console.log(`[PERF] After selection check: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`After selection check: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     // Check if cell is an initial clue - allow clicking for highlighting but log it
     const isInitial = initialGrid[row]?.[col] !== 0;
     if (isInitial) {
-      console.log(`[PERF] Clicked initial clue cell (${row}, ${col})`);
+      log.perf(`Clicked initial clue cell (${row}, ${col})`);
     }
 
-    console.log(`[PERF] After initial check: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`After initial check: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     // If tapping the same cell again, clear selection/highlights
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
-      console.log(`[PERF] Before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
       setSelectedCell(null);
-      console.log(`[PERF] After setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
-      console.log(`[PERF] Cell click END (deselect): ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`After setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Cell click END (deselect): ${(performance.now() - startTime).toFixed(2)}ms`);
       return;
     }
 
@@ -1200,11 +1199,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // CRITICAL: This preserves the UX feature where clicking a cell with a number
     // highlights all identical numbers and related cells (row/column/3x3 box)
     // OPTIMIZED: Removed myGrid from dependencies - we don't need it for selection
-    console.log(`[PERF] Before setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`Before setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     setSelectedCell({ row, col });
-    console.log(`[PERF] After setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`After setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     
-    console.log(`[PERF] Cell click END: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`Cell click END: ${(performance.now() - startTime).toFixed(2)}ms`);
   }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, countdownPhase]);
 
   // Back button removed - forfeit can be accessed via other means if needed
@@ -1354,22 +1353,22 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   const handleNumberClick = useCallback((num: number) => {
     const startTime = performance.now();
-    console.log(`[PERF] Number click START: ${startTime.toFixed(2)}ms`);
+    log.perf(`Number click START: ${startTime.toFixed(2)}ms`);
 
     if (countdownPhase !== 'complete') return; // Block during countdown
     if (!selectedCell || gameStatus !== 'playing') {
-      console.log(`[PERF] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
+      log.perf(`Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
       return;
     }
     if (myState?.is_locked) {
-      console.log(`[PERF] Number click blocked: myState.is_locked=${myState.is_locked}`);
+      log.perf(`Number click blocked: myState.is_locked=${myState.is_locked}`);
       return;
     }
 
-    console.log(`[PERF] After validation checks: ${(performance.now() - startTime).toFixed(2)}ms`);
+    log.perf(`After validation checks: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     if (notesMode) {
-      console.log(`[PERF] Notes mode - before setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Notes mode - before setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
       // In notes mode: toggle the number in notes for this cell
       const cellKey = `${selectedCell.row}-${selectedCell.col}`;
       setNotes((prev) => {
@@ -1391,14 +1390,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         return newNotes;
       });
-      console.log(`[PERF] Notes mode - after setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
-      console.log(`[PERF] Number click END (notes mode): ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Notes mode - after setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Number click END (notes mode): ${(performance.now() - startTime).toFixed(2)}ms`);
     } else {
-      console.log(`[PERF] Normal mode - before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Normal mode - before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
       // Normal mode: place number
       // Prevent placing numbers in initial clue cells
       if (initialGrid[selectedCell.row]?.[selectedCell.col] !== 0) {
-        console.log(`[PERF] Blocked - initial clue cell: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Blocked - initial clue cell: ${(performance.now() - startTime).toFixed(2)}ms`);
         return;
       }
       
@@ -1411,11 +1410,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      console.log(`[PERF] After validation (isCorrect=${isCorrect}): ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`After validation (isCorrect=${isCorrect}): ${(performance.now() - startTime).toFixed(2)}ms`);
       
       // INSTANT FEEDBACK: Trigger immediately based on local validation
       if (isCorrect) {
-        console.log(`[PERF] Before sound/feedback: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Before sound/feedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Update streak immediately
         const newStreak = myStreakRef.current + 1;
         myStreakRef.current = newStreak;
@@ -1427,7 +1426,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         console.log(`[PERF] After triggerScoreFeedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         
         // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
-        console.log(`[PERF] Before setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Before setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
         if (wasEmpty && !isInitialClue) {
           setMyState(prev => ({
             ...prev,
@@ -1435,13 +1434,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             score: prev.score + 1,
           }));
         }
-        console.log(`[PERF] After setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`After setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
       } else {
         // INSTANT ERROR FEEDBACK: Incorrect move
         const cellKey = `${row}-${col}`;
         const isFirstError = !erroredCells.has(cellKey);
         
-        console.log(`[PERF] Error path - before setLastMoveResult: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - before setLastMoveResult: ${(performance.now() - startTime).toFixed(2)}ms`);
         setLastMoveResult({ correct: false, row, col });
         
         // Track errored cell
@@ -1449,14 +1448,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           setErroredCells(prev => new Set(prev).add(cellKey));
         }
         
-        console.log(`[PERF] Error path - before playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - before playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Use different sound for first vs subsequent errors
         if (isFirstError) {
           playIncorrectSound();
         } else {
           playSofterErrorSound();
         }
-        console.log(`[PERF] Error path - after playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - after playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
         hapticError();
         myStreakRef.current = 0; // Reset streak on error
         
@@ -1473,7 +1472,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           return newSet;
         });
         
-        console.log(`[PERF] Before setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Before setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Create new grid with the number placed
         const newGrid = myGrid.map((r) => [...r]);
         newGrid[row][col] = num;
@@ -1481,25 +1480,25 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setMyGrid(newGrid);
         // Track cell placement time for TIME_SYNC throttling
         lastCellPlacementRef.current = Date.now();
-        console.log(`[PERF] After setMyGrid (scheduled): ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`After setMyGrid (scheduled): ${(performance.now() - startTime).toFixed(2)}ms`);
         
         // Measure when React actually commits the render
         requestAnimationFrame(() => {
           const afterRAF = performance.now();
-          console.log(`[PERF] After requestAnimationFrame (paint scheduled): ${(afterRAF - startTime).toFixed(2)}ms (${(afterRAF - beforeSetState).toFixed(2)}ms after setState)`);
+          log.perf(`After requestAnimationFrame (paint scheduled): ${(afterRAF - startTime).toFixed(2)}ms (${(afterRAF - beforeSetState).toFixed(2)}ms after setState)`);
           
           requestAnimationFrame(() => {
             const afterSecondRAF = performance.now();
-            console.log(`[PERF] After second requestAnimationFrame (painted): ${(afterSecondRAF - startTime).toFixed(2)}ms (${(afterSecondRAF - beforeSetState).toFixed(2)}ms after setState)`);
+            log.perf(`After second requestAnimationFrame (painted): ${(afterSecondRAF - startTime).toFixed(2)}ms (${(afterSecondRAF - beforeSetState).toFixed(2)}ms after setState)`);
           });
         });
       
         // DEFER expensive completion checks to avoid blocking paint
         // Use requestIdleCallback to run after paint, or setTimeout as fallback
         const deferCompletionCheck = () => {
-          console.log(`[PERF] Deferred checkCompletions START: ${(performance.now() - startTime).toFixed(2)}ms`);
+          log.perf(`Deferred checkCompletions START: ${(performance.now() - startTime).toFixed(2)}ms`);
           checkCompletions(newGrid, row, col);
-          console.log(`[PERF] Deferred checkCompletions END: ${(performance.now() - startTime).toFixed(2)}ms`);
+          log.perf(`Deferred checkCompletions END: ${(performance.now() - startTime).toFixed(2)}ms`);
         };
         
         if ('requestIdleCallback' in window) {
@@ -1530,12 +1529,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
       } else {
         // For incorrect moves, still clear selection but don't update grid
-        console.log(`[PERF] Error path - before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
         setSelectedCell(null);
-        console.log(`[PERF] Error path - after setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - after setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
       }
       
-      console.log(`[PERF] Before ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Before ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
       // Send to server (for synchronization, not validation - we already validated locally)
       if (wsRef.current) {
         wsRef.current.send(
@@ -1548,12 +1547,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             },
           })
         );
-        console.log(`[PERF] After ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`After ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
       } else {
-        console.log(`[PERF] wsRef.current is null, skipping send: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`wsRef.current is null, skipping send: ${(performance.now() - startTime).toFixed(2)}ms`);
       }
       
-      console.log(`[PERF] Number click END: ${(performance.now() - startTime).toFixed(2)}ms`);
+      log.perf(`Number click END: ${(performance.now() - startTime).toFixed(2)}ms`);
     }
   }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError, countdownPhase]);
 
