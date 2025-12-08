@@ -9,8 +9,8 @@ interface ReportModalProps {
 }
 
 const REPORT_REASONS = [
-  { id: 'cheating', label: 'Cheating', description: 'Using external tools or exploits' },
-  { id: 'offensive_content', label: 'Offensive Content', description: 'Inappropriate username or behavior' },
+  { id: 'CHEATING', label: 'Cheating', description: 'Using external tools or exploits' },
+  { id: 'OFFENSIVE_CONTENT', label: 'Offensive Content', description: 'Inappropriate username or behavior' },
 ];
 
 export default function ReportModal({

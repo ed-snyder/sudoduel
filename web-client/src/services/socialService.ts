@@ -6,15 +6,14 @@ interface ApiResponse {
   error?: string;
 }
 
-// Send a friend request
+// Send a friend request by player ID
 export async function sendFriendRequest(token: string, targetUserId: number): Promise<ApiResponse> {
-  const response = await fetch(`${API_URL}/api/friends/request`, {
+  const response = await fetch(`${API_URL}/api/friends/request/${targetUserId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ target_user_id: targetUserId }),
   });
   
   const data = await response.json();

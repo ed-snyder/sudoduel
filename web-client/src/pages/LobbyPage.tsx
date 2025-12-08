@@ -249,7 +249,7 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
             >
               {user?.display_name || 'Player'}
             </div>
-            <div className="text-xs text-muted font-body">Tap to view profile</div>
+            <div className="text-xs text-muted font-body">Tap to view profile, match history, and statistics</div>
           </div>
           <svg className="w-5 h-5 text-muted group-hover:text-player transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
