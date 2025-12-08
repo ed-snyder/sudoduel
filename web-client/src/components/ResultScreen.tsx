@@ -3,6 +3,8 @@ import { useHaptics } from '../hooks/useHaptics';
 import { matchmakingAPI, friendsAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ReportModal from './ReportModal';
+import { reportUser } from '../services/socialService';
 
 interface PlayerResult {
   playerId: number;
@@ -124,6 +126,7 @@ export default function ResultScreen({
   const [gridHue, setGridHue] = useState(0);
   const [breathePhase, setBreathePhase] = useState(0);
   const [showOpponentModal, setShowOpponentModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1273,10 +1276,38 @@ export default function ResultScreen({
                   'Add Friend'
                 )}
               </button>
+
+              {/* Report Button */}
+              <button
+                onClick={() => {
+                  setShowOpponentModal(false);
+                  setShowReportModal(true);
+                }}
+                className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
+                style={{
+                  background: 'rgba(255, 51, 102, 0.15)',
+                  border: '2px solid rgba(255, 51, 102, 0.5)',
+                  color: '#FF3366',
+                }}
+              >
+                Report Player
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        playerName={opponentName}
+        playerId={opponentResult.playerId}
+        onSubmitReport={async (playerId: number, reason: string, details?: string) => {
+          if (!token) throw new Error('Not authenticated');
+          await reportUser(token, playerId, reason, details);
+        }}
+      />
     </div>
   );
 }

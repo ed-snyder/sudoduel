@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { playerAPI } from '../services/api';
+import PlayerActionModal from './PlayerActionModal';
+import ReportModal from './ReportModal';
+import { sendFriendRequest, reportUser } from '../services/socialService';
+import { useAuth } from '../context/AuthContext';
 
 interface MatchHistoryEntry {
   match_id: number;
   date: Date;
+  opponent_id: number;
   opponent_name: string;
   result: 'WIN' | 'LOSS' | 'DRAW';
   cells_completed: number;
@@ -22,9 +27,15 @@ interface MatchHistoryModalProps {
 }
 
 export default function MatchHistoryModal({ isOpen, onClose, playerName, currentRating }: MatchHistoryModalProps) {
+  const { token, user } = useAuth();
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null);
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportPlayerId, setReportPlayerId] = useState<number | null>(null);
+  const [reportPlayerName, setReportPlayerName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -63,6 +74,33 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return d.toLocaleDateString();
+  };
+
+  const handlePlayerClick = (playerId: number, playerName: string) => {
+    // Don't allow clicking yourself
+    if (playerId === user?.id) return;
+    
+    setSelectedPlayer({ id: playerId, name: playerName });
+    setShowPlayerModal(true);
+  };
+
+  const handleAddFriend = async (playerId: number) => {
+    if (!token) throw new Error('Not authenticated');
+    await sendFriendRequest(token, playerId);
+  };
+
+  const handleOpenReport = (playerId: number) => {
+    if (selectedPlayer) {
+      setReportPlayerId(playerId);
+      setReportPlayerName(selectedPlayer.name);
+      setShowPlayerModal(false);
+      setShowReportModal(true);
+    }
+  };
+
+  const handleSubmitReport = async (playerId: number, reason: string, details?: string) => {
+    if (!token) throw new Error('Not authenticated');
+    await reportUser(token, playerId, reason, details);
   };
 
   if (!isOpen) return null;
@@ -131,7 +169,14 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
                   {/* Match info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-display font-black text-primary">vs {match.opponent_name}</span>
+                      <span className="font-display font-black text-primary">vs </span>
+                      <button
+                        onClick={() => handlePlayerClick(match.opponent_id, match.opponent_name)}
+                        className="font-display font-black text-opponent hover:underline text-left truncate disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={match.opponent_id === user?.id}
+                      >
+                        {match.opponent_name}
+                      </button>
                       <span className="text-xs text-muted font-display">{formatDate(match.date)}</span>
                     </div>
                     <div className="text-xs text-muted font-display mt-1">
@@ -158,6 +203,34 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
           )}
         </div>
       </div>
+
+      {/* Player Action Modal */}
+      {selectedPlayer && (
+        <PlayerActionModal
+          isOpen={showPlayerModal}
+          onClose={() => {
+            setShowPlayerModal(false);
+            setSelectedPlayer(null);
+          }}
+          playerName={selectedPlayer.name}
+          playerId={selectedPlayer.id}
+          onAddFriend={handleAddFriend}
+          onReport={handleOpenReport}
+        />
+      )}
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => {
+          setShowReportModal(false);
+          setReportPlayerId(null);
+          setReportPlayerName('');
+        }}
+        playerName={reportPlayerName}
+        playerId={reportPlayerId || 0}
+        onSubmitReport={handleSubmitReport}
+      />
     </div>
   );
 }
