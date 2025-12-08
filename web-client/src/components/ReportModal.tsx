@@ -21,7 +21,6 @@ export default function ReportModal({
   onSubmitReport,
 }: ReportModalProps) {
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
-  const [details, setDetails] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');

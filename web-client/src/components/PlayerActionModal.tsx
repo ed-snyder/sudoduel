@@ -6,7 +6,7 @@ interface PlayerActionModalProps {
   playerName: string;
   playerId: number;
   onAddFriend: (playerId: number) => Promise<void>;
-  onReport: (playerId: number) => void; // Opens report modal
+  onReport: () => void; // Opens report modal
 }
 
 export default function PlayerActionModal({

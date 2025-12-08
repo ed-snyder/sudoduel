@@ -34,8 +34,6 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportPlayerId, setReportPlayerId] = useState<number | null>(null);
-  const [reportPlayerName, setReportPlayerName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -89,7 +87,7 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
     await sendFriendRequest(token, playerId);
   };
 
-  const handleOpenReport = (playerId: number) => {
+  const handleOpenReport = () => {
     setShowPlayerModal(false);
     setShowReportModal(true);
   };
@@ -219,8 +217,6 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
           isOpen={showReportModal}
           onClose={() => {
             setShowReportModal(false);
-            setReportPlayerId(null);
-            setReportPlayerName('');
           }}
           playerName={selectedPlayer.name}
           playerId={selectedPlayer.id}
