@@ -17,6 +17,7 @@ interface SudokuGridProps {
   currentStreak?: number;
   erroredCells?: Set<string>;
   animateIn?: boolean; // NEW: Whether to play draw-in animation
+  countdownPhase?: 'hidden' | 'countdown' | 'go' | 'complete'; // NEW: Track countdown phase
 }
 
 interface FloatingFeedback {
@@ -90,6 +91,7 @@ function SudokuGrid({
   currentStreak = 0,
   erroredCells = new Set(),
   animateIn = false,
+  countdownPhase = 'complete',
 }: SudokuGridProps) {
   const renderStart = performance.now();
   console.log(`[PERF] SudokuGrid render START`);
@@ -154,19 +156,18 @@ function SudokuGrid({
   useEffect(() => {
     if (!animateIn) return;
 
-    // Grid lines complete at ~0.9s (faster drawing)
+    // Grid lines complete at ~2.0s (slower drawing - 3 second total animation)
     const gridTimer = setTimeout(() => {
       console.log('[GRID ANIM] Grid lines complete');
       setGridAnimationComplete(true);
-    }, 800);
+    }, 2000);
 
-    // Numbers MUST complete IMMEDIATELY after grid finishes drawing
-    // Set to 1.0s to ensure cells are NEVER highlighted during countdown
-    // This prevents any blue highlighting during the 3...2...1...GO! sequence
+    // Numbers complete at ~3.0s (slower slamming - 3 second total animation)
+    // This ensures cells are NEVER highlighted during countdown
     const numbersTimer = setTimeout(() => {
       console.log('[GRID ANIM] Numbers complete - preventing highlights');
       setNumbersAnimationComplete(true);
-    }, 1000);
+    }, 3000);
 
     return () => {
       clearTimeout(gridTimer);
@@ -181,9 +182,9 @@ function SudokuGrid({
     const cellInfo = prefilledCells.find(c => c.row === row && c.col === col);
     if (!cellInfo) return null;
     
-    // Start at 0.4s (while grid is still drawing), rapid succession with 0.025s between each
-    // This creates an overlapping effect where numbers slam in as grid draws
-    return 0.4 + (cellInfo.index * 0.025);
+    // Start at 2.0s (after grid finishes drawing), stagger by 0.025s per cell
+    // Total animation duration: ~3.0s for slower, more dramatic effect
+    return 2.0 + (cellInfo.index * 0.025);
   }, [animateIn, numbersAnimationComplete, prefilledCells]);
   
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
@@ -344,7 +345,8 @@ function SudokuGrid({
             const isError = isErrorFlash(rowIndex, colIndex);
 
             // IMPORTANT: During countdown animation, ALL cells are transparent - no highlights whatsoever
-            const isAnimatingIn = animateIn && !numbersAnimationComplete;
+            // Keep cells unhighlighted until countdown is completely done
+            const isAnimatingIn = (animateIn && !numbersAnimationComplete) || countdownPhase !== 'complete';
 
             // Cell background - transparent by default, bright cyan for selection
             // Priority: selected > almost-complete > highlighted > default
@@ -510,7 +512,7 @@ function SudokuGrid({
             style={animateIn && !gridAnimationComplete ? {
               strokeDasharray: '2000',
               strokeDashoffset: '2000',
-              animation: 'draw-line-long 0.6s ease-out forwards',
+              animation: 'draw-line-long 1.5s ease-out forwards',
             } : {}}
           />
 
@@ -528,8 +530,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.25s ease-out forwards',
-                animationDelay: `${0.3 + (idx * 0.06)}s`,
+                animation: 'draw-line 0.4s ease-out forwards',
+                animationDelay: `${0.5 + (idx * 0.08)}s`,
               } : {}}
             />
           ))}
@@ -548,8 +550,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.25s ease-out forwards',
-                animationDelay: `${0.3 + (idx * 0.06)}s`,
+                animation: 'draw-line 0.4s ease-out forwards',
+                animationDelay: `${0.5 + (idx * 0.08)}s`,
               } : {}}
             />
           ))}
@@ -568,8 +570,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.3s ease-out forwards',
-                animationDelay: `${0.15 + (idx * 0.08)}s`,
+                animation: 'draw-line 0.5s ease-out forwards',
+                animationDelay: `${0.8 + (idx * 0.1)}s`,
               } : {}}
             />
           ))}
@@ -588,8 +590,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.3s ease-out forwards',
-                animationDelay: `${0.15 + (idx * 0.08)}s`,
+                animation: 'draw-line 0.5s ease-out forwards',
+                animationDelay: `${0.8 + (idx * 0.1)}s`,
               } : {}}
             />
           ))}

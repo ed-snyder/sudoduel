@@ -2064,6 +2064,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 notesMode={notesMode}
                 lockedOut={myState.is_locked || countdownPhase !== 'complete'}
                 animateIn={gridAnimateIn}
+                countdownPhase={countdownPhase}
                 lastMoveResult={lastMoveResult}
                 opponentScoredCells={opponentScoredCells}
                 lastScoredCell={lastScoredCell}
