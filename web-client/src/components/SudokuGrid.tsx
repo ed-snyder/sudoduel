@@ -335,9 +335,9 @@ function SudokuGrid({
             width="100%"
             height="100%"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.9)"
+            stroke="rgba(255, 255, 255, 1)"
             strokeWidth={2}
-            strokeOpacity={thickBreathMultiplier}
+            strokeOpacity={1}
             rx="4"
             ry="4"
             filter="url(#softGlow)"
@@ -377,9 +377,9 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="rgba(255, 255, 255, 0.9)"
+              stroke="rgba(255, 255, 255, 1)"
               strokeWidth={2}
-              strokeOpacity={thickBreathMultiplier}
+              strokeOpacity={1}
               filter="url(#softGlow)"
             />
           ))}
@@ -390,9 +390,9 @@ function SudokuGrid({
               y1="0"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="rgba(255, 255, 255, 0.9)"
+              stroke="rgba(255, 255, 255, 1)"
               strokeWidth={2}
-              strokeOpacity={thickBreathMultiplier}
+              strokeOpacity={1}
               filter="url(#softGlow)"
             />
           ))}
