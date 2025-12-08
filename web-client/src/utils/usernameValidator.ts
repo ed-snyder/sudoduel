@@ -15,6 +15,8 @@ const BLOCKED_WORDS = [
   'pedo', 'pedophile', 'paedo',
   // Sexual
   'porn', 'rape',
+  // Profanity
+  'asshole',
 ];
 
 // Leetspeak substitutions
