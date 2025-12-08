@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import { useHaptics } from '../hooks/useHaptics';
@@ -1104,7 +1104,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     return result;
   }, []);
 
-  const almostCompleteCells = useMemo(() => calculateAlmostCompleteCells(myGrid), [myGrid, calculateAlmostCompleteCells]);
+  // Defer expensive calculation to avoid blocking paint on first cell placement
+  const deferredGrid = useDeferredValue(myGrid);
+  const almostCompleteCells = useMemo(() => calculateAlmostCompleteCells(deferredGrid), [deferredGrid, calculateAlmostCompleteCells]);
 
   // Clear notes containing a value from the same row, column, and 3x3 box
   // OPTIMIZED: Memoized to avoid recreating function on every render
@@ -1269,15 +1271,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           });
         });
       
-        // IMMEDIATELY check for completions using the NEW grid state (not stale myGrid)
-        // This ensures the flash happens instantly, not after server response
-        if (import.meta.env.DEV) {
-          const completeTime = performance.now();
-          console.log(`[COMPLETE] Number placed at ${completeTime}`);
-        }
-        checkCompletions(newGrid, row, col);
-        if (import.meta.env.DEV) {
-          console.log(`[COMPLETE] Completion check triggered at ${performance.now()}`);
+        // DEFER expensive completion checks to avoid blocking paint
+        // Use requestIdleCallback to run after paint, or setTimeout as fallback
+        const deferCompletionCheck = () => {
+          console.log(`[PERF] Deferred checkCompletions START: ${(performance.now() - startTime).toFixed(2)}ms`);
+          checkCompletions(newGrid, row, col);
+          console.log(`[PERF] Deferred checkCompletions END: ${(performance.now() - startTime).toFixed(2)}ms`);
+        };
+        
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(deferCompletionCheck, { timeout: 100 });
+        } else {
+          setTimeout(deferCompletionCheck, 0);
         }
         
         // OPTIMISTIC: Clear notes for this cell (batched with grid update)
