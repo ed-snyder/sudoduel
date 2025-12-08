@@ -86,6 +86,9 @@ function SudokuGrid({
   almostCompleteCells = new Set(),
   currentStreak = 0,
 }: SudokuGridProps) {
+  const renderStart = performance.now();
+  console.log(`[PERF] SudokuGrid render START`);
+
   // Pre-initialize error audio context on first user interaction
   useEffect(() => {
     const initOnInteraction = () => {
@@ -150,6 +153,9 @@ function SudokuGrid({
   useEffect(() => {
     if (!lastMoveResult) return;
 
+    const effectStart = performance.now();
+    console.log(`[PERF] useEffect lastMoveResult START: ${effectStart.toFixed(2)}ms`);
+
     const { row, col, correct } = lastMoveResult;
     const moveId = `${row}-${col}-${correct}`;
     
@@ -158,13 +164,17 @@ function SudokuGrid({
     
     const feedbackId = `${row}-${col}-${Date.now()}`;
     
+    console.log(`[PERF] useEffect lastMoveResult - before feedback: ${(performance.now() - effectStart).toFixed(2)}ms`);
+    
     if (correct) {
       setFloatingFeedbacks((prev) => [
         ...prev,
         { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
       ]);
     } else {
+      console.log(`[PERF] useEffect lastMoveResult - before playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       playErrorSound();
+      console.log(`[PERF] useEffect lastMoveResult - after playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
       setFloatingFeedbacks((prev) => [
         ...prev,
@@ -175,6 +185,8 @@ function SudokuGrid({
     setTimeout(() => {
       setFloatingFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
     }, 1000);
+    
+    console.log(`[PERF] useEffect lastMoveResult END: ${(performance.now() - effectStart).toFixed(2)}ms`);
   }, [lastMoveResult, currentStreak]);
 
   // Breathing animation - synchronized glow pulse
@@ -201,6 +213,8 @@ function SudokuGrid({
   const textGlowOpacity = 0.3 + Math.sin(breathPhase) * 0.1; // 0.2 to 0.4
   const cyanGlowOpacity = 0.6 + Math.sin(breathPhase) * 0.15; // 0.45 to 0.75
   const cellBreathFactor = 0.85 + Math.sin(breathPhase) * 0.15; // 0.7 to 1.0
+
+  console.log(`[PERF] SudokuGrid render took: ${(performance.now() - renderStart).toFixed(2)}ms`);
 
   return (
     <div

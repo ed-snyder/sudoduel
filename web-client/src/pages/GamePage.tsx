@@ -969,31 +969,30 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
 
   const handleCellClick = useCallback((row: number, col: number) => {
-    // PERFORMANCE: Mark start of cell click handling
-    if (import.meta.env.DEV) {
-      performance.mark('cell-click-start');
-    }
+    const startTime = performance.now();
+    console.log(`[PERF] Cell click START: ${startTime.toFixed(2)}ms`);
 
     if (gameStatus !== 'playing' || myState?.is_locked) {
-      if (import.meta.env.DEV) {
-        console.log(`[GamePage] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
-      }
+      console.log(`[PERF] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
       return;
     }
 
+    console.log(`[PERF] After selection check: ${(performance.now() - startTime).toFixed(2)}ms`);
+
     // Check if cell is an initial clue - allow clicking for highlighting but log it
     const isInitial = initialGrid[row]?.[col] !== 0;
-    if (isInitial && import.meta.env.DEV) {
-      console.log(`[GamePage] Clicked initial clue cell (${row}, ${col}) - allowing for highlighting`);
+    if (isInitial) {
+      console.log(`[PERF] Clicked initial clue cell (${row}, ${col})`);
     }
+
+    console.log(`[PERF] After initial check: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     // If tapping the same cell again, clear selection/highlights
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+      console.log(`[PERF] Before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
       setSelectedCell(null);
-      if (import.meta.env.DEV) {
-        performance.mark('cell-click-state-update');
-        performance.measure('cell-click-to-state', 'cell-click-start', 'cell-click-state-update');
-      }
+      console.log(`[PERF] After setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
+      console.log(`[PERF] Cell click END (deselect): ${(performance.now() - startTime).toFixed(2)}ms`);
       return;
     }
 
@@ -1002,15 +1001,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // CRITICAL: This preserves the UX feature where clicking a cell with a number
     // highlights all identical numbers and related cells (row/column/3x3 box)
     // OPTIMIZED: Removed myGrid from dependencies - we don't need it for selection
-    if (import.meta.env.DEV) {
-      console.log(`[GamePage] Selecting cell (${row}, ${col}), isInitial: ${isInitial}`);
-    }
+    console.log(`[PERF] Before setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     setSelectedCell({ row, col });
+    console.log(`[PERF] After setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     
-    if (import.meta.env.DEV) {
-      performance.mark('cell-click-state-update');
-      performance.measure('cell-click-to-state', 'cell-click-start', 'cell-click-state-update');
-    }
+    console.log(`[PERF] Cell click END: ${(performance.now() - startTime).toFixed(2)}ms`);
   }, [gameStatus, myState?.is_locked, initialGrid, selectedCell]);
 
   // Back button removed - forfeit can be accessed via other means if needed
@@ -1157,25 +1152,22 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }, []);
 
   const handleNumberClick = useCallback((num: number) => {
-    // PERFORMANCE: Mark start of number click handling
-    if (import.meta.env.DEV) {
-      performance.mark('number-click-start');
-    }
+    const startTime = performance.now();
+    console.log(`[PERF] Number click START: ${startTime.toFixed(2)}ms`);
 
     if (!selectedCell || gameStatus !== 'playing') {
-      if (import.meta.env.DEV) {
-        console.log(`[GamePage] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
-      }
+      console.log(`[PERF] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
       return;
     }
     if (myState?.is_locked) {
-      if (import.meta.env.DEV) {
-        console.log(`[GamePage] Number click blocked: myState.is_locked=${myState.is_locked}, myState.score=${myState.score}, opponentState.is_locked=${opponentState.is_locked}, opponentState.score=${opponentState.score}`);
-      }
+      console.log(`[PERF] Number click blocked: myState.is_locked=${myState.is_locked}`);
       return;
     }
 
+    console.log(`[PERF] After validation checks: ${(performance.now() - startTime).toFixed(2)}ms`);
+
     if (notesMode) {
+      console.log(`[PERF] Notes mode - before setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
       // In notes mode: toggle the number in notes for this cell
       const cellKey = `${selectedCell.row}-${selectedCell.col}`;
       setNotes((prev) => {
@@ -1197,40 +1189,44 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         return newNotes;
       });
-      
-      if (import.meta.env.DEV) {
-        performance.mark('number-click-state-update');
-        performance.measure('number-click-to-state', 'number-click-start', 'number-click-state-update');
-      }
+      console.log(`[PERF] Notes mode - after setNotes: ${(performance.now() - startTime).toFixed(2)}ms`);
+      console.log(`[PERF] Number click END (notes mode): ${(performance.now() - startTime).toFixed(2)}ms`);
     } else {
+      console.log(`[PERF] Normal mode - before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
       // Normal mode: place number
       // Prevent placing numbers in initial clue cells
       if (initialGrid[selectedCell.row]?.[selectedCell.col] !== 0) {
+        console.log(`[PERF] Blocked - initial clue cell: ${(performance.now() - startTime).toFixed(2)}ms`);
         return;
       }
       
       const { row, col } = selectedCell;
       const cellKey = `${row}-${col}`;
       
+      console.log(`[PERF] Before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
+      
       // INSTANT LOCAL VALIDATION: Check correctness using solution grid
       const isCorrect = solutionGrid.length > 0 && solutionGrid[row]?.[col] === num;
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid[row]?.[col] !== 0;
       
-      // PERFORMANCE: Measure feedback timing
-      const tapTime = performance.now();
+      console.log(`[PERF] After validation (isCorrect=${isCorrect}): ${(performance.now() - startTime).toFixed(2)}ms`);
       
       // INSTANT FEEDBACK: Trigger immediately based on local validation
       if (isCorrect) {
+        console.log(`[PERF] Before sound/feedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Update streak immediately
         const newStreak = myStreakRef.current + 1;
         myStreakRef.current = newStreak;
         setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
         
+        console.log(`[PERF] Before triggerScoreFeedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Trigger synchronized feedback instantly
         triggerScoreFeedback(newStreak, row, col);
+        console.log(`[PERF] After triggerScoreFeedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         
         // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
+        console.log(`[PERF] Before setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
         if (wasEmpty && !isInitialClue) {
           setMyState(prev => ({
             ...prev,
@@ -1238,13 +1234,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             score: prev.score + 1,
           }));
         }
+        console.log(`[PERF] After setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
       } else {
         // INSTANT ERROR FEEDBACK: Incorrect move
-        if (import.meta.env.DEV) {
-          console.log(`[ERROR] Local validation triggered at ${performance.now()}`);
-        }
+        console.log(`[PERF] Error path - before setLastMoveResult: ${(performance.now() - startTime).toFixed(2)}ms`);
         setLastMoveResult({ correct: false, row, col });
+        console.log(`[PERF] Error path - before playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
         playIncorrectSound();
+        console.log(`[PERF] Error path - after playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
         hapticError();
         myStreakRef.current = 0; // Reset streak on error
         
@@ -1253,10 +1250,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       
       // OPTIMISTIC: Update grid only for correct moves (we know it's correct locally)
       if (isCorrect) {
+        console.log(`[PERF] Before setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Create new grid with the number placed
         const newGrid = myGrid.map((r) => [...r]);
         newGrid[row][col] = num;
         setMyGrid(newGrid);
+        console.log(`[PERF] After setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
       
         // IMMEDIATELY check for completions using the NEW grid state (not stale myGrid)
         // This ensures the flash happens instantly, not after server response
@@ -1291,33 +1290,30 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
       } else {
         // For incorrect moves, still clear selection but don't update grid
+        console.log(`[PERF] Error path - before setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
         setSelectedCell(null);
+        console.log(`[PERF] Error path - after setSelectedCell(null): ${(performance.now() - startTime).toFixed(2)}ms`);
       }
       
-      if (import.meta.env.DEV) {
-        const feedbackTime = performance.now() - tapTime;
-        console.log(`[PERF] Feedback triggered ${feedbackTime.toFixed(2)}ms after tap`);
-        if (feedbackTime > 16) {
-          console.warn(`[PERF] Feedback delay exceeds 16ms frame budget`);
-        }
-      }
-      
-      if (import.meta.env.DEV) {
-        performance.mark('number-click-state-update');
-        performance.measure('number-click-to-state', 'number-click-start', 'number-click-state-update');
-      }
-      
+      console.log(`[PERF] Before ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
       // Send to server (for synchronization, not validation - we already validated locally)
-      wsRef.current?.send(
-        JSON.stringify({
-          type: 'PLACE_NUMBER',
-          data: {
-            row,
-            col,
-            value: num,
-          },
-        })
-      );
+      if (wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'PLACE_NUMBER',
+            data: {
+              row,
+              col,
+              value: num,
+            },
+          })
+        );
+        console.log(`[PERF] After ws.send: ${(performance.now() - startTime).toFixed(2)}ms`);
+      } else {
+        console.log(`[PERF] wsRef.current is null, skipping send: ${(performance.now() - startTime).toFixed(2)}ms`);
+      }
+      
+      console.log(`[PERF] Number click END: ${(performance.now() - startTime).toFixed(2)}ms`);
     }
   }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError]);
 
