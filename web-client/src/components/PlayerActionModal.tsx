@@ -52,7 +52,7 @@ export default function PlayerActionModal({
 
   const handleReport = () => {
     onReport();
-    onClose();
+    // Don't call onClose() here - let the parent handle modal transitions
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
