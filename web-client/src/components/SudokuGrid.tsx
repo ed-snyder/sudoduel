@@ -341,12 +341,10 @@ function SudokuGrid({
             rx="4"
             ry="4"
             filter="url(#softGlow)"
-            vectorEffect="non-scaling-stroke"
-            strokeLinecap="butt"
           />
 
-          {/* 3. Thin internal lines - cell boundaries (positions 1, 2, 4, 5, 7, 8) */}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
+          {/* 3. Thin internal lines - ALL 8 cell boundaries (will be overlaid by thick lines at 3,6) */}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
               x1="0"
@@ -354,11 +352,11 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.25)"
-              strokeWidth="1"
+              strokeWidth={1}
               strokeOpacity={breathMultiplier}
             />
           ))}
-          {[1, 2, 4, 5, 7, 8].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <line
               key={`v-thin-${i}`}
               x1={`${(i / 9) * 100}%`}
@@ -366,12 +364,12 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="rgba(255, 255, 255, 0.25)"
-              strokeWidth="1"
+              strokeWidth={1}
               strokeOpacity={breathMultiplier}
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border, overlays thin lines */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -383,8 +381,6 @@ function SudokuGrid({
               strokeWidth={2}
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
-              vectorEffect="non-scaling-stroke"
-              strokeLinecap="butt"
             />
           ))}
           {[3, 6].map((i) => (
@@ -398,8 +394,6 @@ function SudokuGrid({
               strokeWidth={2}
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
-              vectorEffect="non-scaling-stroke"
-              strokeLinecap="butt"
             />
           ))}
 
