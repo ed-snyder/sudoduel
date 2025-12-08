@@ -30,23 +30,9 @@ router.post('/block', authMiddleware, async (req: AuthRequest, res: Response) =>
       return res.status(400).json({ error: 'Cannot block yourself' });
     }
     
-    // Check if already blocked
-    const existingBlock = await query(
-      `SELECT id FROM blocked_users WHERE user_id = $1 AND blocked_user_id = $2`,
-      [req.userId!, target_user_id]
-    );
-    
-    if (existingBlock.rows.length > 0) {
-      return res.status(400).json({ error: 'User already blocked' });
-    }
-    
-    // Insert block (create table if it doesn't exist)
+    // Ensure blocked_users table exists
     try {
-      await query(
-        `INSERT INTO blocked_users (user_id, blocked_user_id, created_at) 
-         VALUES ($1, $2, NOW())`,
-        [req.userId!, target_user_id]
-      );
+      await query(`SELECT 1 FROM blocked_users LIMIT 1`);
     } catch (err: any) {
       // If table doesn't exist, create it
       if (err.message.includes('relation "blocked_users" does not exist')) {
@@ -65,16 +51,27 @@ router.post('/block', authMiddleware, async (req: AuthRequest, res: Response) =>
         await query(`
           CREATE INDEX IF NOT EXISTS idx_blocked_users_blocked ON blocked_users(blocked_user_id)
         `);
-        // Retry insert
-        await query(
-          `INSERT INTO blocked_users (user_id, blocked_user_id, created_at) 
-           VALUES ($1, $2, NOW())`,
-          [req.userId!, target_user_id]
-        );
       } else {
         throw err;
       }
     }
+    
+    // Check if already blocked
+    const existingBlock = await query(
+      `SELECT id FROM blocked_users WHERE user_id = $1 AND blocked_user_id = $2`,
+      [req.userId!, target_user_id]
+    );
+    
+    if (existingBlock.rows.length > 0) {
+      return res.status(400).json({ error: 'User already blocked' });
+    }
+    
+    // Insert block
+    await query(
+      `INSERT INTO blocked_users (user_id, blocked_user_id, created_at) 
+       VALUES ($1, $2, NOW())`,
+      [req.userId!, target_user_id]
+    );
     
     res.json({ 
       success: true, 
