@@ -102,6 +102,7 @@ export const PlayerService = {
         `SELECT 
           mp.match_id,
           COALESCE(m.ended_at, m.created_at) as date,
+          opponent.id as opponent_id,
           opponent.display_name as opponent_name,
           CASE 
             WHEN mp.is_winner = true THEN 'WIN'
@@ -128,6 +129,7 @@ export const PlayerService = {
         matches: result.rows.map(row => ({
           match_id: row.match_id,
           date: row.date,
+          opponent_id: parseInt(row.opponent_id, 10),
           opponent_name: row.opponent_name,
           result: row.result,
           cells_completed: row.cells_completed,
