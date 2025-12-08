@@ -336,12 +336,13 @@ function SudokuGrid({
             height="100%"
             fill="none"
             stroke="rgba(255, 255, 255, 0.9)"
-            strokeWidth="2"
+            strokeWidth={2}
             strokeOpacity={thickBreathMultiplier}
             rx="4"
             ry="4"
             filter="url(#softGlow)"
             vectorEffect="non-scaling-stroke"
+            strokeLinecap="butt"
           />
 
           {/* 3. Thin internal lines - cell boundaries (positions 1, 2, 4, 5, 7, 8) */}
@@ -370,7 +371,7 @@ function SudokuGrid({
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - SAME as border */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -379,10 +380,11 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth="2"
+              strokeWidth={2}
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
               vectorEffect="non-scaling-stroke"
+              strokeLinecap="butt"
             />
           ))}
           {[3, 6].map((i) => (
@@ -393,10 +395,11 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth="2"
+              strokeWidth={2}
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
               vectorEffect="non-scaling-stroke"
+              strokeLinecap="butt"
             />
           ))}
 
@@ -409,7 +412,7 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="url(#shimmerGradient)"
-              strokeWidth={i === 3 || i === 6 ? 3 : 2}
+              strokeWidth={i === 3 || i === 6 ? 2 : 1}
             />
           ))}
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -420,18 +423,18 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="url(#shimmerGradient)"
-              strokeWidth={i === 3 || i === 6 ? 3 : 2}
+              strokeWidth={i === 3 || i === 6 ? 2 : 1}
             />
           ))}
           {/* Border shimmer */}
           <rect
-            x="1"
-            y="1"
-            width="calc(100% - 2px)"
-            height="calc(100% - 2px)"
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
             fill="none"
             stroke="url(#shimmerGradient)"
-            strokeWidth="3"
+            strokeWidth={2}
             rx="4"
             ry="4"
           />
