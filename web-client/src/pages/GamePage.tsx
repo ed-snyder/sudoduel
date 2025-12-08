@@ -97,6 +97,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [gameResult, setGameResult] = useState<any>(null);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const warmUpDoneRef = useRef(false);
+  const lastCellPlacementRef = useRef(0);
   
   // Load custom emotes from localStorage
   useEffect(() => {
@@ -828,6 +829,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         break;
 
       case 'TIME_SYNC':
+        // Skip TIME_SYNC processing for 200ms after cell placement to allow paint to complete
+        if (Date.now() - lastCellPlacementRef.current < 200) {
+          console.log(`[GamePage] TIME_SYNC throttled - recent cell placement`);
+          break;
+        }
+        
         // Update both timers and lock status from server
         // Don't update state if mySlot hasn't been set yet (wait for GAME_STATE)
         if (mySlotRef.current === 0) {
@@ -838,6 +845,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         console.log(`[GamePage] TIME_SYNC received: player1_locked=${message.data.player1_locked}, player2_locked=${message.data.player2_locked}, mySlot=${mySlotRef.current}`);
         if (mySlotRef.current === 1) {
           const myServerTime = message.data.player1_time;
+          const myLocked = message.data.player1_locked;
+          const myScore = message.data.player1_score;
+          const myCells = message.data.player1_cells_completed;
+          const opponentLocked = message.data.player2_locked;
+          const opponentScore = message.data.player2_score;
+          const opponentCells = message.data.player2_cells_completed;
+          
           // Correct if drift > 1 second
           setMyTimeRemaining(prev => {
             if (Math.abs(prev - myServerTime) > 1) {
@@ -847,24 +861,58 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             return prev;
           });
           setOpponentTimeRemaining(message.data.player2_time);
+          
+          // Only update state if values actually changed to avoid unnecessary re-renders
           setMyState(prev => {
+            // Check if anything actually changed
+            if (
+              prev.is_locked === myLocked &&
+              prev.score === (myScore !== undefined ? myScore : prev.score) &&
+              prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
+            ) {
+              // No change, return same reference to skip re-render
+              return prev;
+            }
+            
+            // Values changed, update state
             const newState = {
               ...prev,
-              is_locked: message.data.player1_locked,
-              score: message.data.player1_score !== undefined ? message.data.player1_score : prev.score,
-              cells_completed: message.data.player1_cells_completed !== undefined ? message.data.player1_cells_completed : prev.cells_completed,
+              is_locked: myLocked,
+              score: myScore !== undefined ? myScore : prev.score,
+              cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
             };
             console.log(`[GamePage] Updating myState (slot 1): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
             return newState;
           });
-          setOpponentState(prev => ({
-            ...prev,
-            is_locked: message.data.player2_locked,
-            score: message.data.player2_score !== undefined ? message.data.player2_score : prev.score,
-            cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
-          }));
+          
+          setOpponentState(prev => {
+            // Check if anything actually changed
+            if (
+              prev.is_locked === opponentLocked &&
+              prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
+              prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
+            ) {
+              // No change, return same reference to skip re-render
+              return prev;
+            }
+            
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: opponentLocked,
+              score: opponentScore !== undefined ? opponentScore : prev.score,
+              cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
+            };
+          });
         } else if (mySlotRef.current === 2) {
           const myServerTime = message.data.player2_time;
+          const myLocked = message.data.player2_locked;
+          const myScore = message.data.player2_score;
+          const myCells = message.data.player2_cells_completed;
+          const opponentLocked = message.data.player1_locked;
+          const opponentScore = message.data.player1_score;
+          const opponentCells = message.data.player1_cells_completed;
+          
           // Correct if drift > 1 second
           setMyTimeRemaining(prev => {
             if (Math.abs(prev - myServerTime) > 1) {
@@ -874,22 +922,49 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             return prev;
           });
           setOpponentTimeRemaining(message.data.player1_time);
+          
+          // Only update state if values actually changed to avoid unnecessary re-renders
           setMyState(prev => {
+            // Check if anything actually changed
+            if (
+              prev.is_locked === myLocked &&
+              prev.score === (myScore !== undefined ? myScore : prev.score) &&
+              prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
+            ) {
+              // No change, return same reference to skip re-render
+              return prev;
+            }
+            
+            // Values changed, update state
             const newState = {
               ...prev,
-              is_locked: message.data.player2_locked,
-              score: message.data.player2_score !== undefined ? message.data.player2_score : prev.score,
-              cells_completed: message.data.player2_cells_completed !== undefined ? message.data.player2_cells_completed : prev.cells_completed,
+              is_locked: myLocked,
+              score: myScore !== undefined ? myScore : prev.score,
+              cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
             };
             console.log(`[GamePage] Updating myState (slot 2): is_locked=${newState.is_locked}, score=${newState.score}, cells_completed=${newState.cells_completed}`);
             return newState;
           });
-          setOpponentState(prev => ({
-            ...prev,
-            is_locked: message.data.player1_locked,
-            score: message.data.player1_score !== undefined ? message.data.player1_score : prev.score,
-            cells_completed: message.data.player1_cells_completed !== undefined ? message.data.player1_cells_completed : prev.cells_completed,
-          }));
+          
+          setOpponentState(prev => {
+            // Check if anything actually changed
+            if (
+              prev.is_locked === opponentLocked &&
+              prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
+              prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
+            ) {
+              // No change, return same reference to skip re-render
+              return prev;
+            }
+            
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: opponentLocked,
+              score: opponentScore !== undefined ? opponentScore : prev.score,
+              cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
+            };
+          });
         }
         break;
 
@@ -1338,6 +1413,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         newGrid[row][col] = num;
         const beforeSetState = performance.now();
         setMyGrid(newGrid);
+        // Track cell placement time for TIME_SYNC throttling
+        lastCellPlacementRef.current = Date.now();
         console.log(`[PERF] After setMyGrid (scheduled): ${(performance.now() - startTime).toFixed(2)}ms`);
         
         // Measure when React actually commits the render
