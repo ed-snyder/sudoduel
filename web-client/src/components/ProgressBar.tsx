@@ -21,6 +21,9 @@ export function ProgressBar({ progress, color, className }: ProgressBarProps) {
         height: '14px',
         background: bgColor,
         border: `1px solid ${color === 'blue' ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 0, 255, 0.3)'}`,
+        boxShadow: color === 'blue' 
+          ? '0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 8px rgba(0, 255, 255, 0.1)'
+          : '0 0 10px rgba(255, 0, 255, 0.3), inset 0 0 8px rgba(255, 0, 255, 0.1)',
       }}
     >
       <div
@@ -28,7 +31,7 @@ export function ProgressBar({ progress, color, className }: ProgressBarProps) {
         style={{
           width: `${clampedProgress}%`,
           backgroundColor: baseColor,
-          boxShadow: `0 0 8px ${baseColor}80`,
+          boxShadow: `0 0 12px ${baseColor}, 0 0 20px ${baseColor}80, inset 0 0 8px ${baseColor}40`,
         }}
       />
     </div>

@@ -1927,7 +1927,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'block',
-                    letterSpacing: '-0.1em'
+                    letterSpacing: '-0.1em',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
                   }}
                 >
                   {myEmote}
@@ -1950,7 +1954,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     lineHeight: '1',
                     whiteSpace: 'nowrap',
                     display: 'block',
-                    letterSpacing: '-0.1em'
+                    letterSpacing: '-0.1em',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    boxShadow: '0 0 15px rgba(255, 255, 255, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)',
                   }}
                 >
                   {opponentEmote}

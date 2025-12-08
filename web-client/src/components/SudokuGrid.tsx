@@ -297,7 +297,8 @@ function SudokuGrid({
               cellClassName = 'almost-complete-glow';
             } else if (related) {
               // Enhanced highlighting for related cells (same row/col/box or matching number)
-              cellBg = 'rgba(0, 255, 255, 0.15)';
+              // Uniform solid background - no gradient or inset shadows
+              cellBg = 'rgba(0, 255, 255, 0.22)';
               cellClassName = 'selected-number-highlight';
             } else if (opponentScored) {
               // Bright magenta pulsing effect for opponent-placed cells

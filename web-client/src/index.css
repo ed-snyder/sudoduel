@@ -466,10 +466,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
   text-shadow: 0 0 4px rgba(255, 0, 255, 0.4), 0 0 8px rgba(255, 0, 255, 0.2);
-  animation: premium-name-shimmer 4s linear infinite;
+  animation: premium-name-shimmer 6s linear infinite;
 }
 
-/* Premium Opponent Name Styling (Magenta with Blue Outline) */
+/* Premium Opponent Name Styling (Magenta with Magenta Outline) */
 .premium-opponent-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 900;
@@ -481,8 +481,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
-  text-shadow: 0 0 4px rgba(0, 255, 255, 0.4), 0 0 8px rgba(0, 255, 255, 0.2);
-  animation: premium-name-shimmer 4s linear infinite;
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.5), 0 0 8px rgba(255, 0, 255, 0.3);
+  animation: premium-name-shimmer 6s linear infinite;
 }
 
 /* Non-Premium Name Styling */
@@ -499,20 +499,18 @@ input[type="range"]::-webkit-slider-thumb:hover {
 @keyframes selected-number-pulse {
   0%, 100% {
     box-shadow: 
-      inset 0 0 15px rgba(0, 255, 255, 0.3),
-      0 0 10px rgba(0, 255, 255, 0.2),
-      0 0 20px rgba(0, 255, 255, 0.15);
+      0 0 8px rgba(0, 255, 255, 0.5),
+      0 0 15px rgba(0, 255, 255, 0.3);
   }
   50% {
     box-shadow: 
-      inset 0 0 20px rgba(0, 255, 255, 0.5),
-      0 0 15px rgba(0, 255, 255, 0.4),
-      0 0 30px rgba(0, 255, 255, 0.3);
+      0 0 15px rgba(0, 255, 255, 0.7),
+      0 0 25px rgba(0, 255, 255, 0.5);
   }
 }
 
 .selected-number-highlight {
-  background: rgba(0, 255, 255, 0.15) !important;
+  background-color: rgba(0, 255, 255, 0.22) !important;
   animation: selected-number-pulse 1.5s ease-in-out infinite;
 }
 
