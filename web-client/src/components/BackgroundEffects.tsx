@@ -12,8 +12,9 @@ export default function BackgroundEffects() {
   }, []);
 
   // Grid hue oscillates between purple (270) and shifts toward cyan (200) or magenta (320)
-  const gridHue = 270 + Math.sin(phase * Math.PI / 180) * 50;
-  const gridOpacity = 0.12 + Math.sin(phase * Math.PI / 90) * 0.04;
+  // Kept for potential future use - hue and opacity shift calculations
+  const _gridHue = 270 + Math.sin(phase * Math.PI / 180) * 50;
+  const _gridOpacity = 0.12 + Math.sin(phase * Math.PI / 90) * 0.04;
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
