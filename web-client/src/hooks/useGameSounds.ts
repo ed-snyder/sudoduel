@@ -229,6 +229,26 @@ export function useGameSounds() {
     }
   }, [initAudio, playBuffer, playGeneratedIncorrect]);
 
+  // Softer error sound for subsequent incorrect guesses on same cell
+  const playSofterErrorSound = useCallback(() => {
+    initAudio();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Lower pitch, less harsh version of error sound
+    const oscLow = ctx.createOscillator();
+    const gainLow = ctx.createGain();
+    oscLow.type = 'sine';
+    oscLow.frequency.setValueAtTime(60, ctx.currentTime); // Lower pitch than first error
+    oscLow.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.15);
+    gainLow.gain.setValueAtTime(0.2, ctx.currentTime); // Lower volume
+    gainLow.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    oscLow.connect(gainLow);
+    gainLow.connect(ctx.destination);
+    oscLow.start(ctx.currentTime);
+    oscLow.stop(ctx.currentTime + 0.15);
+  }, [initAudio]);
+
   const resetStreak = useCallback(() => {
     streakRef.current = 0;
   }, []);
@@ -325,6 +345,7 @@ export function useGameSounds() {
   return {
     playCorrectSound,
     playIncorrectSound,
+    playSofterErrorSound,
     resetStreak,
     getStreak,
     initAudio,

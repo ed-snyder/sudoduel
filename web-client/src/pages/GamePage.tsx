@@ -34,7 +34,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
-  const { playCorrectSound, playIncorrectSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
+  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
   const { victory: hapticVictory, bigWin: hapticBigWin, error: hapticError, vibrate } = useHaptics();
   
   // Synchronized feedback function - all feedback fires together
@@ -218,6 +218,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [graceTimeRemaining, setGraceTimeRemaining] = useState(0);
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
+  const [isPlayerPremium] = useState<boolean>(true);
+  const [isOpponentPremium] = useState<boolean>(true);
+  const [erroredCells, setErroredCells] = useState<Set<string>>(new Set()); // Track cells that have received incorrect guesses
   
   // Background effect triggers
   const [bgPlayerScored, setBgPlayerScored] = useState(false);
@@ -665,6 +668,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setMyState({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
         setOpponentState({ score: 0, cells_completed: 0, time_remaining: STARTING_TIME_SECONDS, is_locked: false, is_solved: false });
         setOpponentScoredCells(new Set()); // CRITICAL: Clear opponent scored cells
+        setErroredCells(new Set()); // Reset errored cells tracking
         setLastMoveResult(null);
         setSelectedCell(null);
         setNotes(new Map());
@@ -1364,7 +1368,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       }
       
       const { row, col } = selectedCell;
-      const cellKey = `${row}-${col}`;
       
       console.log(`[PERF] Before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
       
@@ -1400,10 +1403,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         console.log(`[PERF] After setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
       } else {
         // INSTANT ERROR FEEDBACK: Incorrect move
+        const cellKey = `${row}-${col}`;
+        const isFirstError = !erroredCells.has(cellKey);
+        
         console.log(`[PERF] Error path - before setLastMoveResult: ${(performance.now() - startTime).toFixed(2)}ms`);
         setLastMoveResult({ correct: false, row, col });
+        
+        // Track errored cell
+        if (isFirstError) {
+          setErroredCells(prev => new Set(prev).add(cellKey));
+        }
+        
         console.log(`[PERF] Error path - before playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
-        playIncorrectSound();
+        // Use different sound for first vs subsequent errors
+        if (isFirstError) {
+          playIncorrectSound();
+        } else {
+          playSofterErrorSound();
+        }
         console.log(`[PERF] Error path - after playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
         hapticError();
         myStreakRef.current = 0; // Reset streak on error
@@ -1413,6 +1430,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       
       // OPTIMISTIC: Update grid only for correct moves (we know it's correct locally)
       if (isCorrect) {
+        // Clear errored cell tracking when cell becomes correct
+        const cellKey = `${row}-${col}`;
+        setErroredCells(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(cellKey);
+          return newSet;
+        });
+        
         console.log(`[PERF] Before setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Create new grid with the number placed
         const newGrid = myGrid.map((r) => [...r]);
@@ -1449,11 +1474,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
         
         // OPTIMISTIC: Clear notes for this cell (batched with grid update)
-      setNotes(prev => {
-        const newNotes = new Map(prev);
-        newNotes.delete(cellKey);
-        return newNotes;
-      });
+        setNotes(prev => {
+          const newNotes = new Map(prev);
+          newNotes.delete(cellKey);
+          return newNotes;
+        });
       
         // Clear selection immediately (batched)
       setSelectedCell(null);
@@ -1821,12 +1846,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
             <div className="flex items-center gap-2">
-              <div className="text-lg sm:text-xl font-bold text-player">{user?.display_name || 'You'}</div>
+              <div className={`text-lg sm:text-xl ${isPlayerPremium ? 'premium-player-name' : 'non-premium-name'}`}>
+                {user?.display_name || 'You'}
+              </div>
               <div className="text-xs sm:text-sm text-muted font-mono">{Math.round(user?.rating || 1500)}</div>
             </div>
             {/* Right: Opponent */}
             <div className="flex items-center gap-2">
-              <div className="text-lg sm:text-xl font-bold text-opponent">{opponentName}</div>
+              <div className={`text-lg sm:text-xl ${isOpponentPremium ? 'premium-opponent-name' : 'non-premium-name'}`}>
+                {opponentName}
+              </div>
               <div className="text-xs sm:text-sm text-muted font-mono">
                 {opponentRating !== undefined ? Math.round(opponentRating) : '—'}
               </div>
@@ -1987,6 +2016,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 completedCells={completedCells}
                 almostCompleteCells={almostCompleteCells}
                 currentStreak={myStreakRef.current}
+                erroredCells={erroredCells}
               />
             </div>
           )}
@@ -2064,15 +2094,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             {/* Emote Button */}
             <button
               onClick={() => setShowEmotePicker(true)}
-              className="flex-1 py-4 rounded-xl transition-all touch-manipulation flex items-center justify-center"
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center"
               style={{
                 background: 'rgba(20, 12, 30, 0.8)',
                 border: '2px solid rgba(139, 0, 255, 0.5)',
-                fontSize: '1.5rem',
+                color: 'rgba(255, 255, 255, 0.9)',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              😊
+              Emote
             </button>
           </div>
           </>

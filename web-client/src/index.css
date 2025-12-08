@@ -310,17 +310,23 @@ html, body, #root {
 }
 
 /* Almost complete glow - last empty cell in row/col/box */
-@keyframes almost-complete-glow {
+@keyframes almost-complete-pulse {
   0%, 100% { 
-    box-shadow: inset 0 0 8px 2px rgba(99, 102, 241, 0.3);
+    box-shadow: 
+      0 0 8px rgba(0, 255, 136, 0.4),
+      0 0 15px rgba(0, 255, 136, 0.2),
+      inset 0 0 10px rgba(0, 255, 136, 0.1);
   }
   50% { 
-    box-shadow: inset 0 0 12px 4px rgba(99, 102, 241, 0.5);
+    box-shadow: 
+      0 0 15px rgba(0, 255, 136, 0.6),
+      0 0 25px rgba(0, 255, 136, 0.4),
+      inset 0 0 15px rgba(0, 255, 136, 0.2);
   }
 }
 
 .almost-complete-glow {
-  animation: almost-complete-glow 1.5s ease-in-out infinite;
+  animation: almost-complete-pulse 1s ease-in-out infinite;
 }
 
 /* Event banner animation - subtle scale pulse + fade in */
@@ -414,6 +420,77 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .emote-input-placeholder::placeholder {
   font-family: 'Industry', 'Orbitron', ui-sans-serif, system-ui, sans-serif;
   font-weight: 900;
+}
+
+/* Premium Player Name Styling (Cyan Chrome) */
+@keyframes premium-name-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.premium-player-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FFFFFF 0%, #B0FFFF 25%, #00FFFF 50%, #008B8B 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+  animation: premium-name-shimmer 2s linear infinite;
+}
+
+/* Premium Opponent Name Styling (Magenta with Blue Outline) */
+.premium-opponent-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FFFFFF 0%, #FFB0FF 25%, #FF00FF 50%, #8B008B 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
+  text-shadow: 0 0 4px rgba(0, 255, 255, 0.4), 0 0 8px rgba(0, 255, 255, 0.2);
+  animation: premium-name-shimmer 2s linear infinite;
+}
+
+/* Non-Premium Name Styling */
+.non-premium-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 400;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #F0E6FF;
+  text-shadow: 0 0 8px rgba(240, 230, 255, 0.4);
+}
+
+/* Selected Number Highlighting - Pulsing Glow */
+@keyframes selected-number-pulse {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 15px rgba(0, 255, 255, 0.3),
+      0 0 10px rgba(0, 255, 255, 0.2),
+      0 0 20px rgba(0, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 20px rgba(0, 255, 255, 0.5),
+      0 0 15px rgba(0, 255, 255, 0.4),
+      0 0 30px rgba(0, 255, 255, 0.3);
+  }
+}
+
+.selected-number-highlight {
+  background: rgba(0, 255, 255, 0.15) !important;
+  animation: selected-number-pulse 1.5s ease-in-out infinite;
 }
 
 

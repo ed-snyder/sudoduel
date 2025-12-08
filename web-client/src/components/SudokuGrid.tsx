@@ -14,6 +14,7 @@ interface SudokuGridProps {
   completedCells?: Set<string>;
   almostCompleteCells?: Set<string>;
   currentStreak?: number;
+  erroredCells?: Set<string>;
 }
 
 interface FloatingFeedback {
@@ -85,6 +86,7 @@ function SudokuGrid({
   completedCells = new Set(),
   almostCompleteCells = new Set(),
   currentStreak = 0,
+  erroredCells = new Set(),
 }: SudokuGridProps) {
   const renderStart = performance.now();
   console.log(`[PERF] SudokuGrid render START`);
@@ -169,14 +171,21 @@ function SudokuGrid({
         { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak },
       ]);
     } else {
+      const cellKey = `${row}-${col}`;
+      const isFirstError = !erroredCells.has(cellKey);
+      
       console.log(`[PERF] useEffect lastMoveResult - before playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       playErrorSound();
       console.log(`[PERF] useEffect lastMoveResult - after playErrorSound: ${(performance.now() - effectStart).toFixed(2)}ms`);
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-      setFloatingFeedbacks((prev) => [
-        ...prev,
-        { id: feedbackId, row, col, text: '-30s!', correct: false },
-      ]);
+      
+      // Only show "-30s" animation on first error
+      if (isFirstError) {
+        setFloatingFeedbacks((prev) => [
+          ...prev,
+          { id: feedbackId, row, col, text: '-30s', correct: false },
+        ]);
+      }
     }
 
     setTimeout(() => {
@@ -184,7 +193,7 @@ function SudokuGrid({
     }, 1000);
     
     console.log(`[PERF] useEffect lastMoveResult END: ${(performance.now() - effectStart).toFixed(2)}ms`);
-  }, [lastMoveResult, currentStreak]);
+  }, [lastMoveResult, currentStreak, erroredCells]);
 
   const getCellPosition = (row: number, col: number) => {
     const cellPercent = 100 / 9;
@@ -266,8 +275,11 @@ function SudokuGrid({
             const isError = isErrorFlash(rowIndex, colIndex);
 
             // Cell background - transparent by default, bright cyan for selection
+            // Priority: selected > almost-complete > highlighted > default
             let cellBg = 'transparent';
             let cellShadow = 'none';
+            let cellClassName = '';
+            let cellBorder = 'none';
             
             if (lockedOut) {
               cellBg = 'rgba(100, 100, 100, 0.2)';
@@ -275,11 +287,18 @@ function SudokuGrid({
               cellBg = 'rgba(255, 51, 102, 0.4)';
               cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
             } else if (selected) {
+              // Selected cell - highest priority
               cellBg = 'rgba(0, 255, 255, 0.35)';
               cellShadow = 'inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 15px rgba(0, 255, 255, 0.4)';
+            } else if (isAlmostComplete && !hasValue) {
+              // Almost complete - second priority (only for empty cells)
+              cellBg = 'rgba(0, 255, 136, 0.1)';
+              cellBorder = '2px solid #00FF88';
+              cellClassName = 'almost-complete-glow';
             } else if (related) {
-              cellBg = 'rgba(0, 255, 255, 0.12)';
-              cellShadow = 'inset 0 0 10px rgba(0, 255, 255, 0.15)';
+              // Enhanced highlighting for related cells (same row/col/box or matching number)
+              cellBg = 'rgba(0, 255, 255, 0.15)';
+              cellClassName = 'selected-number-highlight';
             } else if (opponentScored) {
               cellBg = 'rgba(255, 0, 255, 0.15)';
             }
@@ -298,11 +317,13 @@ function SudokuGrid({
                   transition-all duration-75 touch-manipulation
                   ${isCompleted ? 'completion-flash' : ''}
                   ${isAlmostComplete ? 'almost-complete-glow' : ''}
+                  ${cellClassName}
                   ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
                 `}
                 style={{
                   background: cellBg,
                   boxShadow: cellShadow,
+                  border: cellBorder,
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
                   WebkitTapHighlightColor: 'transparent',
@@ -453,7 +474,9 @@ function SudokuGrid({
             style={{
               left: `${position.left}%`,
               top: `${position.top}%`,
-              transform: 'translate(-50%, -100%)',
+              transform: feedback.correct 
+                ? 'translate(-50%, calc(-100% - 12px))' // Higher position for "+5s!"
+                : 'translate(-50%, -100%)',
               zIndex: 100,
             }}
           >
