@@ -3,10 +3,26 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
+
+  // Pre-warm haptics engine on app start (earliest possible)
+  useEffect(() => {
+    const warmUpHaptics = async () => {
+      try {
+        console.log('[PERF] Pre-warming haptics engine...');
+        await Haptics.impact({ style: ImpactStyle.Light });
+        console.log('[PERF] Haptics engine ready');
+      } catch (e) {
+        // Ignore - haptics may not be available (web, etc.)
+        console.log('[PERF] Haptics not available:', e);
+      }
+    };
+    warmUpHaptics();
+  }, []);
 
   // Warm up renderer immediately on app load (earlier initialization)
   useEffect(() => {

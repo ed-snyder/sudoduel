@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } f
 import { useAuth } from '../context/AuthContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import { useHaptics } from '../hooks/useHaptics';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
@@ -127,6 +128,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       }
 
       console.log('[PERF] Starting renderer warm-up...');
+      
+      // Pre-warm haptics engine - do a silent/minimal haptic
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {
+        // Ignore errors, just warming up
+      });
       
       // 1. Pre-warm font rendering by forcing layout calculation
       const warmUpDiv = document.createElement('div');
