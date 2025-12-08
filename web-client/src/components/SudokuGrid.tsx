@@ -369,7 +369,7 @@ function SudokuGrid({
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - TESTING WITH RED */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -377,8 +377,10 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="red"
-              strokeWidth={4}
+              stroke="rgba(255, 255, 255, 0.9)"
+              strokeWidth={2}
+              strokeOpacity={thickBreathMultiplier}
+              filter="url(#softGlow)"
             />
           ))}
           {[3, 6].map((i) => (
@@ -388,13 +390,15 @@ function SudokuGrid({
               y1="0"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="red"
-              strokeWidth={4}
+              stroke="rgba(255, 255, 255, 0.9)"
+              strokeWidth={2}
+              strokeOpacity={thickBreathMultiplier}
+              filter="url(#softGlow)"
             />
           ))}
 
-          {/* Shimmer overlay - renders on top of base lines */}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {/* Shimmer overlay - renders on top of THIN lines only (skip positions 3,6 where thick lines are) */}
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-shimmer-${i}`}
               x1="0"
@@ -402,10 +406,10 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="url(#shimmerGradient)"
-              strokeWidth={i === 3 || i === 6 ? 2 : 1}
+              strokeWidth={1}
             />
           ))}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`v-shimmer-${i}`}
               x1={`${(i / 9) * 100}%`}
@@ -413,7 +417,30 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="url(#shimmerGradient)"
-              strokeWidth={i === 3 || i === 6 ? 2 : 1}
+              strokeWidth={1}
+            />
+          ))}
+          {/* Shimmer overlay for thick lines (positions 3,6) - renders on top of thick lines */}
+          {[3, 6].map((i) => (
+            <line
+              key={`h-shimmer-thick-${i}`}
+              x1="0"
+              y1={`${(i / 9) * 100}%`}
+              x2="100%"
+              y2={`${(i / 9) * 100}%`}
+              stroke="url(#shimmerGradient)"
+              strokeWidth={2}
+            />
+          ))}
+          {[3, 6].map((i) => (
+            <line
+              key={`v-shimmer-thick-${i}`}
+              x1={`${(i / 9) * 100}%`}
+              y1="0"
+              x2={`${(i / 9) * 100}%`}
+              y2="100%"
+              stroke="url(#shimmerGradient)"
+              strokeWidth={2}
             />
           ))}
           {/* Border shimmer */}
