@@ -343,8 +343,8 @@ function SudokuGrid({
             filter="url(#softGlow)"
           />
 
-          {/* 3. Thin internal lines - ALL 8 cell boundaries (will be overlaid by thick lines at 3,6) */}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {/* 3. Thin internal lines - cell boundaries (positions 1, 2, 4, 5, 7, 8) - SKIP 3 and 6 where thick lines go */}
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
               x1="0"
@@ -352,11 +352,12 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.25)"
-              strokeWidth={1}
+              strokeWidth="1"
               strokeOpacity={breathMultiplier}
+              style={{ strokeWidth: 1 }}
             />
           ))}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`v-thin-${i}`}
               x1={`${(i / 9) * 100}%`}
@@ -364,12 +365,13 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="rgba(255, 255, 255, 0.25)"
-              strokeWidth={1}
+              strokeWidth="1"
               strokeOpacity={breathMultiplier}
+              style={{ strokeWidth: 1 }}
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border, overlays thin lines */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border - MUST BE THICKER */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -378,9 +380,10 @@ function SudokuGrid({
               x2="100%"
               y2={`${(i / 9) * 100}%`}
               stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth={2}
+              strokeWidth="2"
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
+              style={{ strokeWidth: 2 }}
             />
           ))}
           {[3, 6].map((i) => (
@@ -391,9 +394,10 @@ function SudokuGrid({
               x2={`${(i / 9) * 100}%`}
               y2="100%"
               stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth={2}
+              strokeWidth="2"
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
+              style={{ strokeWidth: 2 }}
             />
           ))}
 
