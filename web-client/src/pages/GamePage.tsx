@@ -1931,7 +1931,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 }}
               >
                 <div className={`text-xl sm:text-2xl font-mono font-bold ${
-                  myTimeRemaining < 30 ? 'text-error' : myTimeRemaining < 60 ? 'text-gold' : 'text-primary'
+                  myTimeRemaining < 30 ? 'text-error' : 'text-primary'
                 }`}>
                   {formatTime(myTimeRemaining)}
                   {myTimerPaused && <span className="ml-2 text-sm">⏸</span>}

@@ -101,17 +101,19 @@
   text-transform: uppercase;
   letter-spacing: 0.02em;
   
-  /* Metallic magenta gradient fill */
+  /* MAGENTA METALLIC GRADIENT FILL - not white */
   background: linear-gradient(
     180deg,
-    #FF9FFF 0%,
-    #FF00FF 20%,
-    #DD00DD 45%,
-    #FF00FF 55%,
-    #CC00CC 80%,
-    #FF7FFF 100%
+    #FFB0FF 0%,      /* Light magenta highlight */
+    #FF60FF 15%,     /* Bright magenta */
+    #FF00FF 30%,     /* Pure magenta */
+    #DD00DD 50%,     /* Darker magenta (shadow) */
+    #FF00FF 70%,     /* Pure magenta */
+    #FF60FF 85%,     /* Bright magenta */
+    #FFB0FF 100%     /* Light magenta highlight */
   );
   -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;  /* Better browser support */
   background-clip: text;
   color: transparent;
   
