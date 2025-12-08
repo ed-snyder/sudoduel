@@ -40,8 +40,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { token, user, refreshUser } = useAuth();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
-  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
-  const { victory: hapticVictory, bigWin: hapticBigWin, error: hapticError, vibrate } = useHaptics();
+  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio } = useGameSounds();
+  const { error: hapticError, vibrate } = useHaptics();
   
   // Event banner system - defined early for use in triggerScoreFeedback
   interface BannerMessage {
@@ -1807,6 +1807,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         onCountdownNumberChange={setCountdownNumber}
         onComplete={handleCountdownComplete}
         isActive={showGameCountdown}
+      />
+
+      {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! */}
+      <GameEndOverlay
+        isActive={showGameEndOverlay}
+        reason={gameEndReason}
+        onComplete={handleGameEndOverlayComplete}
       />
 
       {/* Countdown overlay */}
