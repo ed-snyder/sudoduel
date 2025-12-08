@@ -122,6 +122,7 @@ function SudokuGrid({
   useEffect(() => {
     if (animateIn) {
       console.log('[GRID ANIM] Starting animation');
+      // Immediately set both to false to prevent any highlighting
       setGridAnimationComplete(false);
       setNumbersAnimationComplete(false);
     } else {
@@ -159,14 +160,13 @@ function SudokuGrid({
       setGridAnimationComplete(true);
     }, 800);
 
-    // Numbers MUST complete before GO! phase (3.6s)
-    // Set to 3.0s to ensure cells are unhighlighted before GO!
-    // 0.4s start + (40 prefilled cells * 0.025s) + 0.18s animation = ~1.6s
-    // But we need to finish before GO! appears at 3.6s
+    // Numbers MUST complete IMMEDIATELY after grid finishes drawing
+    // Set to 1.0s to ensure cells are NEVER highlighted during countdown
+    // This prevents any blue highlighting during the 3...2...1...GO! sequence
     const numbersTimer = setTimeout(() => {
-      console.log('[GRID ANIM] Numbers complete');
+      console.log('[GRID ANIM] Numbers complete - preventing highlights');
       setNumbersAnimationComplete(true);
-    }, 3000);
+    }, 1000);
 
     return () => {
       clearTimeout(gridTimer);

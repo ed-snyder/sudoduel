@@ -442,7 +442,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Gained the lead: was behind or tied, now ahead
     if (prevDiff <= 0 && currentDiff > 0) {
-      showBanner("Take the Lead!", "banner-message-cyan", 5, 2000, 'positive');
+      showBanner("Gained the Lead!", "banner-message-cyan", 5, 2000, 'positive');
     }
     // Lost the lead: was ahead or tied, now behind
     else if (prevDiff >= 0 && currentDiff < 0) {
@@ -805,8 +805,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           }
           
           // Update pressure indicators
-          const newScoreDiff = player_state.score - opponentState.score;
-          prevScoreDiffRef.current = newScoreDiff;
+          // Don't update prevScoreDiffRef here - let the banner effect handle it
+          // This allows banners to trigger properly when reconnecting
           
           // Remove from opponent scored cells if player scores it (reclaimed)
           if (correct) {
