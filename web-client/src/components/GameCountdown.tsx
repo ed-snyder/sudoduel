@@ -100,12 +100,12 @@ export default function GameCountdown({
         <div className="vs-container">
           <div className="vs-player vs-player-left">
             <div className="vs-name">{playerName}</div>
-            <div className="vs-rating">{playerRating}</div>
+            <div className="vs-rating">{Math.round(playerRating)}</div>
           </div>
           <div className="vs-text">VS</div>
           <div className="vs-player vs-player-right">
             <div className="vs-name">{opponentName}</div>
-            <div className="vs-rating">{opponentRating}</div>
+            <div className="vs-rating">{Math.round(opponentRating)}</div>
           </div>
         </div>
       )}

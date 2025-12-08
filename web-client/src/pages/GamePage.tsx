@@ -552,7 +552,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     console.log('[COUNTDOWN] Phase:', phase);
     setCountdownPhase(phase);
     
-    if (phase === 'go') {
+    if (phase === 'countdown') {
+      // Start grid draw and number animations when countdown starts (at "3!")
+      setGridAnimateIn(true);
+    } else if (phase === 'go') {
       setControlsVisible(true);
     }
   }, []);
@@ -690,9 +693,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         // START COUNTDOWN ANIMATION
         setShowGameCountdown(true);
-        setGridAnimateIn(true);
         setControlsVisible(false);
         setCountdownPhase('hidden');
+        // Grid animation will start when countdown phase begins (at "3!")
         prevCellsRemainingRef.current = 41;
         if (bannerTimeoutRef.current) {
           clearTimeout(bannerTimeoutRef.current);
