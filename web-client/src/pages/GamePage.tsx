@@ -96,6 +96,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
+  const warmUpDoneRef = useRef(false);
   
   // Load custom emotes from localStorage
   useEffect(() => {
@@ -111,6 +112,63 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       console.error('Failed to load custom emotes');
     }
   }, []);
+
+  // Warm-up function to force browser to pre-compute expensive operations
+  const warmUpRenderer = useCallback(() => {
+    if (warmUpDoneRef.current) return;
+    warmUpDoneRef.current = true;
+    
+    console.log('[PERF] Starting renderer warm-up...');
+    
+    // 1. Pre-warm font rendering by forcing layout calculation
+    const warmUpDiv = document.createElement('div');
+    warmUpDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
+    warmUpDiv.innerHTML = `
+      <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: rgba(255, 255, 255, 0.95);">123456789</span>
+      <span style="font-family: Industry, Orbitron, sans-serif; font-size: 1.5rem; font-weight: bold; color: #00FFFF; text-shadow: 0 0 12px rgba(0,255,255,0.7);">123456789</span>
+    `;
+    document.body.appendChild(warmUpDiv);
+    
+    // Force layout calculation
+    void warmUpDiv.offsetHeight;
+    
+    // 2. Pre-warm CSS animations by triggering them
+    warmUpDiv.innerHTML += `
+      <div class="breathing-line" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:1;"></div>
+      <div class="breathing-line-thick" style="width:100px;height:2px;background:white;stroke:rgb(255,255,255);stroke-width:2;"></div>
+      <div class="breathing-glow" style="width:100px;height:100px;"></div>
+      <span class="breathing-text" style="font-family: Industry, Orbitron, sans-serif; color: rgba(255, 255, 255, 0.95);">1</span>
+      <span class="breathing-cyan-text" style="font-family: Industry, Orbitron, sans-serif; color: #00FFFF;">1</span>
+    `;
+    
+    // Force style recalc
+    void warmUpDiv.offsetHeight;
+    
+    // Clean up after browser has processed
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (warmUpDiv.parentNode) {
+          document.body.removeChild(warmUpDiv);
+        }
+        console.log('[PERF] Renderer warm-up complete');
+      });
+    });
+  }, []);
+
+  // Warm up renderer when game becomes 'playing'
+  useEffect(() => {
+    if (gameStatus === 'playing' && myGrid.length > 0 && initialGrid.length > 0) {
+      // Warm up on first game load
+      warmUpRenderer();
+      
+      // Pre-warm the grid state update path with a dummy update
+      requestIdleCallback(() => {
+        // Force React to go through the full update path
+        // by setting state to same value (React will still reconcile)
+        setSelectedCell(prev => prev);
+      }, { timeout: 100 });
+    }
+  }, [gameStatus, myGrid.length, initialGrid.length, warmUpRenderer]);
   
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
   const [showForfeitModal, setShowForfeitModal] = useState(false);

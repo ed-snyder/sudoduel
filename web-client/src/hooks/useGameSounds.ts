@@ -33,6 +33,19 @@ export function useGameSounds() {
   useEffect(() => {
     const initOnInteraction = () => {
       initAudio();
+      // Play silent sound to fully initialize audio pipeline
+      const ctx = audioContextRef.current;
+      if (ctx) {
+        ctx.resume().then(() => {
+          const oscillator = ctx.createOscillator();
+          const gain = ctx.createGain();
+          gain.gain.value = 0; // Silent
+          oscillator.connect(gain);
+          gain.connect(ctx.destination);
+          oscillator.start();
+          oscillator.stop(ctx.currentTime + 0.001);
+        });
+      }
       document.removeEventListener('touchstart', initOnInteraction);
       document.removeEventListener('click', initOnInteraction);
     };

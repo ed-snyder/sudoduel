@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
@@ -7,6 +7,28 @@ import GamePage from './pages/GamePage';
 function AppContent() {
   const { user, loading } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
+
+  // Warm up renderer immediately on app load (earlier initialization)
+  useEffect(() => {
+    const warmUp = () => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;left:-9999px;visibility:hidden;';
+      div.innerHTML = `
+        <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:#00FFFF;text-shadow:0 0 12px rgba(0,255,255,0.7);">123456789</span>
+        <span style="font-family:Industry,Orbitron,sans-serif;font-size:1.5rem;font-weight:bold;color:rgba(255,255,255,0.95);">123456789</span>
+      `;
+      document.body.appendChild(div);
+      void div.offsetHeight; // Force layout
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (div.parentNode) {
+            document.body.removeChild(div);
+          }
+        });
+      });
+    };
+    warmUp();
+  }, []);
 
     return (
     <div className="min-h-screen bg-void">
