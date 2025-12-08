@@ -156,12 +156,17 @@ function SudokuGrid({
     console.log(`[PERF] useEffect lastMoveResult START: ${effectStart.toFixed(2)}ms`);
 
     const { row, col, correct } = lastMoveResult;
-    const moveId = `${row}-${col}-${correct}`;
     
-    if (lastProcessedMoveRef.current === moveId) return;
-    lastProcessedMoveRef.current = moveId;
+    // For correct moves, use moveId to prevent duplicates
+    // For incorrect moves, always show feedback (use timestamp-based ID)
+    const feedbackId = `${row}-${col}-${Date.now()}-${Math.random()}`;
     
-    const feedbackId = `${row}-${col}-${Date.now()}`;
+    if (correct) {
+      const moveId = `${row}-${col}-${correct}`;
+      if (lastProcessedMoveRef.current === moveId) return;
+      lastProcessedMoveRef.current = moveId;
+    }
+    // For incorrect moves, don't check lastProcessedMoveRef - always show feedback
     
     console.log(`[PERF] useEffect lastMoveResult - before feedback: ${(performance.now() - effectStart).toFixed(2)}ms`);
     
@@ -295,7 +300,9 @@ function SudokuGrid({
               cellBg = 'rgba(0, 255, 255, 0.15)';
               cellClassName = 'selected-number-highlight';
             } else if (opponentScored) {
-              cellBg = 'rgba(255, 0, 255, 0.15)';
+              // Bright magenta pulsing effect for opponent-placed cells
+              cellBg = 'rgba(255, 0, 255, 0.25)';
+              cellClassName = 'opponent-scored-glow';
             }
 
             return (
