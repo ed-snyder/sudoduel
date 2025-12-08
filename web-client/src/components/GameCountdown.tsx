@@ -25,7 +25,7 @@ export default function GameCountdown({
   const [phase, setPhase] = useState<CountdownPhase>('hidden');
   const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
   const hasStartedRef = useRef(false);
-  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     return () => {
