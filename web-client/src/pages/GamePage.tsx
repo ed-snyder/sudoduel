@@ -261,11 +261,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [gridAnimateIn, setGridAnimateIn] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   
-  // Background effect triggers
-  const [bgPlayerScored, setBgPlayerScored] = useState(false);
-  const [bgOpponentScored, setBgOpponentScored] = useState(false);
-  const [bgMistakeMade, setBgMistakeMade] = useState(false);
-  
   // Streak system - track longest streak (used internally, not displayed in ResultScreen)
   const [_longestStreak, setLongestStreak] = useState(0);
   const myStreakRef = useRef(0);
@@ -779,7 +774,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             setMyState(player_state);
             
             // Trigger background effects
-            setBgPlayerScored(prev => !prev); // Toggle to trigger effect
           } else {
             // Incorrect move: Server confirms incorrect (matches our local validation)
             // Error feedback already played locally - do NOT re-trigger to avoid duplicate flash
@@ -799,7 +793,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           setMyState(player_state);
           
           // Trigger background effects
-          setBgMistakeMade(prev => !prev);
           }
           
           // Update pressure indicators
@@ -837,7 +830,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             });
             
             // Trigger background effects
-            setBgOpponentScored(prev => !prev);
             
             // Optional: play distant tick for opponent moves
             // playDistantTick(); // Uncomment if enabled in settings
