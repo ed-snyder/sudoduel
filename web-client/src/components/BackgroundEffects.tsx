@@ -1,20 +1,6 @@
 import { useEffect, useState } from 'react';
 
 export default function BackgroundEffects() {
-  const [phase, setPhase] = useState(0);
-
-  // Animate phase for grid color shifting
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhase(prev => (prev + 1) % 360);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Grid hue oscillates between purple (270) and shifts toward cyan (200) or magenta (320)
-  // Kept for potential future use - hue and opacity shift calculations
-  const _gridHue = 270 + Math.sin(phase * Math.PI / 180) * 50;
-  const _gridOpacity = 0.12 + Math.sin(phase * Math.PI / 90) * 0.04;
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
