@@ -2026,7 +2026,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         {/* EVENT BANNER - Between timer and grid */}
         <div className="h-10 flex items-center justify-center">
-          {showGameCountdown && countdownPhase !== 'vs' && countdownPhase !== 'hidden' && countdownPhase !== 'complete' ? (
+          {showGameCountdown && countdownPhase !== 'hidden' && countdownPhase !== 'complete' ? (
             <div className="countdown-number-container">
               {countdownPhase === 'countdown' && countdownNumber !== null && (
                 <span className="countdown-number" key={countdownNumber}>{countdownNumber}!</span>

@@ -188,6 +188,11 @@
   to { stroke-dashoffset: 0; }
 }
 
+@keyframes draw-line-border {
+  from { stroke-dashoffset: 2000; }
+  to { stroke-dashoffset: 0; }
+}
+
 @keyframes number-slam {
   0% { opacity: 0; transform: translateY(-200%) scale(1.2); }
   60% { opacity: 1; transform: translateY(10%) scale(0.95); }

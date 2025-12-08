@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import './GameCountdown.css';
 
-export type CountdownPhase = 'hidden' | 'vs' | 'countdown' | 'go' | 'complete';
+export type CountdownPhase = 'hidden' | 'countdown' | 'go' | 'complete';
 
 interface GameCountdownProps {
   playerName: string;
@@ -48,40 +48,35 @@ export default function GameCountdown({
     };
 
     // Timeline:
-    // 0ms: VS screen
-    // 2000ms: "3" appears
-    // 3200ms: "2" appears
-    // 4400ms: "1" appears
-    // 5600ms: "GO!" appears
-    // 6800ms: Complete
+    // 0ms: "3" appears, grid starts drawing
+    // 1200ms: "2" appears
+    // 2400ms: "1" appears
+    // 3600ms: "GO!" appears
+    // 4800ms: Complete
 
-    setPhase('vs');
-    onPhaseChange?.('vs');
-
-    addTimeout(() => {
-      setPhase('countdown');
-      onCountdownNumberChange?.(3);
-      onPhaseChange?.('countdown');
-    }, 2000);
+    // Start countdown immediately
+    setPhase('countdown');
+    onCountdownNumberChange?.(3);
+    onPhaseChange?.('countdown');
 
     addTimeout(() => {
       onCountdownNumberChange?.(2);
-    }, 3200);
+    }, 1200);
     addTimeout(() => {
       onCountdownNumberChange?.(1);
-    }, 4400);
+    }, 2400);
 
     addTimeout(() => {
       setPhase('go');
       onCountdownNumberChange?.(null);
       onPhaseChange?.('go');
-    }, 5600);
+    }, 3600);
 
     addTimeout(() => {
       setPhase('complete');
       onPhaseChange?.('complete');
       onComplete?.();
-    }, 6800);
+    }, 4800);
 
   }, [isActive, onPhaseChange, onComplete]);
 
@@ -95,26 +90,6 @@ export default function GameCountdown({
     }
   }, [isActive, onCountdownNumberChange]);
 
-  if (phase === 'hidden' || phase === 'complete') {
-    return null;
-  }
-
-  return (
-    <div className="countdown-overlay">
-      {phase === 'vs' && (
-        <div className="vs-container">
-          <div className="vs-player vs-player-left">
-            <div className="vs-name">{playerName}</div>
-            <div className="vs-rating">{Math.round(playerRating)}</div>
-          </div>
-          <div className="vs-text">VS</div>
-          <div className="vs-player vs-player-right">
-            <div className="vs-name">{opponentName}</div>
-            <div className="vs-rating">{Math.round(opponentRating)}</div>
-          </div>
-        </div>
-      )}
-      {/* Countdown numbers are displayed in banner area, not here */}
-    </div>
-  );
+  // No overlay needed - countdown numbers are displayed in banner area
+  return null;
 }
