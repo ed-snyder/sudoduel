@@ -344,8 +344,8 @@ function SudokuGrid({
             vectorEffect="non-scaling-stroke"
           />
 
-          {/* Thin lines - between cells (ALL 8 positions) */}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {/* Thin lines - between cells (skip positions 3 and 6 where thick lines go) */}
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
               x1="0"
@@ -357,7 +357,7 @@ function SudokuGrid({
               strokeOpacity={breathMultiplier}
             />
           ))}
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`v-thin-${i}`}
               x1={`${(i / 9) * 100}%`}
