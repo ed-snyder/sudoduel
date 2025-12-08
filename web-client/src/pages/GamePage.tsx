@@ -437,15 +437,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const currentDiff = myScore - oppScore;
     const prevDiff = prevScoreDiffRef.current;
     
+    // Only trigger if the difference actually changed
+    if (currentDiff === prevDiff) return;
+    
     // Gained the lead: was behind or tied, now ahead
     if (prevDiff <= 0 && currentDiff > 0) {
-      showBanner("Gained the Lead!", "banner-message-cyan", 5, 2000, 'positive');
+      showBanner("Take the Lead!", "banner-message-cyan", 5, 2000, 'positive');
     }
     // Lost the lead: was ahead or tied, now behind
     else if (prevDiff >= 0 && currentDiff < 0) {
       showBanner("Lost the Lead!", "banner-message-magenta", 5, 2000, 'negative');
     }
+    // Tied: was not tied, now tied (and scores > 0 to avoid start-of-game)
+    else if (prevDiff !== 0 && currentDiff === 0 && myScore > 0) {
+      showBanner("Tie!", "banner-message-neutral", 5, 2000, 'neutral');
+    }
     
+    // Always update the ref AFTER checking
     prevScoreDiffRef.current = currentDiff;
   }, [myState.score, opponentState.score, gameStatus, showBanner]);
   
