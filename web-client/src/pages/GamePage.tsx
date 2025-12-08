@@ -1797,10 +1797,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       />
 
       <GameCountdown
-        playerName={user?.display_name || 'Player'}
-        playerRating={user?.rating || 1000}
-        opponentName={opponentName || 'Opponent'}
-        opponentRating={opponentRating || 1000}
         onPhaseChange={handleCountdownPhaseChange}
         onCountdownNumberChange={setCountdownNumber}
         onComplete={handleCountdownComplete}
