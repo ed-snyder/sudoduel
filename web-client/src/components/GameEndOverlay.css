@@ -1,0 +1,185 @@
+/* GAME END OVERLAY - Dramatic freeze and text slam */
+
+.game-end-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 2, 33, 0);
+  pointer-events: all; /* Block interactions */
+  animation: game-end-overlay-fade-in 0.2s ease-out forwards;
+}
+
+.game-end-overlay-exit {
+  animation: game-end-overlay-fade-out 0.2s ease-in forwards;
+}
+
+/* TEXT CONTAINER */
+.game-end-text-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-end-text-exit {
+  animation: game-end-text-exit 0.2s ease-in forwards;
+}
+
+/* TEXT - Magenta metallic with white + cyan boundaries */
+.game-end-text {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  
+  /* Magenta metallic gradient fill */
+  background: linear-gradient(
+    180deg,
+    #FFB0FF 0%,
+    #FF60FF 15%,
+    #FF00FF 30%,
+    #DD00DD 50%,
+    #FF00FF 70%,
+    #FF60FF 85%,
+    #FFB0FF 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  
+  /* White inner boundary + Cyan outer boundary + Glow */
+  text-shadow: 
+    /* White inner boundary - 2px */
+    -2px -2px 0 #FFFFFF,
+    2px -2px 0 #FFFFFF,
+    -2px 2px 0 #FFFFFF,
+    2px 2px 0 #FFFFFF,
+    0px -2px 0 #FFFFFF,
+    0px 2px 0 #FFFFFF,
+    -2px 0px 0 #FFFFFF,
+    2px 0px 0 #FFFFFF,
+    -1px -2px 0 #FFFFFF,
+    1px -2px 0 #FFFFFF,
+    -1px 2px 0 #FFFFFF,
+    1px 2px 0 #FFFFFF,
+    -2px -1px 0 #FFFFFF,
+    2px -1px 0 #FFFFFF,
+    -2px 1px 0 #FFFFFF,
+    2px 1px 0 #FFFFFF,
+    /* Cyan outer boundary - 4-5px */
+    -5px -5px 0 #00FFFF,
+    5px -5px 0 #00FFFF,
+    -5px 5px 0 #00FFFF,
+    5px 5px 0 #00FFFF,
+    0px -5px 0 #00FFFF,
+    0px 5px 0 #00FFFF,
+    -5px 0px 0 #00FFFF,
+    5px 0px 0 #00FFFF,
+    -4px -4px 0 #00FFFF,
+    4px -4px 0 #00FFFF,
+    -4px 4px 0 #00FFFF,
+    4px 4px 0 #00FFFF,
+    /* Glow effects */
+    0 0 20px rgba(255, 0, 255, 0.9),
+    0 0 40px rgba(255, 0, 255, 0.6),
+    0 0 60px rgba(255, 0, 255, 0.4),
+    0 0 80px rgba(0, 255, 255, 0.3);
+  
+  will-change: transform, opacity;
+  animation: game-end-text-slam 0.3s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+
+/* MAGENTA SHEEN EFFECT */
+.game-end-sheen {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 0, 255, 0.1) 20%,
+    rgba(255, 127, 255, 0.4) 40%,
+    rgba(255, 200, 255, 0.6) 50%,
+    rgba(255, 127, 255, 0.4) 60%,
+    rgba(255, 0, 255, 0.1) 80%,
+    transparent 100%
+  );
+  animation: game-end-sheen-sweep 0.8s ease-out 0.2s forwards;
+  pointer-events: none;
+}
+
+/* KEYFRAMES */
+
+@keyframes game-end-overlay-fade-in {
+  from {
+    background: rgba(13, 2, 33, 0);
+  }
+  to {
+    background: rgba(13, 2, 33, 0.85);
+  }
+}
+
+@keyframes game-end-overlay-fade-out {
+  from {
+    background: rgba(13, 2, 33, 0.85);
+  }
+  to {
+    background: rgba(13, 2, 33, 0);
+  }
+}
+
+@keyframes game-end-text-slam {
+  0% {
+    opacity: 0;
+    transform: scale(2.5) translateY(-20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(0.9) translateY(5px);
+  }
+  70% {
+    transform: scale(1.05) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes game-end-text-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes game-end-sheen-sweep {
+  0% {
+    left: -60%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 120%;
+    opacity: 0;
+  }
+}

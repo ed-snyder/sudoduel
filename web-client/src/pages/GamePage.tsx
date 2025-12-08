@@ -11,6 +11,8 @@ import GameBackgroundEffects from '../components/GameBackgroundEffects';
 import BackgroundEffects from '../components/BackgroundEffects';
 import GameCountdown, { type CountdownPhase } from '../components/GameCountdown';
 import '../components/GameCountdown.css';
+import GameEndOverlay from '../components/GameEndOverlay';
+import '../components/GameEndOverlay.css';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
@@ -249,6 +251,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [isPlayerPremium] = useState<boolean>(true);
   const [isOpponentPremium] = useState<boolean>(true);
   const [erroredCells, setErroredCells] = useState<Set<string>>(new Set()); // Track cells that have received incorrect guesses
+  
+  // Game end overlay state
+  const [showGameEndOverlay, setShowGameEndOverlay] = useState(false);
+  const [gameEndReason, setGameEndReason] = useState<'complete' | 'timeout'>('complete');
+  const [pendingGameResult, setPendingGameResult] = useState<any>(null);
   
   // Countdown system state
   const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
@@ -566,6 +573,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     setGridAnimateIn(false);
     setCountdownPhase('complete');
   }, []);
+
+  // Handler for game end overlay completion
+  const handleGameEndOverlayComplete = useCallback(() => {
+    setShowGameEndOverlay(false);
+    // Now show the results screen with the pending result
+    if (pendingGameResult) {
+      setGameResult(pendingGameResult);
+      setPendingGameResult(null);
+    }
+  }, [pendingGameResult]);
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
@@ -1046,8 +1063,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         break;
 
       case 'GAME_END':
+      case 'GAME_OVER': {
+        // Stop the timer immediately
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        
         setGameStatus('ended');
-        setGameResult(message.data);
         setOpponentDisconnected(false);
         setGraceTimeRemaining(0);
         setMyTimerPaused(false);
@@ -1055,43 +1078,29 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setRematchState('idle');
         setRematchCountdown(30);
         
-        // Determine if we won for effects
-        const myPlayerIdForEnd = user?.id;
-        const myResultForEnd = myPlayerIdForEnd && message.data.player1?.playerId === myPlayerIdForEnd
-          ? message.data.player1
-          : myPlayerIdForEnd && message.data.player2?.playerId === myPlayerIdForEnd
-          ? message.data.player2
-          : mySlotRef.current === 1
-          ? message.data.player1
-          : message.data.player2;
-        const winnerSlotForEnd = message.data.winner_slot;
-        const didWinForEnd = winnerSlotForEnd !== null && winnerSlotForEnd === mySlotRef.current;
-        const ratingChangeForEnd = myResultForEnd?.rating_change || 0;
+        // Determine the reason for game end
+        const endReason = message.data.reason === 'timeout' || 
+                          message.data.reason === 'time_up' ||
+                          myTimeRemaining <= 0 || 
+                          opponentTimeRemaining <= 0
+          ? 'timeout' 
+          : 'complete';
         
-        // Trigger victory/defeat effects
-        if (didWinForEnd) {
-          playVictorySound();
-          hapticVictory();
-          
-          // Screen shake for big wins
-          if (ratingChangeForEnd >= 30) {
-            setShowScreenShake(true);
-            hapticBigWin();
-            setTimeout(() => setShowScreenShake(false), 400);
-          }
-          
-          // Initialize rating counter animation (will be handled by useEffect)
-          // Don't set displayedRating here to avoid conflicts with useEffect
-        } else {
-          // Defeat overlay handled by ResultScreen component
-          playDefeatSound();
-        }
+        setGameEndReason(endReason);
         
-        // Refresh user profile/rating so Lobby shows updated rating without full reload
-        refreshUser().catch((err) => {
-          console.error('Failed to refresh user after GAME_END:', err);
-        });
+        // Store the result but don't show it yet
+        setPendingGameResult(message.data);
+        
+        // Show the game end overlay FIRST
+        setShowGameEndOverlay(true);
+        
+        // The overlay will call handleGameEndOverlayComplete after 2.5s
+        // which will then show the results screen
+        
+        // Refresh user data for updated rating
+        refreshUser?.();
         break;
+      }
 
       case 'OPPONENT_DISCONNECTED':
         setOpponentDisconnected(true);
@@ -1651,7 +1660,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Game ended - check this BEFORE waiting screen to prevent stuck state
   // Also handle case where we have gameResult but status might be 'waiting' (safeguard)
-  if (gameResult && (gameStatus === 'ended' || gameStatus === 'waiting')) {
+  // Only show ResultScreen after overlay completes
+  if (gameResult && (gameStatus === 'ended' || gameStatus === 'waiting') && !showGameEndOverlay) {
     const myPlayerId = user?.id;
 
     // Prefer authoritative identity by player_id from backend results
@@ -2047,7 +2057,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
       {/* Sudoku Grid - Absolutely positioned to center on screen, other elements unaffected */}
       <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <div className={`relative w-full max-w-full ${myState.is_locked ? 'pointer-events-none opacity-50' : ''}`} style={{ pointerEvents: 'auto' }}>
+        <div 
+          className={`relative w-full max-w-full ${
+            myState.is_locked ? 'pointer-events-none opacity-50' : ''
+          } ${
+            showGameEndOverlay ? 'pointer-events-none' : ''
+          }`}
+          style={{ 
+            pointerEvents: showGameEndOverlay ? 'none' : 'auto',
+            transition: 'opacity 0.2s ease-out',
+          }}
+        >
           {myGrid.length > 0 && (
             <div className="w-full flex justify-center">
               <SudokuGrid
