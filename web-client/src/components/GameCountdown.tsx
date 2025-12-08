@@ -25,7 +25,6 @@ export default function GameCountdown({
   isActive,
 }: GameCountdownProps) {
   const [phase, setPhase] = useState<CountdownPhase>('hidden');
-  const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
   const hasStartedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -61,23 +60,19 @@ export default function GameCountdown({
 
     addTimeout(() => {
       setPhase('countdown');
-      setCountdownNumber(3);
       onCountdownNumberChange?.(3);
       onPhaseChange?.('countdown');
     }, 2000);
 
     addTimeout(() => {
-      setCountdownNumber(2);
       onCountdownNumberChange?.(2);
     }, 3200);
     addTimeout(() => {
-      setCountdownNumber(1);
       onCountdownNumberChange?.(1);
     }, 4400);
 
     addTimeout(() => {
       setPhase('go');
-      setCountdownNumber(null);
       onCountdownNumberChange?.(null);
       onPhaseChange?.('go');
     }, 5600);
@@ -94,7 +89,6 @@ export default function GameCountdown({
     if (!isActive) {
       hasStartedRef.current = false;
       setPhase('hidden');
-      setCountdownNumber(null);
       onCountdownNumberChange?.(null);
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = [];
