@@ -369,7 +369,7 @@ function SudokuGrid({
             />
           ))}
 
-          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - EXACTLY SAME as border */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - TESTING WITH RED */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
@@ -377,10 +377,8 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth={2}
-              strokeOpacity={thickBreathMultiplier}
-              filter="url(#softGlow)"
+              stroke="red"
+              strokeWidth={4}
             />
           ))}
           {[3, 6].map((i) => (
@@ -390,10 +388,8 @@ function SudokuGrid({
               y1="0"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="rgba(255, 255, 255, 0.9)"
-              strokeWidth={2}
-              strokeOpacity={thickBreathMultiplier}
-              filter="url(#softGlow)"
+              stroke="red"
+              strokeWidth={4}
             />
           ))}
 
