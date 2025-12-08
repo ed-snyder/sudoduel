@@ -1264,12 +1264,61 @@
   animation: breathe-glow 5s ease-in-out infinite;
 }
 
+/* NUMBER GLOW AND PULSE - Applied to all cell numbers */
 .breathing-text {
-  animation: breathe-text-glow 5s ease-in-out infinite;
+  /* Prefilled numbers (white) - subtle warm glow */
+  text-shadow: 
+    0 0 8px rgba(255, 255, 255, 0.6),
+    0 0 16px rgba(255, 255, 255, 0.3),
+    0 0 24px rgba(139, 0, 255, 0.2);
+  animation: number-pulse-white 3s ease-in-out infinite;
 }
 
 .breathing-cyan-text {
-  animation: breathe-cyan-glow 5s ease-in-out infinite;
+  /* Player-placed numbers (cyan) - vibrant glow */
+  text-shadow: 
+    0 0 8px rgba(0, 255, 255, 0.8),
+    0 0 16px rgba(0, 255, 255, 0.5),
+    0 0 24px rgba(0, 255, 255, 0.3),
+    0 0 32px rgba(0, 255, 255, 0.15);
+  animation: number-pulse-cyan 3s ease-in-out infinite;
+}
+
+/* Pulse animations - slow, subtle, GPU-accelerated */
+@keyframes number-pulse-white {
+  0%, 100% {
+    text-shadow: 
+      0 0 8px rgba(255, 255, 255, 0.6),
+      0 0 16px rgba(255, 255, 255, 0.3),
+      0 0 24px rgba(139, 0, 255, 0.2);
+    opacity: 0.95;
+  }
+  50% {
+    text-shadow: 
+      0 0 12px rgba(255, 255, 255, 0.8),
+      0 0 24px rgba(255, 255, 255, 0.5),
+      0 0 36px rgba(139, 0, 255, 0.35);
+    opacity: 1;
+  }
+}
+
+@keyframes number-pulse-cyan {
+  0%, 100% {
+    text-shadow: 
+      0 0 8px rgba(0, 255, 255, 0.8),
+      0 0 16px rgba(0, 255, 255, 0.5),
+      0 0 24px rgba(0, 255, 255, 0.3),
+      0 0 32px rgba(0, 255, 255, 0.15);
+    opacity: 1;
+  }
+  50% {
+    text-shadow: 
+      0 0 12px rgba(0, 255, 255, 1),
+      0 0 24px rgba(0, 255, 255, 0.7),
+      0 0 36px rgba(0, 255, 255, 0.5),
+      0 0 48px rgba(0, 255, 255, 0.25);
+    opacity: 1;
+  }
 }
 
 /* =========================================

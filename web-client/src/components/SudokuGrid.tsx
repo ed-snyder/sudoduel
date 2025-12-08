@@ -157,15 +157,16 @@ function SudokuGrid({
     const gridTimer = setTimeout(() => {
       console.log('[GRID ANIM] Grid lines complete');
       setGridAnimationComplete(true);
-    }, 900);
+    }, 800);
 
-    // Numbers complete at ~2.0s
+    // Numbers MUST complete before GO! phase (3.6s)
+    // Set to 3.0s to ensure cells are unhighlighted before GO!
     // 0.4s start + (40 prefilled cells * 0.025s) + 0.18s animation = ~1.6s
-    // Add buffer for safety
+    // But we need to finish before GO! appears at 3.6s
     const numbersTimer = setTimeout(() => {
       console.log('[GRID ANIM] Numbers complete');
       setNumbersAnimationComplete(true);
-    }, 2000);
+    }, 3000);
 
     return () => {
       clearTimeout(gridTimer);
