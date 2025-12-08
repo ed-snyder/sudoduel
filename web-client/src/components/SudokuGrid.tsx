@@ -328,7 +328,7 @@ function SudokuGrid({
             </linearGradient>
           </defs>
 
-          {/* Outer border / perimeter */}
+          {/* 1. Outer border / perimeter */}
           <rect
             x="0"
             y="0"
@@ -344,7 +344,7 @@ function SudokuGrid({
             vectorEffect="non-scaling-stroke"
           />
 
-          {/* Thin lines - between cells (skip positions 3 and 6 where thick lines go) */}
+          {/* 3. Thin internal lines - cell boundaries (positions 1, 2, 4, 5, 7, 8) */}
           {[1, 2, 4, 5, 7, 8].map((i) => (
             <line
               key={`h-thin-${i}`}
@@ -370,7 +370,7 @@ function SudokuGrid({
             />
           ))}
 
-          {/* Thick lines - 3x3 box boundaries (positions 3 and 6) - overlay on top of thin lines */}
+          {/* 2. Thick internal lines - 3x3 box boundaries (positions 3 and 6) - SAME as border */}
           {[3, 6].map((i) => (
             <line
               key={`h-thick-${i}`}
