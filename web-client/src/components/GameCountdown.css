@@ -1,0 +1,205 @@
+/* GAME COUNTDOWN ANIMATIONS - GPU-accelerated */
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 2, 33, 0.85);
+  pointer-events: none;
+}
+
+/* VS SCREEN */
+.vs-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  padding: 0 1rem;
+  animation: vs-fade-in 0.3s ease-out forwards,
+             vs-fade-out 0.3s ease-in 1.7s forwards;
+}
+
+.vs-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.vs-player-left {
+  animation: slide-in-left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s forwards;
+}
+
+.vs-player-right {
+  animation: slide-in-right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+}
+
+.vs-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-size: clamp(1.25rem, 5vw, 2rem);
+  font-weight: 700;
+  color: #F0E6FF;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(240, 230, 255, 0.5), 0 0 20px rgba(139, 0, 255, 0.3);
+}
+
+.vs-player-left .vs-name {
+  color: #00FFFF;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.6), 0 0 20px rgba(0, 255, 255, 0.4), 0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+.vs-player-right .vs-name {
+  color: #FF00FF;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.6), 0 0 20px rgba(255, 0, 255, 0.4), 0 0 30px rgba(255, 0, 255, 0.2);
+}
+
+.vs-rating {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(0.875rem, 3vw, 1.25rem);
+  color: #B8A8D4;
+  letter-spacing: 0.1em;
+}
+
+.vs-text {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 8vw, 4rem);
+  font-weight: 900;
+  color: #FFD700;
+  opacity: 0;
+  animation: vs-text-appear 0.3s ease-out 0.3s forwards,
+             vs-text-pulse 0.6s ease-in-out 0.6s infinite alternate;
+}
+
+/* COUNTDOWN NUMBERS - Metallic: Magenta fill → White → Cyan boundary */
+.countdown-number-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: countdown-fade-in 0.2s ease-out forwards;
+}
+
+.countdown-number {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-size: clamp(5rem, 25vw, 10rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  
+  /* Metallic magenta gradient fill */
+  background: linear-gradient(180deg, #FF7FFF 0%, #FF00FF 25%, #CC00CC 50%, #FF00FF 75%, #FF7FFF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  
+  /* White inner + Cyan outer boundary via text-shadow */
+  text-shadow: 
+    -2px -2px 0 #FFFFFF, 2px -2px 0 #FFFFFF, -2px 2px 0 #FFFFFF, 2px 2px 0 #FFFFFF,
+    0px -2px 0 #FFFFFF, 0px 2px 0 #FFFFFF, -2px 0px 0 #FFFFFF, 2px 0px 0 #FFFFFF,
+    -4px -4px 0 #00FFFF, 4px -4px 0 #00FFFF, -4px 4px 0 #00FFFF, 4px 4px 0 #00FFFF,
+    0px -4px 0 #00FFFF, 0px 4px 0 #00FFFF, -4px 0px 0 #00FFFF, 4px 0px 0 #00FFFF,
+    0 0 20px rgba(255, 0, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.5),
+    0 0 60px rgba(0, 255, 255, 0.4), 0 0 80px rgba(0, 255, 255, 0.2);
+  
+  will-change: transform, opacity;
+  animation: countdown-number-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.countdown-number-go {
+  font-size: clamp(4rem, 20vw, 8rem);
+  animation: countdown-go-slam 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* GRID DRAW ANIMATION (Tron-style) */
+.grid-line-animate {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  will-change: stroke-dashoffset;
+}
+
+/* NUMBER SLAM ANIMATION */
+.cell-number-animate {
+  opacity: 0;
+  transform: translateY(-200%) scale(1.2);
+  will-change: transform, opacity;
+}
+
+.cell-number-slam {
+  animation: number-slam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* KEYFRAMES */
+@keyframes vs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vs-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes vs-text-appear {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes vs-text-pulse {
+  from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.3); }
+  to { text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.7), 0 0 90px rgba(255, 215, 0, 0.4); }
+}
+
+@keyframes countdown-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes countdown-number-pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes countdown-go-slam {
+  0% { opacity: 0; transform: scale(2) translateY(-20px); }
+  60% { opacity: 1; transform: scale(0.95) translateY(5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes number-slam {
+  0% { opacity: 0; transform: translateY(-200%) scale(1.2); }
+  60% { opacity: 1; transform: translateY(10%) scale(0.95); }
+  80% { transform: translateY(-5%) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.grid-drawing-glow {
+  filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

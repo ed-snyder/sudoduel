@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo, useMemo } from 'react';
 
 interface SudokuGridProps {
   grid: number[][];
@@ -15,6 +15,7 @@ interface SudokuGridProps {
   almostCompleteCells?: Set<string>;
   currentStreak?: number;
   erroredCells?: Set<string>;
+  animateIn?: boolean; // NEW: Whether to play draw-in animation
 }
 
 interface FloatingFeedback {
@@ -87,6 +88,7 @@ function SudokuGrid({
   almostCompleteCells = new Set(),
   currentStreak = 0,
   erroredCells = new Set(),
+  animateIn = false,
 }: SudokuGridProps) {
   const renderStart = performance.now();
   console.log(`[PERF] SudokuGrid render START`);
@@ -110,6 +112,54 @@ function SudokuGrid({
   const [floatingFeedbacks, setFloatingFeedbacks] = useState<FloatingFeedback[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
+  
+  // Track animation state
+  const [gridAnimationComplete, setGridAnimationComplete] = useState(!animateIn);
+  const [numbersAnimationComplete, setNumbersAnimationComplete] = useState(!animateIn);
+
+  // Calculate pre-filled cell positions for staggered animation
+  const prefilledCells = useMemo(() => {
+    if (!animateIn) return [];
+    
+    const cells: { row: number; col: number; value: number; index: number }[] = [];
+    let index = 0;
+    
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (initialGrid[row]?.[col] !== 0) {
+          cells.push({ row, col, value: initialGrid[row][col], index });
+          index++;
+        }
+      }
+    }
+    
+    return cells;
+  }, [initialGrid, animateIn]);
+
+  // Complete animations after delay
+  useEffect(() => {
+    if (!animateIn) {
+      setGridAnimationComplete(true);
+      setNumbersAnimationComplete(true);
+      return;
+    }
+
+    const gridTimer = setTimeout(() => setGridAnimationComplete(true), 1500);
+    const numbersTimer = setTimeout(() => setNumbersAnimationComplete(true), 2800);
+
+    return () => {
+      clearTimeout(gridTimer);
+      clearTimeout(numbersTimer);
+    };
+  }, [animateIn]);
+
+  // Helper to get animation delay for pre-filled cells
+  const getNumberAnimationDelay = (row: number, col: number): number | null => {
+    if (!animateIn) return null;
+    const cellInfo = prefilledCells.find(c => c.row === row && c.col === col);
+    if (!cellInfo) return null;
+    return 0.8 + (cellInfo.index * 0.05);
+  };
   
   const isInitialCell = (row: number, col: number) => initialGrid[row][col] !== 0;
   const isSelected = (row: number, col: number) => selectedCell?.row === row && selectedCell?.col === col;
@@ -234,7 +284,7 @@ function SudokuGrid({
   return (
     <div
       ref={gridRef}
-      className="relative select-none"
+      className={`relative select-none gpu-accelerated ${animateIn ? 'grid-drawing-glow' : ''}`}
       style={{
         zIndex: 10,
         aspectRatio: '1 / 1',
@@ -335,19 +385,35 @@ function SudokuGrid({
                 }}
               >
                 {hasValue ? (
-                  <span
-                    className={`font-heading font-bold ${isJustScored ? 'cell-score-pop' : ''} ${isInitial ? 'breathing-text' : 'breathing-cyan-text'}`}
-                    style={{ 
-                      fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
-                      fontFamily: 'Industry, Orbitron, sans-serif',
-                      color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
-                      WebkitUserSelect: 'none',
-                      userSelect: 'none',
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    {cell}
-                  </span>
+                  (() => {
+                    const animationDelay = getNumberAnimationDelay(rowIndex, colIndex);
+                    const shouldAnimateNumber = animateIn && isInitial && animationDelay !== null && !numbersAnimationComplete;
+                    
+                    return (
+                      <span
+                        className={`
+                          font-heading font-bold 
+                          ${isJustScored ? 'cell-score-pop' : ''} 
+                          ${isInitial ? 'breathing-text' : 'breathing-cyan-text'}
+                          ${shouldAnimateNumber ? 'cell-number-animate cell-number-slam' : ''}
+                        `}
+                        style={{ 
+                          fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
+                          fontFamily: 'Industry, Orbitron, sans-serif',
+                          color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                          pointerEvents: 'none',
+                          ...(shouldAnimateNumber && animationDelay !== null ? {
+                            animationDelay: `${animationDelay}s`,
+                            animationFillMode: 'forwards',
+                          } : {}),
+                        }}
+                      >
+                        {cell}
+                      </span>
+                    );
+                  })()
                 ) : showNotes ? (
                   <div 
                     className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5"
@@ -408,6 +474,11 @@ function SudokuGrid({
             rx="4"
             ry="4"
             className="breathing-line-thick"
+            style={animateIn && !gridAnimationComplete ? {
+              strokeDasharray: 2000,
+              strokeDashoffset: 0,
+              animation: 'draw-line 0.6s ease-out forwards',
+            } : {}}
           />
 
           {/* Thin horizontal lines - between cells (NOT at box boundaries) */}
@@ -421,6 +492,11 @@ function SudokuGrid({
               stroke="rgb(255, 255, 255)"
               strokeWidth={1}
               className="breathing-line"
+              style={animateIn && !gridAnimationComplete ? {
+                strokeDasharray: 1000,
+                animation: 'draw-line 0.3s ease-out forwards',
+                animationDelay: `${0.7 + ([1,2,4,5,7,8].indexOf(i) * 0.05)}s`,
+              } : {}}
             />
           ))}
 
@@ -435,6 +511,11 @@ function SudokuGrid({
               stroke="rgb(255, 255, 255)"
               strokeWidth={1}
               className="breathing-line"
+              style={animateIn && !gridAnimationComplete ? {
+                strokeDasharray: 1000,
+                animation: 'draw-line 0.3s ease-out forwards',
+                animationDelay: `${0.7 + ([1,2,4,5,7,8].indexOf(i) * 0.05)}s`,
+              } : {}}
             />
           ))}
 
@@ -449,6 +530,11 @@ function SudokuGrid({
               stroke="rgb(255, 255, 255)"
               strokeWidth={2}
               className="breathing-line-thick"
+              style={animateIn && !gridAnimationComplete ? {
+                strokeDasharray: 2000,
+                animation: 'draw-line 0.5s ease-out forwards',
+                animationDelay: `${0.6 + ([3,6].indexOf(i) * 0.1)}s`,
+              } : {}}
             />
           ))}
 
@@ -463,6 +549,11 @@ function SudokuGrid({
               stroke="rgb(255, 255, 255)"
               strokeWidth={2}
               className="breathing-line-thick"
+              style={animateIn && !gridAnimationComplete ? {
+                strokeDasharray: 2000,
+                animation: 'draw-line 0.5s ease-out forwards',
+                animationDelay: `${0.6 + ([3,6].indexOf(i) * 0.1)}s`,
+              } : {}}
             />
           ))}
         </svg>

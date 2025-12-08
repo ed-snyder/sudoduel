@@ -8,6 +8,9 @@ import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
 import ResultScreen from '../components/ResultScreen';
 import GameBackgroundEffects from '../components/GameBackgroundEffects';
+import GameCountdown from '../components/GameCountdown';
+import type { CountdownPhase } from '../components/GameCountdown';
+import '../components/GameCountdown.css';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
@@ -251,6 +254,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [isPlayerPremium] = useState<boolean>(true);
   const [isOpponentPremium] = useState<boolean>(true);
   const [erroredCells, setErroredCells] = useState<Set<string>>(new Set()); // Track cells that have received incorrect guesses
+  
+  // Countdown system state
+  const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
+  const [showGameCountdown, setShowGameCountdown] = useState(false);
+  const [gridAnimateIn, setGridAnimateIn] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
   
   // Background effect triggers
   const [bgPlayerScored, setBgPlayerScored] = useState(false);
@@ -539,6 +548,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }, [myGrid, selectedCell]);
 
 
+  // Countdown handlers
+  const handleCountdownPhaseChange = useCallback((phase: CountdownPhase) => {
+    console.log('[COUNTDOWN] Phase:', phase);
+    setCountdownPhase(phase);
+    
+    if (phase === 'go') {
+      setControlsVisible(true);
+    }
+  }, []);
+
+  const handleCountdownComplete = useCallback(() => {
+    console.log('[COUNTDOWN] Complete');
+    setShowGameCountdown(false);
+    setGridAnimateIn(false);
+    setCountdownPhase('complete');
+  }, []);
+
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
     console.log('[REMATCH] handleRematchRequest called, state:', rematchState);
@@ -595,6 +621,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         if (gameStatus !== 'ended') {
           if (message.data.status === 'IN_PROGRESS') {
             setGameStatus('playing');
+            // Handle reconnection - skip countdown if game in progress
+            setControlsVisible(true);
+            setGridAnimateIn(false);
+            setShowGameCountdown(false);
+            setCountdownPhase('complete');
           } else if (message.data.status === 'WAITING') {
             setGameStatus('waiting');
           } else if (message.data.status === 'ENDED') {
@@ -657,6 +688,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setBannerMessage(null);
         setIsDownToWire(false);
         setShownLowTimeWarning(false);
+        
+        // START COUNTDOWN ANIMATION
+        setShowGameCountdown(true);
+        setGridAnimateIn(true);
+        setControlsVisible(false);
+        setCountdownPhase('hidden');
         prevCellsRemainingRef.current = 41;
         if (bannerTimeoutRef.current) {
           clearTimeout(bannerTimeoutRef.current);
@@ -1133,6 +1170,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const startTime = performance.now();
     console.log(`[PERF] Cell click START: ${startTime.toFixed(2)}ms`);
 
+    if (countdownPhase !== 'complete') return; // Block during countdown
     if (gameStatus !== 'playing' || myState?.is_locked) {
       console.log(`[PERF] Cell click blocked: gameStatus=${gameStatus}, is_locked=${myState?.is_locked}`);
       return;
@@ -1167,7 +1205,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     console.log(`[PERF] After setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     
     console.log(`[PERF] Cell click END: ${(performance.now() - startTime).toFixed(2)}ms`);
-  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell]);
+  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, countdownPhase]);
 
   // Back button removed - forfeit can be accessed via other means if needed
   // const handleBackClick = () => { ... }
@@ -1318,6 +1356,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const startTime = performance.now();
     console.log(`[PERF] Number click START: ${startTime.toFixed(2)}ms`);
 
+    if (countdownPhase !== 'complete') return; // Block during countdown
     if (!selectedCell || gameStatus !== 'playing') {
       console.log(`[PERF] Number click blocked: selectedCell=${!!selectedCell}, gameStatus=${gameStatus}`);
       return;
@@ -1516,7 +1555,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       
       console.log(`[PERF] Number click END: ${(performance.now() - startTime).toFixed(2)}ms`);
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError, countdownPhase]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
@@ -1752,6 +1791,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         mistakeMade={bgMistakeMade}
         timeRemaining={myTimeRemaining}
         criticalTime={30}
+      />
+
+      <GameCountdown
+        playerName={user?.display_name || 'Player'}
+        playerRating={user?.rating || 1000}
+        opponentName={opponentName || 'Opponent'}
+        opponentRating={opponentRating || 1000}
+        onPhaseChange={handleCountdownPhaseChange}
+        onComplete={handleCountdownComplete}
+        isActive={showGameCountdown}
       />
 
       {/* Countdown overlay */}
@@ -2003,7 +2052,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 onCellClick={handleCellClick}
                 notes={notes}
                 notesMode={notesMode}
-                lockedOut={myState.is_locked}
+                lockedOut={myState.is_locked || countdownPhase !== 'complete'}
+                animateIn={gridAnimateIn}
                 lastMoveResult={lastMoveResult}
                 opponentScoredCells={opponentScoredCells}
                 lastScoredCell={lastScoredCell}
@@ -2021,7 +2071,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       <div className="flex-shrink-0" style={{ minHeight: '50vh' }}></div>
 
       {/* Number Pad - below grid */}
-      <div className="px-3 pt-1 pb-1">
+      <div className={`px-3 pt-1 pb-1 transition-all duration-300 ${
+        !controlsVisible ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+      }`}
+        style={{ willChange: 'transform, opacity', transitionDelay: controlsVisible ? '0.05s' : '0s' }}
+      >
         <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
@@ -2050,7 +2104,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       </div>
 
       {/* Toolbar OR Emoji Picker - they swap, same position */}
-      <div className="px-3 py-1 pb-safe">
+      <div className={`px-3 py-1 pb-safe transition-all duration-300 ${
+        !controlsVisible ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+      }`}
+        style={{ willChange: 'transform, opacity', transitionDelay: controlsVisible ? '0.1s' : '0s' }}
+      >
         {!showEmotePicker ? (
           <>
             {/* Normal Toolbar */}
@@ -2088,7 +2146,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             {/* Emote Button */}
             <button
               onClick={() => setShowEmotePicker(true)}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center"
+              disabled={countdownPhase !== 'complete'}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
               style={{
                 background: 'rgba(20, 12, 30, 0.8)',
                 border: '2px solid rgba(139, 0, 255, 0.5)',
