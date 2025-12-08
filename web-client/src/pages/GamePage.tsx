@@ -1789,9 +1789,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1 }}>
       {/* Battlefield Background */}
       <GameBackgroundEffects 
-        playerScored={bgPlayerScored}
-        opponentScored={bgOpponentScored}
-        mistakeMade={bgMistakeMade}
         timeRemaining={myTimeRemaining}
         criticalTime={30}
       />
