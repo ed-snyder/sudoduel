@@ -231,6 +231,7 @@ function SudokuGrid({
         aspectRatio: '1 / 1',
         width: '100%',
         maxWidth: 'min(100vw - 24px, 400px)',
+        backgroundColor: 'rgba(13, 2, 33, 1)', // Fully opaque to hide cyan tunnel lines behind grid
         WebkitUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',

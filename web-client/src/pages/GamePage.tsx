@@ -7,7 +7,7 @@ import SudokuGrid from '../components/SudokuGrid';
 import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
 import ResultScreen from '../components/ResultScreen';
-import GameBackgroundEffects from '../components/GameBackgroundEffects';
+import TunnelBackground from '../components/TunnelBackground';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
@@ -219,10 +219,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
   
-  // Background effect triggers
-  const [bgPlayerScored, setBgPlayerScored] = useState(false);
-  const [bgOpponentScored, setBgOpponentScored] = useState(false);
-  const [bgMistakeMade, setBgMistakeMade] = useState(false);
+  // Background effect triggers (removed - using TunnelBackground instead)
   
   // Streak system - track longest streak (used internally, not displayed in ResultScreen)
   const [_longestStreak, setLongestStreak] = useState(0);
@@ -739,7 +736,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             setMyState(player_state);
             
             // Trigger background effects
-            setBgPlayerScored(prev => !prev); // Toggle to trigger effect
+            // Background effects removed - using TunnelBackground instead
           } else {
             // Incorrect move: Server confirms incorrect (matches our local validation)
             // Error feedback already played locally - do NOT re-trigger to avoid duplicate flash
@@ -759,7 +756,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           setMyState(player_state);
           
           // Trigger background effects
-          setBgMistakeMade(prev => !prev);
+          // Background effects removed - using TunnelBackground instead
           }
           
           // Update pressure indicators
@@ -797,7 +794,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             });
             
             // Trigger background effects
-            setBgOpponentScored(prev => !prev);
+            // Background effects removed - using TunnelBackground instead
             
             // Optional: play distant tick for opponent moves
             // playDistantTick(); // Uncomment if enabled in settings
@@ -1723,15 +1720,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1 }}>
-      {/* Battlefield Background */}
-      <GameBackgroundEffects 
-        playerScored={bgPlayerScored}
-        opponentScored={bgOpponentScored}
-        mistakeMade={bgMistakeMade}
-        timeRemaining={myTimeRemaining}
-        criticalTime={30}
-      />
+    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1, backgroundColor: '#0D0221' }}>
+      {/* Tunnel Background - lowest z-index */}
+      <TunnelBackground timeRemaining={myTimeRemaining} />
 
       {/* Countdown overlay */}
       {countdown !== null && (

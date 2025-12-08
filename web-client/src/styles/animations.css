@@ -1314,7 +1314,39 @@
 }
 
 /* =========================================
-   23. ADDITIONAL BACKGROUND BLOBS (Game Page)
+   23. TUNNEL BACKGROUND BLOB ANIMATIONS
+   ========================================= */
+
+@keyframes blobDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10%, 5%) scale(1.1); }
+}
+
+@keyframes blobDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15%, -10%) scale(1.05); }
+}
+
+@keyframes blobDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, -10%) scale(1.1); }
+  66% { transform: translate(-5%, 5%) scale(0.95); }
+}
+
+.animate-blob-1 {
+  animation: blobDrift1 25s ease-in-out infinite;
+}
+
+.animate-blob-2 {
+  animation: blobDrift2 30s ease-in-out infinite;
+}
+
+.animate-blob-3 {
+  animation: blobDrift3 20s ease-in-out infinite;
+}
+
+/* =========================================
+   24. ADDITIONAL BACKGROUND BLOBS (Game Page)
    ========================================= */
 
 /* Deep Purple - largest, slowest, deepest layer */
