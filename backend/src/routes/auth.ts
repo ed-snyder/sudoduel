@@ -18,7 +18,11 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    // Validate display name
+    // Validate display name (critical for Apple App Store compliance)
+    if (!display_name || typeof display_name !== 'string') {
+      return res.status(400).json({ error: 'Display name is required' });
+    }
+    
     const usernameValidation = validateUsername(display_name);
     if (!usernameValidation.valid) {
       return res.status(400).json({ error: usernameValidation.error || 'Invalid display name' });

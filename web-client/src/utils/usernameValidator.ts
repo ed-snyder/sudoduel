@@ -37,6 +37,10 @@ function hasBannedWord(text: string): boolean {
 }
 
 export function validateUsername(username: string): { valid: boolean; error?: string } {
+  if (!username || typeof username !== 'string') {
+    return { valid: false, error: 'Username is required' };
+  }
+  
   const trimmed = username.trim();
   
   if (trimmed.length < 3) {
@@ -48,9 +52,10 @@ export function validateUsername(username: string): { valid: boolean; error?: st
   }
   
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(trimmed)) {
-    return { valid: false, error: 'Letters, numbers, and underscores only' };
+    return { valid: false, error: 'Must start with a letter and contain only letters, numbers, and underscores' };
   }
   
+  // Profanity check - this is the critical Apple requirement
   if (hasBannedWord(trimmed)) {
     return { valid: false, error: 'Please choose a different username' };
   }
