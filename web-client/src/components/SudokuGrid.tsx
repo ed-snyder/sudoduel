@@ -476,7 +476,7 @@ function SudokuGrid({
             className="breathing-line-thick"
             style={animateIn && !gridAnimationComplete ? {
               strokeDasharray: 2000,
-              strokeDashoffset: 0,
+              strokeDashoffset: 2000,
               animation: 'draw-line 0.6s ease-out forwards',
             } : {}}
           />

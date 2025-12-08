@@ -256,6 +256,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   
   // Countdown system state
   const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
+  const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
   const [showGameCountdown, setShowGameCountdown] = useState(false);
   const [gridAnimateIn, setGridAnimateIn] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -1801,6 +1802,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         opponentName={opponentName || 'Opponent'}
         opponentRating={opponentRating || 1000}
         onPhaseChange={handleCountdownPhaseChange}
+        onCountdownNumberChange={setCountdownNumber}
         onComplete={handleCountdownComplete}
         isActive={showGameCountdown}
       />
@@ -2024,7 +2026,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         {/* EVENT BANNER - Between timer and grid */}
         <div className="h-10 flex items-center justify-center">
-          {bannerMessage && (
+          {showGameCountdown && countdownPhase !== 'vs' && countdownPhase !== 'hidden' && countdownPhase !== 'complete' ? (
+            <div className="countdown-number-container">
+              {countdownPhase === 'countdown' && countdownNumber !== null && (
+                <span className="countdown-number" key={countdownNumber}>{countdownNumber}!</span>
+              )}
+              {countdownPhase === 'go' && (
+                <span className="countdown-number countdown-number-go">GO!</span>
+              )}
+            </div>
+          ) : bannerMessage ? (
             <span 
               className={`font-heading font-bold text-lg uppercase tracking-wider ${
                 bannerMessage.colorClass === 'premium-streak' 
@@ -2038,7 +2049,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               {bannerMessage.text}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
 

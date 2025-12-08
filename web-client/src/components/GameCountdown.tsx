@@ -9,6 +9,7 @@ interface GameCountdownProps {
   opponentName: string;
   opponentRating: number;
   onPhaseChange?: (phase: CountdownPhase) => void;
+  onCountdownNumberChange?: (number: number | null) => void;
   onComplete?: () => void;
   isActive: boolean;
 }
@@ -19,6 +20,7 @@ export default function GameCountdown({
   opponentName,
   opponentRating,
   onPhaseChange,
+  onCountdownNumberChange,
   onComplete,
   isActive,
 }: GameCountdownProps) {
@@ -60,15 +62,23 @@ export default function GameCountdown({
     addTimeout(() => {
       setPhase('countdown');
       setCountdownNumber(3);
+      onCountdownNumberChange?.(3);
       onPhaseChange?.('countdown');
     }, 2000);
 
-    addTimeout(() => setCountdownNumber(2), 3200);
-    addTimeout(() => setCountdownNumber(1), 4400);
+    addTimeout(() => {
+      setCountdownNumber(2);
+      onCountdownNumberChange?.(2);
+    }, 3200);
+    addTimeout(() => {
+      setCountdownNumber(1);
+      onCountdownNumberChange?.(1);
+    }, 4400);
 
     addTimeout(() => {
       setPhase('go');
       setCountdownNumber(null);
+      onCountdownNumberChange?.(null);
       onPhaseChange?.('go');
     }, 5600);
 
@@ -85,10 +95,11 @@ export default function GameCountdown({
       hasStartedRef.current = false;
       setPhase('hidden');
       setCountdownNumber(null);
+      onCountdownNumberChange?.(null);
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = [];
     }
-  }, [isActive]);
+  }, [isActive, onCountdownNumberChange]);
 
   if (phase === 'hidden' || phase === 'complete') {
     return null;
@@ -109,18 +120,7 @@ export default function GameCountdown({
           </div>
         </div>
       )}
-
-      {phase === 'countdown' && countdownNumber !== null && (
-        <div className="countdown-number-container" key={countdownNumber}>
-          <span className="countdown-number">{countdownNumber}!</span>
-        </div>
-      )}
-
-      {phase === 'go' && (
-        <div className="countdown-number-container countdown-go">
-          <span className="countdown-number countdown-number-go">GO!</span>
-        </div>
-      )}
+      {/* Countdown numbers are displayed in banner area, not here */}
     </div>
   );
 }
