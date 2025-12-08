@@ -8,6 +8,7 @@ import { ForfeitModal } from '../components/ForfeitModal';
 import { ProgressBar } from '../components/ProgressBar';
 import ResultScreen from '../components/ResultScreen';
 import GameBackgroundEffects from '../components/GameBackgroundEffects';
+import BackgroundEffects from '../components/BackgroundEffects';
 import GameCountdown, { type CountdownPhase } from '../components/GameCountdown';
 import '../components/GameCountdown.css';
 import { createGameSocket } from '../config';
@@ -1784,6 +1785,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         timeRemaining={myTimeRemaining}
         criticalTime={30}
       />
+      
+      {/* Lobby-style blob effects */}
+      <BackgroundEffects />
 
       <GameCountdown
         onPhaseChange={handleCountdownPhaseChange}

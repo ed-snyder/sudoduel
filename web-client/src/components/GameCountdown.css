@@ -89,6 +89,7 @@
   animation: countdown-fade-in 0.2s ease-out forwards;
   width: 100%;
   height: 100%;
+  transform: translateY(-15px); /* Move countdown text higher */
 }
 
 /* COUNTDOWN TEXT - Force identical sizing for ALL text */
