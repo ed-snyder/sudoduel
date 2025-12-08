@@ -156,11 +156,11 @@ function SudokuGrid({
   useEffect(() => {
     if (!animateIn) return;
 
-    // Grid lines complete at ~2.0s (slower drawing - 3 second total animation)
+    // Grid lines complete at ~3.0s (50% slower drawing - 4.5 second total animation)
     const gridTimer = setTimeout(() => {
       console.log('[GRID ANIM] Grid lines complete');
       setGridAnimationComplete(true);
-    }, 2000);
+    }, 3000);
 
     // Numbers complete at ~3.0s (slower slamming - 3 second total animation)
     // This ensures cells are NEVER highlighted during countdown
@@ -512,7 +512,7 @@ function SudokuGrid({
             style={animateIn && !gridAnimationComplete ? {
               strokeDasharray: '2000',
               strokeDashoffset: '2000',
-              animation: 'draw-line-long 1.5s ease-out forwards',
+              animation: 'draw-line-long 2.25s ease-out forwards',
             } : {}}
           />
 
@@ -530,8 +530,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.4s ease-out forwards',
-                animationDelay: `${0.5 + (idx * 0.08)}s`,
+                animation: 'draw-line 0.6s ease-out forwards',
+                animationDelay: `${0.75 + (idx * 0.12)}s`,
               } : {}}
             />
           ))}
@@ -550,8 +550,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.4s ease-out forwards',
-                animationDelay: `${0.5 + (idx * 0.08)}s`,
+                animation: 'draw-line 0.6s ease-out forwards',
+                animationDelay: `${0.75 + (idx * 0.12)}s`,
               } : {}}
             />
           ))}
@@ -570,8 +570,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.5s ease-out forwards',
-                animationDelay: `${0.8 + (idx * 0.1)}s`,
+                animation: 'draw-line 0.75s ease-out forwards',
+                animationDelay: `${1.2 + (idx * 0.15)}s`,
               } : {}}
             />
           ))}
@@ -590,8 +590,8 @@ function SudokuGrid({
               style={animateIn && !gridAnimationComplete ? {
                 strokeDasharray: '500',
                 strokeDashoffset: '500',
-                animation: 'draw-line 0.5s ease-out forwards',
-                animationDelay: `${0.8 + (idx * 0.1)}s`,
+                animation: 'draw-line 0.75s ease-out forwards',
+                animationDelay: `${1.2 + (idx * 0.15)}s`,
               } : {}}
             />
           ))}
