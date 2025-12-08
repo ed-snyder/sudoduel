@@ -330,10 +330,10 @@ function SudokuGrid({
 
           {/* Outer border / perimeter */}
           <rect
-            x="1"
-            y="1"
-            width="calc(100% - 2px)"
-            height="calc(100% - 2px)"
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
             fill="none"
             stroke="rgba(255, 255, 255, 0.9)"
             strokeWidth="2"
@@ -341,6 +341,7 @@ function SudokuGrid({
             rx="4"
             ry="4"
             filter="url(#softGlow)"
+            vectorEffect="non-scaling-stroke"
           />
 
           {/* Thin lines - between cells (ALL 8 positions) */}
@@ -381,6 +382,7 @@ function SudokuGrid({
               strokeWidth="2"
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
+              vectorEffect="non-scaling-stroke"
             />
           ))}
           {[3, 6].map((i) => (
@@ -394,6 +396,7 @@ function SudokuGrid({
               strokeWidth="2"
               strokeOpacity={thickBreathMultiplier}
               filter="url(#softGlow)"
+              vectorEffect="non-scaling-stroke"
             />
           ))}
 
