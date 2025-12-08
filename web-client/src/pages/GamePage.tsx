@@ -178,11 +178,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       warmUpRenderer();
       
       // Pre-warm the grid state update path with a dummy update
-      requestIdleCallback(() => {
+      const warmUpStateUpdate = () => {
         // Force React to go through the full update path
         // by setting state to same value (React will still reconcile)
         setSelectedCell(prev => prev);
-      }, { timeout: 100 });
+      };
+      
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(warmUpStateUpdate, { timeout: 100 });
+      } else {
+        setTimeout(warmUpStateUpdate, 0);
+      }
     }
   }, [gameStatus, myGrid.length, initialGrid.length, warmUpRenderer]);
   
