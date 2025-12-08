@@ -108,10 +108,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       setTimeout(() => setShowMicroShake(false), 150);
     }
     
-    // 6. Super Streak banner at streak 8
-    if (streak === 8) {
-      showBanner("Super Streak", "premium-streak", 15, 3000, 'positive');
-    }
   }, [playCorrectSound, vibrate, showBanner]);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
