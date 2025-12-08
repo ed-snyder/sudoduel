@@ -1337,3 +1337,24 @@
   50% { transform: translate(-15%, -5%) scale(0.95) rotate(-5deg); }
   75% { transform: translate(5%, -10%) scale(1.1) rotate(3deg); }
 }
+
+/* =========================================
+   24. OPTIMIZED GAME BACKGROUND BLOB ANIMATIONS
+   Simplified animations for performance (no blur filters)
+   ========================================= */
+
+@keyframes blobDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10%, 5%) scale(1.05); }
+}
+
+@keyframes blobDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15%, -10%) scale(1.03); }
+}
+
+@keyframes blobDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, -10%) scale(1.05); }
+  66% { transform: translate(-5%, 5%) scale(0.97); }
+}

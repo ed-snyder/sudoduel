@@ -1,196 +1,405 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
+
+
 
 interface GameBackgroundEffectsProps {
-  playerScored?: boolean; // Trigger cyan pulse
-  opponentScored?: boolean; // Trigger magenta pulse
-  mistakeMade?: boolean; // Trigger dim/contract
-  timeRemaining?: number; // For intensity scaling
-  criticalTime?: number; // Threshold for critical state (default 30)
+
+  playerScored?: boolean;
+
+  opponentScored?: boolean;
+
+  mistakeMade?: boolean;
+
+  timeRemaining?: number;
+
+  criticalTime?: number;
+
 }
 
-export default function GameBackgroundEffects({ 
+
+
+const GameBackgroundEffects = memo(function GameBackgroundEffects({ 
+
   playerScored, 
+
   opponentScored, 
+
   mistakeMade,
+
   timeRemaining = 999,
+
   criticalTime = 30 
+
 }: GameBackgroundEffectsProps) {
+
   const [cyanPulse, setCyanPulse] = useState(false);
+
   const [magentaPulse, setMagentaPulse] = useState(false);
+
   const [dimmed, setDimmed] = useState(false);
 
+
+
   // Cyan pulse on player score
+
   useEffect(() => {
+
     if (playerScored) {
+
       setCyanPulse(true);
-      setTimeout(() => setCyanPulse(false), 400);
+
+      const timer = setTimeout(() => setCyanPulse(false), 400);
+
+      return () => clearTimeout(timer);
+
     }
+
   }, [playerScored]);
 
+
+
   // Magenta pulse on opponent score
+
   useEffect(() => {
+
     if (opponentScored) {
+
       setMagentaPulse(true);
-      setTimeout(() => setMagentaPulse(false), 400);
+
+      const timer = setTimeout(() => setMagentaPulse(false), 400);
+
+      return () => clearTimeout(timer);
+
     }
+
   }, [opponentScored]);
 
+
+
   // Dim on mistake
+
   useEffect(() => {
+
     if (mistakeMade) {
+
       setDimmed(true);
-      setTimeout(() => setDimmed(false), 300);
+
+      const timer = setTimeout(() => setDimmed(false), 300);
+
+      return () => clearTimeout(timer);
+
     }
+
   }, [mistakeMade]);
 
+
+
   const isCritical = timeRemaining < criticalTime;
-  const isWarning = timeRemaining < 60;
-  const vignetteIntensity = isCritical ? 0.7 : isWarning ? 0.5 : 0.3;
+
+  const vignetteIntensity = isCritical ? 0.7 : timeRemaining < 60 ? 0.5 : 0.3;
+
+
 
   return (
+
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -1 }}>
+
       
-      {/* Drifting gradient blobs - 5 total, faster than lobby */}
+
+      {/* Simplified soft blobs - NO blur filter, use pre-softened gradients */}
+
       <div className="absolute inset-0">
-        {/* Cyan blob 1 - larger, main */}
+
+        {/* Cyan blob */}
+
         <div 
-          className={`absolute w-[500px] h-[500px] transition-transform duration-300 ${cyanPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
+
+          className={`absolute transition-transform duration-300 ${cyanPulse ? 'scale-110' : ''} ${dimmed ? 'scale-95 opacity-60' : ''}`}
+
           style={{
-            background: 'radial-gradient(circle, rgba(0,255,255,0.18) 0%, rgba(0,255,255,0.06) 40%, transparent 70%)',
-            filter: 'blur(50px)',
-            top: '-5%',
-            left: '-10%',
-            animation: 'drift-battle-1 16s ease-in-out infinite',
-          }}
-        />
-        
-        {/* Cyan blob 2 - smaller, different path */}
-        <div 
-          className={`absolute w-[350px] h-[350px] transition-transform duration-300 ${cyanPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            background: 'radial-gradient(circle, rgba(0,255,255,0.14) 0%, rgba(0,255,255,0.04) 40%, transparent 70%)',
-            filter: 'blur(45px)',
-            bottom: '10%',
-            left: '5%',
-            animation: 'drift-battle-2 14s ease-in-out infinite',
-            animationDelay: '-5s',
-          }}
-        />
-        
-        {/* Magenta blob 1 - larger, main */}
-        <div 
-          className={`absolute w-[450px] h-[450px] transition-transform duration-300 ${magentaPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            background: 'radial-gradient(circle, rgba(255,0,255,0.16) 0%, rgba(255,0,255,0.05) 40%, transparent 70%)',
-            filter: 'blur(55px)',
+
             top: '15%',
-            right: '-10%',
-            animation: 'drift-battle-3 18s ease-in-out infinite',
-            animationDelay: '-3s',
-          }}
-        />
-        
-        {/* Magenta blob 2 - smaller, different path */}
-        <div 
-          className={`absolute w-[300px] h-[300px] transition-transform duration-300 ${magentaPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            background: 'radial-gradient(circle, rgba(255,0,255,0.12) 0%, rgba(255,0,255,0.03) 40%, transparent 70%)',
-            filter: 'blur(40px)',
-            bottom: '20%',
-            right: '10%',
-            animation: 'drift-battle-4 12s ease-in-out infinite',
-            animationDelay: '-8s',
-          }}
-        />
-        
-        {/* Purple anchor blob - center */}
-        <div 
-          className={`absolute w-[400px] h-[400px] transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            background: 'radial-gradient(circle, rgba(139,0,255,0.12) 0%, rgba(139,0,255,0.04) 40%, transparent 70%)',
-            filter: 'blur(50px)',
-            top: '40%',
-            left: '30%',
-            animation: 'drift-battle-5 20s ease-in-out infinite',
-            animationDelay: '-10s',
-          }}
-        />
-        
-        {/* Deep Purple - largest, slowest, deepest layer */}
-        <div 
-          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            top: '10%',
-            left: '-20%',
-            width: '80vw',
-            height: '80vw',
-            maxWidth: '600px',
-            maxHeight: '600px',
-            background: 'radial-gradient(circle, rgba(61, 21, 128, 0.2) 0%, transparent 70%)',
+
+            left: '-15%',
+
+            width: '60vw',
+
+            height: '60vw',
+
+            maxWidth: 450,
+
+            maxHeight: 450,
+
+            background: 'radial-gradient(circle, rgba(0, 255, 255, 0.12) 0%, rgba(0, 255, 255, 0.04) 30%, transparent 60%)',
+
             borderRadius: '50%',
-            filter: 'blur(60px)',
-            animation: 'blob-drift-1 35s ease-in-out infinite',
-            pointerEvents: 'none',
+
+            animation: 'blobDrift1 25s ease-in-out infinite',
+
           }}
+
         />
+
         
-        {/* Accent Purple - medium size, mid layer */}
+
+        {/* Magenta blob */}
+
         <div 
-          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+
+          className={`absolute transition-transform duration-300 ${magentaPulse ? 'scale-110' : ''} ${dimmed ? 'scale-95 opacity-60' : ''}`}
+
           style={{
-            bottom: '15%',
-            right: '-15%',
-            width: '50vw',
-            height: '50vw',
-            maxWidth: '400px',
-            maxHeight: '400px',
-            background: 'radial-gradient(circle, rgba(139, 0, 255, 0.12) 0%, transparent 70%)',
+
+            bottom: '10%',
+
+            right: '-20%',
+
+            width: '70vw',
+
+            height: '70vw',
+
+            maxWidth: 500,
+
+            maxHeight: 500,
+
+            background: 'radial-gradient(circle, rgba(255, 0, 255, 0.1) 0%, rgba(255, 0, 255, 0.03) 30%, transparent 60%)',
+
             borderRadius: '50%',
-            filter: 'blur(50px)',
-            animation: 'blob-drift-2 25s ease-in-out infinite',
-            pointerEvents: 'none',
+
+            animation: 'blobDrift2 30s ease-in-out infinite',
+
           }}
+
         />
+
         
-        {/* Dark Magenta - smaller, adds variety */}
+
+        {/* Purple blob */}
+
         <div 
-          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
+
+          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-95 opacity-60' : ''}`}
+
           style={{
-            top: '50%',
-            right: '10%',
-            width: '35vw',
-            height: '35vw',
-            maxWidth: '300px',
-            maxHeight: '300px',
-            background: 'radial-gradient(circle, rgba(92, 0, 128, 0.15) 0%, transparent 70%)',
+
+            top: '55%',
+
+            left: '25%',
+
+            width: '45vw',
+
+            height: '45vw',
+
+            maxWidth: 350,
+
+            maxHeight: 350,
+
+            background: 'radial-gradient(circle, rgba(139, 0, 255, 0.12) 0%, rgba(139, 0, 255, 0.04) 30%, transparent 60%)',
+
             borderRadius: '50%',
-            filter: 'blur(45px)',
-            animation: 'blob-drift-3 20s ease-in-out infinite',
-            pointerEvents: 'none',
+
+            animation: 'blobDrift3 20s ease-in-out infinite',
+
           }}
+
         />
+
       </div>
 
-      {/* Remove the grid pattern - just solid color background shows through */}
-      {/* Grid pattern removed per request */}
 
-      {/* Vignette overlay - intensifies at low time */}
+
+      {/* Floating dust particles */}
+
+      <FloatingDust count={75} />
+
+
+
+      {/* Vignette overlay */}
+
       <div 
+
         className="absolute inset-0 transition-opacity duration-500"
+
         style={{
+
           background: `radial-gradient(circle at center, transparent 30%, rgba(0,0,0,${vignetteIntensity}) 100%)`,
+
         }}
+
       />
 
+
+
       {/* Critical time red edge glow */}
+
       {isCritical && (
+
         <div 
+
           className="absolute inset-0 animate-pulse"
+
           style={{
+
             background: 'radial-gradient(circle at center, transparent 60%, rgba(255,51,102,0.15) 100%)',
+
           }}
+
         />
+
       )}
+
     </div>
+
   );
-}
+
+});
+
+
+
+// Lightweight floating dust particles
+
+const FloatingDust = memo(function FloatingDust({ count }: { count: number }) {
+
+  const [particles, setParticles] = useState<Array<{
+
+    id: number;
+
+    x: number;
+
+    y: number;
+
+    size: number;
+
+    speed: number;
+
+    opacity: number;
+
+    drift: number;
+
+    colorType: number;
+
+  }>>([]);
+
+
+
+  // Initialize particles once
+
+  useEffect(() => {
+
+    const initialParticles = Array.from({ length: count }, (_, i) => ({
+
+      id: i,
+
+      x: Math.random() * 100,
+
+      y: Math.random() * 100,
+
+      size: Math.random() * 2 + 0.5,
+
+      speed: Math.random() * 0.3 + 0.1,
+
+      opacity: Math.random() * 0.5 + 0.15,
+
+      drift: (Math.random() - 0.5) * 0.2,
+
+      colorType: i % 3,
+
+    }));
+
+    setParticles(initialParticles);
+
+  }, [count]);
+
+
+
+  // Animate particles at low frequency for performance (~16fps)
+
+  useEffect(() => {
+
+    if (particles.length === 0) return;
+
+    
+
+    const interval = setInterval(() => {
+
+      setParticles(prev => prev.map(p => ({
+
+        ...p,
+
+        y: p.y <= 0 ? 100 : p.y - p.speed,
+
+        x: ((p.x + p.drift) % 100 + 100) % 100,
+
+      })));
+
+    }, 60);
+
+    
+
+    return () => clearInterval(interval);
+
+  }, [particles.length]);
+
+
+
+  return (
+
+    <div className="absolute inset-0 overflow-hidden">
+
+      {particles.map(p => {
+
+        const fadeOpacity = p.y < 15 ? p.opacity * (p.y / 15) : p.opacity;
+
+        
+
+        // Simple colors - no box-shadow for performance
+
+        const colors = [
+
+          `rgba(0, 255, 255, ${fadeOpacity})`,       // cyan
+
+          `rgba(255, 0, 255, ${fadeOpacity * 0.9})`, // magenta
+
+          `rgba(255, 255, 255, ${fadeOpacity * 0.5})`, // white
+
+        ];
+
+        
+
+        return (
+
+          <div
+
+            key={p.id}
+
+            className="absolute rounded-full"
+
+            style={{
+
+              left: `${p.x}%`,
+
+              top: `${p.y}%`,
+
+              width: p.size,
+
+              height: p.size,
+
+              backgroundColor: colors[p.colorType],
+
+            }}
+
+          />
+
+        );
+
+      })}
+
+    </div>
+
+  );
+
+});
+
+
+
+export default GameBackgroundEffects;
