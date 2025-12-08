@@ -137,11 +137,11 @@ function SudokuGrid({
     }, 1000);
   }, [lastMoveResult, currentStreak]);
 
-  // Breathing animation - 5 second cycle
+  // Breathing animation - synchronized glow pulse
   useEffect(() => {
     const interval = setInterval(() => {
-      setBreathPhase((prev) => (prev + 0.015) % (Math.PI * 2));
-    }, 25); // ~40fps, smooth animation
+      setBreathPhase((prev) => (prev + 0.02) % (Math.PI * 2));
+    }, 50); // 20fps is enough for smooth breathing
     return () => clearInterval(interval);
   }, []);
 
@@ -154,8 +154,13 @@ function SudokuGrid({
     };
   };
 
-  // Calculate breath multiplier for glow effects (creates 60% → 100% → 60% pulse)
-  const glowBreathMultiplier = 0.8 + Math.sin(breathPhase) * 0.2;
+  // Breathing: oscillates between 0.6 and 0.8 for thin lines, 0.8 and 1.0 for thick
+  const thinLineOpacity = 0.2 + Math.sin(breathPhase) * 0.05; // 0.15 to 0.25
+  const thickLineOpacity = 0.85 + Math.sin(breathPhase) * 0.1; // 0.75 to 0.95
+  const glowIntensity = 0.1 + Math.sin(breathPhase) * 0.05; // 0.05 to 0.15
+  const textGlowOpacity = 0.3 + Math.sin(breathPhase) * 0.1; // 0.2 to 0.4
+  const cyanGlowOpacity = 0.6 + Math.sin(breathPhase) * 0.15; // 0.45 to 0.75
+  const cellBreathFactor = 0.85 + Math.sin(breathPhase) * 0.15; // 0.7 to 1.0
 
   return (
     <div
@@ -209,12 +214,12 @@ function SudokuGrid({
               cellBg = 'rgba(255, 51, 102, 0.4)';
               cellShadow = 'inset 0 0 20px rgba(255, 51, 102, 0.6)';
             } else if (selected) {
-              const glowIntensity = 0.4 * glowBreathMultiplier;
-              cellBg = 'rgba(0, 255, 255, 0.35)';
-              cellShadow = `inset 0 0 20px rgba(0, 255, 255, ${0.5 * glowBreathMultiplier}), 0 0 15px rgba(0, 255, 255, ${glowIntensity})`;
+              const glowIntensity = 0.4 * cellBreathFactor;
+              cellBg = `rgba(0, 255, 255, ${0.35 * cellBreathFactor})`;
+              cellShadow = `inset 0 0 20px rgba(0, 255, 255, ${0.5 * cellBreathFactor}), 0 0 15px rgba(0, 255, 255, ${glowIntensity})`;
             } else if (related) {
-              const glowIntensity = 0.15 * glowBreathMultiplier;
-              cellBg = 'rgba(0, 255, 255, 0.12)';
+              const glowIntensity = 0.15 * cellBreathFactor;
+              cellBg = `rgba(0, 255, 255, ${0.12 * cellBreathFactor})`;
               cellShadow = `inset 0 0 10px rgba(0, 255, 255, ${glowIntensity})`;
             } else if (opponentScored) {
               cellBg = 'rgba(255, 0, 255, 0.15)';
@@ -252,8 +257,8 @@ function SudokuGrid({
                       fontFamily: 'Industry, Orbitron, sans-serif',
                       color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
                       textShadow: isInitial 
-                        ? '0 0 8px rgba(255, 255, 255, 0.4), 0 0 16px rgba(255, 255, 255, 0.2)'
-                        : `0 0 ${12 + Math.sin(breathPhase) * 4}px rgba(0, 255, 255, ${0.6 + Math.sin(breathPhase) * 0.15})`,
+                        ? `0 0 8px rgba(255, 255, 255, ${textGlowOpacity}), 0 0 16px rgba(255, 255, 255, ${textGlowOpacity * 0.5})`
+                        : `0 0 12px rgba(0, 255, 255, ${cyanGlowOpacity})`,
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
                       pointerEvents: 'none',
@@ -296,7 +301,7 @@ function SudokuGrid({
         <div 
           className="absolute inset-0 rounded"
           style={{
-            boxShadow: 'inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 20px rgba(255, 255, 255, 0.1)',
+            boxShadow: `inset 0 0 15px rgba(255, 255, 255, ${glowIntensity}), 0 0 20px rgba(255, 255, 255, ${glowIntensity * 0.7})`,
           }}
         />
         
@@ -308,7 +313,7 @@ function SudokuGrid({
             width="calc(100% - 2px)"
             height="calc(100% - 2px)"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.9)"
+            stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
             strokeWidth={2}
             rx="4"
             ry="4"
@@ -322,7 +327,7 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="rgba(255, 255, 255, 0.25)"
+              stroke={`rgba(255, 255, 255, ${thinLineOpacity})`}
               strokeWidth={1}
             />
           ))}
@@ -335,7 +340,7 @@ function SudokuGrid({
               y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="rgba(255, 255, 255, 0.25)"
+              stroke={`rgba(255, 255, 255, ${thinLineOpacity})`}
               strokeWidth={1}
             />
           ))}
@@ -348,7 +353,7 @@ function SudokuGrid({
               y1={`${(i / 9) * 100}%`}
               x2="100%"
               y2={`${(i / 9) * 100}%`}
-              stroke="rgba(255, 255, 255, 0.9)"
+              stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
               strokeWidth={2}
             />
           ))}
@@ -361,7 +366,7 @@ function SudokuGrid({
               y1="0%"
               x2={`${(i / 9) * 100}%`}
               y2="100%"
-              stroke="rgba(255, 255, 255, 0.9)"
+              stroke={`rgba(255, 255, 255, ${thickLineOpacity})`}
               strokeWidth={2}
             />
           ))}
