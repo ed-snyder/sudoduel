@@ -37,6 +37,38 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio, playVictorySound, playDefeatSound } = useGameSounds();
   const { victory: hapticVictory, bigWin: hapticBigWin, error: hapticError, vibrate } = useHaptics();
   
+  // Event banner system - defined early for use in triggerScoreFeedback
+  interface BannerMessage {
+    text: string;
+    colorClass: string;
+    priority: number;
+    type?: 'positive' | 'negative' | 'neutral';
+  }
+  const [bannerMessage, setBannerMessage] = useState<BannerMessage | null>(null);
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Function to show a banner message
+  const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000, type?: 'positive' | 'negative' | 'neutral') => {
+    // Clear any existing timeout
+    if (bannerTimeoutRef.current) {
+      clearTimeout(bannerTimeoutRef.current);
+    }
+    
+    // Check priority - only show if higher or equal priority than current
+    // Higher number = higher priority
+    setBannerMessage(prev => {
+      if (prev && prev.priority > priority) {
+        return prev; // Keep existing higher priority message
+      }
+      return { text, colorClass, priority, type: type || 'neutral' };
+    });
+    
+    // Auto-hide after duration
+    bannerTimeoutRef.current = setTimeout(() => {
+      setBannerMessage(null);
+    }, duration);
+  }, []);
+  
   // Synchronized feedback function - all feedback fires together
   const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
     const now = performance.now();
@@ -61,25 +93,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // 3. Visual state updates (triggers on next render, but initiated same frame)
     setLastMoveResult({ correct: true, row, col });
-    setShowScorePulse(streak >= 5 ? 'intense' : 'normal');
-    setTimeout(() => setShowScorePulse('none'), 400);
+    // Vignette removed - no score pulse
     
     // 4. Cell pop animation
     setLastScoredCell({ row, col });
     setTimeout(() => setLastScoredCell(null), 300);
     
-    // 5. Micro-shake at streak milestones
-    if ([3, 5, 8].includes(streak)) {
+    // 5. Screen shake only after 5 correct guesses
+    if (streak >= 5) {
       setShowMicroShake(true);
       setTimeout(() => setShowMicroShake(false), 150);
     }
     
-    // 6. SUPER flash at streak 8
+    // 6. Super Streak banner at streak 8
     if (streak === 8) {
-      setShowSuperFlash(true);
-      setTimeout(() => setShowSuperFlash(false), 600);
+      showBanner("Super Streak", "premium-streak", 15, 3000, 'positive');
     }
-  }, [playCorrectSound, vibrate]);
+  }, [playCorrectSound, vibrate, showBanner]);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -244,46 +274,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [showScreenShake, setShowScreenShake] = useState(false);
   
   // Addictive scoring feedback system state
-  const [showScorePulse, setShowScorePulse] = useState<'none' | 'normal' | 'intense'>('none');
   const [showMicroShake, setShowMicroShake] = useState(false);
-  const [showSuperFlash, setShowSuperFlash] = useState(false);
   const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
   const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
   
-  // Event banner system
-  interface BannerMessage {
-    text: string;
-    colorClass: string;
-    priority: number;
-    type?: 'positive' | 'negative' | 'neutral';
-  }
-  const [bannerMessage, setBannerMessage] = useState<BannerMessage | null>(null);
-  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Event banner system state (bannerMessage and showBanner moved above)
   const prevCellsRemainingRef = useRef<number>(41); // Start with max empty cells
   const [isDownToWire, setIsDownToWire] = useState(false);
   const [shownLowTimeWarning, setShownLowTimeWarning] = useState(false);
-  
-  // Function to show a banner message
-  const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000, type?: 'positive' | 'negative' | 'neutral') => {
-    // Clear any existing timeout
-    if (bannerTimeoutRef.current) {
-      clearTimeout(bannerTimeoutRef.current);
-    }
-    
-    // Check priority - only show if higher or equal priority than current
-    // Higher number = higher priority
-    setBannerMessage(prev => {
-      if (prev && prev.priority > priority) {
-        return prev; // Keep existing higher priority message
-      }
-      return { text, colorClass, priority, type: type || 'neutral' };
-    });
-    
-    // Auto-hide after duration
-    bannerTimeoutRef.current = setTimeout(() => {
-      setBannerMessage(null);
-    }, duration);
-  }, []);
   
   // Cleanup banner timeout on unmount
   useEffect(() => {
@@ -436,11 +434,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Gained the lead: was behind or tied, now ahead
     if (prevDiff <= 0 && currentDiff > 0) {
-      showBanner("Gained the Lead!", "text-indigo-500", 5, 2000, 'positive');
+      showBanner("Gained the Lead!", "banner-message-cyan", 5, 2000, 'positive');
     }
     // Lost the lead: was ahead or tied, now behind
     else if (prevDiff >= 0 && currentDiff < 0) {
-      showBanner("Lost the Lead!", "text-pink-500", 5, 2000, 'negative');
+      showBanner("Lost the Lead!", "banner-message-magenta", 5, 2000, 'negative');
     }
     
     prevScoreDiffRef.current = currentDiff;
@@ -455,11 +453,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Only trigger when crossing the threshold (not on initial load)
     if (prevRemaining > 9 && cellsRemaining <= 9 && cellsRemaining === 9) {
-      showBanner("9 cells left!", "text-indigo-500", 3, 2000, 'positive');
+      showBanner("9 cells left!", "banner-message-cyan", 3, 2000, 'positive');
     } else if (prevRemaining > 3 && cellsRemaining <= 3 && cellsRemaining === 3) {
-      showBanner("3 cells left!", "text-indigo-500", 3, 2000, 'positive');
+      showBanner("3 cells left!", "banner-message-cyan", 3, 2000, 'positive');
     } else if (prevRemaining > 1 && cellsRemaining <= 1 && cellsRemaining === 1) {
-      showBanner("Final cell!", "text-indigo-500", 3, 2000, 'positive');
+      showBanner("Final cell!", "banner-message-cyan", 3, 2000, 'positive');
     }
     
     prevCellsRemainingRef.current = cellsRemaining;
@@ -476,7 +474,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     if (bothUnder9 && !isDownToWire) {
       setIsDownToWire(true);
-      showBanner("Down to the wire!", "text-red-500", 7, 3000, 'negative');
+      showBanner("Down to the wire!", "banner-message-magenta", 7, 3000, 'negative');
     } else if (!bothUnder9) {
       setIsDownToWire(false);
     }
@@ -488,7 +486,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     if (myTimeRemaining < 15 && myTimeRemaining > 0 && !shownLowTimeWarning) {
       setShownLowTimeWarning(true);
-      showBanner("Running out of time!", "text-red-500", 10, 3000, 'negative');
+      showBanner("Running out of time!", "banner-message-magenta", 10, 3000, 'negative');
     }
     
     // Reset warning if time goes back above 15 (shouldn't happen, but handle edge case)
@@ -674,9 +672,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setNotes(new Map());
         setCompletedCells(new Set());
         setLastScoredCell(null);
-        setShowScorePulse('none');
         setShowMicroShake(false);
-        setShowSuperFlash(false);
         setMyEmote(null);
         setOpponentEmote(null);
         setMyEmoteFadingOut(false);
@@ -1777,21 +1773,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         <div className="critical-vignette fixed inset-0 pointer-events-none z-40" />
       )}
       
-      {/* Score pulse overlay - raspberry blue vignette */}
-      {showScorePulse !== 'none' && (
-        <div 
-          className={`fixed inset-0 z-50 pointer-events-none ${
-            showScorePulse === 'intense' ? 'score-pulse-intense' : 'score-pulse'
-          }`} 
-        />
-      )}
-      
-      {/* SUPER flash overlay */}
-      {showSuperFlash && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <span className="super-flash text-5xl font-black tracking-widest">SUPER!</span>
-        </div>
-      )}
+      {/* Vignette removed - no score pulse overlay */}
       
       {/* Disconnect Banner */}
       {opponentDisconnected && (
@@ -1993,15 +1975,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         <div className="h-10 flex items-center justify-center">
           {bannerMessage && (
             <span 
-              className="font-heading font-bold text-lg uppercase tracking-wider"
-              style={{
-                color: bannerMessage.type === 'positive' ? '#00FFFF' : bannerMessage.type === 'negative' ? '#FF3366' : '#FFFFFF',
-                textShadow: bannerMessage.type === 'positive' 
-                  ? '0 0 15px rgba(0, 255, 255, 0.6)' 
+              className={`font-heading font-bold text-lg uppercase tracking-wider ${
+                bannerMessage.colorClass === 'premium-streak' 
+                  ? 'premium-streak-banner'
+                  : bannerMessage.type === 'positive'
+                  ? 'banner-message-cyan'
                   : bannerMessage.type === 'negative'
-                  ? '0 0 15px rgba(255, 51, 102, 0.6)'
-                  : '0 0 10px rgba(255, 255, 255, 0.4)',
-              }}
+                  ? 'banner-message-magenta'
+                  : 'banner-message-neutral'
+              }`}
             >
               {bannerMessage.text}
             </span>

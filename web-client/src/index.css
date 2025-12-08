@@ -498,6 +498,60 @@ input[type="range"]::-webkit-slider-thumb:hover {
   animation: premium-name-shimmer 6s linear infinite;
 }
 
+/* Premium Streak Banner - Styled like SUDODUEL with magenta boundaries and glow */
+.premium-streak-banner {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FFFFFF 0%, #FFB0FF 25%, #FF00FF 50%, #8B008B 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.5), 0 0 8px rgba(255, 0, 255, 0.3);
+  animation: premium-name-shimmer 6s linear infinite;
+}
+
+/* Banner Message - Cyan with Magenta Boundary */
+.banner-message-cyan {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FFFFFF 0%, #B0FFFF 25%, #00FFFF 50%, #008B8B 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.5), 0 0 8px rgba(255, 0, 255, 0.3);
+  animation: premium-name-shimmer 6s linear infinite;
+}
+
+/* Banner Message - Magenta with Cyan Boundary */
+.banner-message-magenta {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FFFFFF 0%, #FFB0FF 25%, #FF00FF 50%, #8B008B 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
+  text-shadow: 0 0 4px rgba(0, 255, 255, 0.5), 0 0 8px rgba(0, 255, 255, 0.3);
+  animation: premium-name-shimmer 6s linear infinite;
+}
+
+/* Banner Message - Neutral */
+.banner-message-neutral {
+  color: #FFFFFF;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
 /* Non-Premium Name Styling */
 .non-premium-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
