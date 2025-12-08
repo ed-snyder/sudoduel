@@ -50,7 +50,7 @@ export default function GameBackgroundEffects({
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -1 }}>
       
-      {/* LAYER 1: Far background - slowest, largest, most subtle (deep purples + hint of magenta) */}
+      {/* LAYER 1: Far background - slowest, largest, most subtle (deep purples) */}
       <div className="absolute inset-0">
         <div 
           className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
@@ -61,11 +61,7 @@ export default function GameBackgroundEffects({
             height: '90vw',
             maxWidth: 700,
             maxHeight: 700,
-            background: `radial-gradient(circle, 
-              rgba(139, 0, 255, 0.12) 0%, 
-              rgba(255, 0, 255, 0.06) 30%,
-              rgba(61, 21, 128, 0.03) 60%, 
-              transparent 80%)`,
+            background: 'radial-gradient(circle, rgba(61, 21, 128, 0.15) 0%, rgba(61, 21, 128, 0.04) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(60px)',
             animation: 'driftFar1 45s ease-in-out infinite',
@@ -80,11 +76,7 @@ export default function GameBackgroundEffects({
             height: '80vw',
             maxWidth: 600,
             maxHeight: 600,
-            background: `radial-gradient(circle, 
-              rgba(92, 0, 128, 0.08) 0%, 
-              rgba(255, 0, 255, 0.05) 30%,
-              rgba(92, 0, 128, 0.02) 40%, 
-              transparent 70%)`,
+            background: 'radial-gradient(circle, rgba(92, 0, 128, 0.12) 0%, rgba(92, 0, 128, 0.03) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(55px)',
             animation: 'driftFar2 40s ease-in-out infinite',
@@ -93,7 +85,7 @@ export default function GameBackgroundEffects({
         />
       </div>
 
-      {/* LAYER 2: Mid-ground - medium speed, reactive to scoring (more vibrant cyan/magenta) */}
+      {/* LAYER 2: Mid-ground - medium speed, reactive to scoring (cyan/magenta) */}
       <div className="absolute inset-0">
         <div 
           className={`absolute transition-transform duration-300 ${cyanPulse ? 'scale-125' : ''} ${dimmed ? 'scale-90 opacity-50' : ''}`}
@@ -102,11 +94,7 @@ export default function GameBackgroundEffects({
             left: '-10%',
             width: '500px',
             height: '500px',
-            background: `radial-gradient(circle, 
-              rgba(0, 255, 255, 0.15) 0%, 
-              rgba(0, 255, 255, 0.08) 40%, 
-              rgba(139, 0, 255, 0.03) 70%,
-              transparent 85%)`,
+            background: 'radial-gradient(circle, rgba(0,255,255,0.18) 0%, rgba(0,255,255,0.06) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(50px)',
             animation: 'driftMid1 22s ease-in-out infinite',
@@ -119,11 +107,7 @@ export default function GameBackgroundEffects({
             right: '-10%',
             width: '450px',
             height: '450px',
-            background: `radial-gradient(circle, 
-              rgba(255, 0, 255, 0.14) 0%, 
-              rgba(255, 0, 255, 0.06) 40%, 
-              rgba(0, 255, 255, 0.03) 70%,
-              transparent 85%)`,
+            background: 'radial-gradient(circle, rgba(255,0,255,0.16) 0%, rgba(255,0,255,0.05) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(55px)',
             animation: 'driftMid2 25s ease-in-out infinite',
@@ -141,10 +125,7 @@ export default function GameBackgroundEffects({
             left: '5%',
             width: '350px',
             height: '350px',
-            background: `radial-gradient(circle, 
-              rgba(0, 255, 255, 0.12) 0%, 
-              rgba(0, 255, 136, 0.06) 50%,
-              transparent 80%)`,
+            background: 'radial-gradient(circle, rgba(0,255,255,0.14) 0%, rgba(0,255,255,0.04) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(45px)',
             animation: 'driftNear1 15s ease-in-out infinite',
@@ -158,10 +139,7 @@ export default function GameBackgroundEffects({
             right: '8%',
             width: '300px',
             height: '300px',
-            background: `radial-gradient(circle, 
-              rgba(255, 0, 255, 0.11) 0%, 
-              rgba(255, 0, 255, 0.05) 50%,
-              transparent 80%)`,
+            background: 'radial-gradient(circle, rgba(255,0,255,0.12) 0%, rgba(255,0,255,0.03) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(40px)',
             animation: 'driftNear2 13s ease-in-out infinite',
@@ -175,32 +153,11 @@ export default function GameBackgroundEffects({
             left: '25%',
             width: '320px',
             height: '320px',
-            background: `radial-gradient(circle, 
-              rgba(139, 0, 255, 0.09) 0%, 
-              rgba(255, 0, 255, 0.05) 50%,
-              transparent 80%)`,
+            background: 'radial-gradient(circle, rgba(139,0,255,0.12) 0%, rgba(139,0,255,0.04) 40%, transparent 70%)',
             borderRadius: '50%',
             filter: 'blur(45px)',
             animation: 'driftNear3 17s ease-in-out infinite',
             animationDelay: '-8s',
-          }}
-        />
-        {/* Add a gold/warm accent blob */}
-        <div 
-          className={`absolute transition-transform duration-300 ${dimmed ? 'scale-90 opacity-50' : ''}`}
-          style={{
-            top: '30%',
-            right: '15%',
-            width: '280px',
-            height: '280px',
-            background: `radial-gradient(circle, 
-              rgba(255, 184, 0, 0.08) 0%, 
-              rgba(255, 100, 0, 0.04) 50%,
-              transparent 80%)`,
-            borderRadius: '50%',
-            filter: 'blur(50px)',
-            animation: 'driftNear2 18s ease-in-out infinite',
-            animationDelay: '-7s',
           }}
         />
       </div>
