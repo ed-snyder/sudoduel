@@ -352,4 +352,47 @@ export const PlayerService = {
 
     return currentRating - ratingBefore;
   },
+
+  // Get player's global rank based on rating
+  async getPlayerRank(userId: number) {
+    const profile = await PlayerProfileModel.findByUserId(userId);
+    if (!profile) {
+      throw new Error('Player profile not found');
+    }
+
+    const rating = await PlayerRatingModel.findByPlayerAndLadder(
+      profile.id,
+      DEFAULT_LADDER_ID
+    );
+
+    const playerRating = rating?.rating || 1500;
+
+    // Count how many players have a higher rating
+    const higherRatedResult = await query(
+      `SELECT COUNT(*) as count
+       FROM player_ratings pr
+       WHERE pr.ladder_id = $1
+         AND pr.rating > $2`,
+      [DEFAULT_LADDER_ID, playerRating]
+    );
+
+    const higherRatedCount = parseInt(higherRatedResult.rows[0].count, 10);
+    const rank = higherRatedCount + 1;
+
+    // Get total player count
+    const totalPlayersResult = await query(
+      `SELECT COUNT(DISTINCT pr.player_id) as count
+       FROM player_ratings pr
+       WHERE pr.ladder_id = $1`,
+      [DEFAULT_LADDER_ID]
+    );
+
+    const totalPlayers = parseInt(totalPlayersResult.rows[0].count, 10);
+
+    return {
+      rank,
+      total_players: totalPlayers,
+      rating: playerRating,
+    };
+  },
 };

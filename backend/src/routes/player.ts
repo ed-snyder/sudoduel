@@ -114,4 +114,15 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => 
   }
 });
 
+// GET /api/player/rank - Get current player's global rank
+router.get('/rank', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const rankData = await PlayerService.getPlayerRank(req.userId!);
+    res.json(rankData);
+  } catch (error: any) {
+    console.error('Get player rank error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

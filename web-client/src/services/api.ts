@@ -138,11 +138,18 @@ export const friendsAPI = {
 // PLAYER API (extended)
 // =====================================================
 
+export interface UserRank {
+  rank: number;
+  total_players: number;
+  rating: number;
+}
+
 export const playerAPI = {
   getMe: () => api.get('/api/player/me'),
   getMatchHistory: (limit = 50, offset = 0) => 
     api.get(`/api/player/match-history?limit=${limit}&offset=${offset}`),
   getStats: () => api.get('/api/player/stats'),
+  getRank: () => api.get('/api/player/rank') as Promise<UserRank>,
   
   // Update profile (display name)
   updateProfile: (displayName: string) => 

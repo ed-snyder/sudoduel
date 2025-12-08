@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { matchmakingAPI, friendsAPI } from '../services/api';
+import { matchmakingAPI, friendsAPI, playerAPI, type UserRank } from '../services/api';
 import type { MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import MatchHistoryModal from '../components/MatchHistoryModal';
@@ -19,7 +19,7 @@ interface LobbyPageProps {
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
 export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);
@@ -31,6 +31,8 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [incomingMatchRequest, setIncomingMatchRequest] = useState<MatchRequest | null>(null);
   const [matchRequestActionLoading, setMatchRequestActionLoading] = useState(false);
+  const [rankData, setRankData] = useState<UserRank | null>(null);
+  const [rankLoading, setRankLoading] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
@@ -133,6 +135,24 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch global rank
+  useEffect(() => {
+    const loadRank = async () => {
+      if (!token) return;
+      
+      try {
+        const data = await playerAPI.getRank();
+        setRankData(data);
+      } catch (error) {
+        console.error('Failed to load rank:', error);
+      } finally {
+        setRankLoading(false);
+      }
+    };
+    
+    loadRank();
+  }, [token]);
 
   const handleAcceptMatchRequest = async () => {
     if (!incomingMatchRequest || matchRequestActionLoading) return;
@@ -297,7 +317,20 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">Global Rank</span>
-            <span className="text-secondary font-display text-sm italic">Coming Soon</span>
+            {rankLoading ? (
+              <span className="text-primary font-display font-black">...</span>
+            ) : rankData ? (
+              <div className="text-right">
+                <div className="text-primary font-display font-black">
+                  #{rankData.rank.toLocaleString()}
+                </div>
+                <div className="text-muted font-mono text-xs">
+                  of {rankData.total_players.toLocaleString()}
+                </div>
+              </div>
+            ) : (
+              <span className="text-muted font-display text-sm">--</span>
+            )}
           </div>
         </div>
       </div>
