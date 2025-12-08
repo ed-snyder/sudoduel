@@ -514,7 +514,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   animation: premium-name-shimmer 6s linear infinite;
 }
 
-/* Banner Message - Cyan with Magenta Boundary */
+/* Banner Message - Cyan with Cyan Boundary */
 .banner-message-cyan {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 900;
@@ -526,11 +526,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
-  text-shadow: 0 0 4px rgba(255, 0, 255, 0.5), 0 0 8px rgba(255, 0, 255, 0.3);
+  text-shadow: 0 0 4px rgba(0, 255, 255, 0.5), 0 0 8px rgba(0, 255, 255, 0.3);
   animation: premium-name-shimmer 6s linear infinite;
 }
 
-/* Banner Message - Magenta with Cyan Boundary */
+/* Banner Message - Magenta with Magenta Boundary */
 .banner-message-magenta {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 900;
@@ -542,7 +542,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
-  text-shadow: 0 0 4px rgba(0, 255, 255, 0.5), 0 0 8px rgba(0, 255, 255, 0.3);
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.5), 0 0 8px rgba(255, 0, 255, 0.3);
   animation: premium-name-shimmer 6s linear infinite;
 }
 
