@@ -114,7 +114,7 @@ export default function ResultScreen({
   rematchState,
   rematchCountdown = 0,
 }: ResultScreenProps) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
