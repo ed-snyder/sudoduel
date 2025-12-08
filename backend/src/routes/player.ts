@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { PlayerService } from '../services/playerService';
 import { FriendService } from '../services/friendService';
 import { query } from '../config/database';
+import { validateUsername } from '../utils/usernameValidator';
 
 const router = Router();
 
@@ -26,15 +27,11 @@ router.patch('/profile', authMiddleware, async (req: AuthRequest, res: Response)
       return res.status(400).json({ error: 'Display name is required' });
     }
 
-    // Validate display name format
+    // Validate display name format and profanity
     const trimmedName = display_name.trim();
-    if (trimmedName.length < 2 || trimmedName.length > 20) {
-      return res.status(400).json({ error: 'Display name must be 2-20 characters' });
-    }
-
-    // Check for invalid characters (allow alphanumeric, spaces, underscores, hyphens)
-    if (!/^[a-zA-Z0-9_\- ]+$/.test(trimmedName)) {
-      return res.status(400).json({ error: 'Display name can only contain letters, numbers, spaces, underscores, and hyphens' });
+    const usernameValidation = validateUsername(trimmedName);
+    if (!usernameValidation.valid) {
+      return res.status(400).json({ error: usernameValidation.error || 'Invalid display name' });
     }
 
     // Check if display name is available

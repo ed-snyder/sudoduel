@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/authService';
+import { validateUsername } from '../utils/usernameValidator';
 
 const router = Router();
 
@@ -17,7 +18,13 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const result = await AuthService.signup(email, password, display_name);
+    // Validate display name
+    const usernameValidation = validateUsername(display_name);
+    if (!usernameValidation.valid) {
+      return res.status(400).json({ error: usernameValidation.error || 'Invalid display name' });
+    }
+
+    const result = await AuthService.signup(email, password, display_name.trim());
     
     res.status(201).json(result);
   } catch (error: any) {

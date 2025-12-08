@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
+import { validateUsername } from '../utils/usernameValidator';
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -9,19 +10,38 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
+    if (value.length > 0) {
+      const result = validateUsername(value);
+      setDisplayNameError(result.error || '');
+    } else {
+      setDisplayNameError('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setDisplayNameError('');
     setLoading(true);
 
     try {
       if (isLogin) {
         await login(email, password);
       } else {
-        await signup(email, password, displayName);
+        // Validate display name before signup
+        const validation = validateUsername(displayName);
+        if (!validation.valid) {
+          setDisplayNameError(validation.error || 'Invalid username');
+          setLoading(false);
+          return;
+        }
+        await signup(email, password, displayName.trim());
       }
     } catch (err: any) {
       setError(err.message);
@@ -85,14 +105,24 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Display Name"
-                className="w-full px-4 py-3.5 bg-surface border border-grid-line rounded-lg text-primary font-body placeholder-muted focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all duration-200"
-                required={!isLogin}
-              />
+              <div>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => handleDisplayNameChange(e.target.value)}
+                  placeholder="Display Name"
+                  maxLength={20}
+                  className={`w-full px-4 py-3.5 bg-surface border rounded-lg text-primary font-body placeholder-muted focus:outline-none transition-all duration-200 ${
+                    displayNameError 
+                      ? 'border-error/50 focus:border-error focus:shadow-glow-error-subtle' 
+                      : 'border-grid-line focus:border-player focus:shadow-glow-player-subtle'
+                  }`}
+                  required={!isLogin}
+                />
+                {displayNameError && (
+                  <p className="text-error text-xs font-body mt-1">{displayNameError}</p>
+                )}
+              </div>
             )}
 
             <input

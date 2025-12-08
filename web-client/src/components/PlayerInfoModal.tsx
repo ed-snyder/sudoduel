@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { playerAPI } from '../services/api';
+import { validateUsername } from '../utils/usernameValidator';
 
 interface PlayerInfoModalProps {
   isOpen: boolean;
@@ -39,21 +40,10 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
       return;
     }
 
-    // Validate format
-    if (trimmedName.length < 2) {
-      setNameError('Too short (min 2 chars)');
-      setNameAvailable(false);
-      return;
-    }
-
-    if (trimmedName.length > 20) {
-      setNameError('Too long (max 20 chars)');
-      setNameAvailable(false);
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_\- ]+$/.test(trimmedName)) {
-      setNameError('Invalid characters');
+    // Validate format using username validator
+    const validation = validateUsername(trimmedName);
+    if (!validation.valid) {
+      setNameError(validation.error || 'Invalid username');
       setNameAvailable(false);
       return;
     }
@@ -82,6 +72,14 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
     const trimmedName = displayName.trim();
     
     if (!trimmedName || trimmedName === user?.display_name) return;
+    
+    // Validate before saving
+    const validation = validateUsername(trimmedName);
+    if (!validation.valid) {
+      setNameError(validation.error || 'Invalid username');
+      return;
+    }
+    
     if (!nameAvailable) return;
     
     setIsSavingName(true);
