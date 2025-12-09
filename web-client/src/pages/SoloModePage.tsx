@@ -624,6 +624,9 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
           style={{ 
             pointerEvents: gameStatus !== 'playing' ? 'none' : 'auto',
             transition: 'opacity 0.2s ease-out',
+            // Constrain pointer events to grid bounds only
+            width: 'fit-content',
+            maxWidth: '100%',
           }}
         >
           {myGrid.length > 0 && (
@@ -651,12 +654,17 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
         </div>
       </div>
       
-      {/* Spacer to push number pad and toolbar below the grid */}
-      <div className="flex-grow flex-shrink-0" style={{ minHeight: '50vh' }}></div>
-
-      {/* Number Pad - below grid */}
+      {/* Number Pad - positioned at bottom like multiplayer mode */}
       {gameStatus === 'playing' && (
-        <div className="px-3 pt-1 pb-1 flex-shrink-0" style={{ position: 'relative', zIndex: 10 }}>
+        <div 
+          className="absolute left-0 right-0 px-3 pt-1 pb-1"
+          style={{ 
+            bottom: '120px', // Space for toolbar below
+            zIndex: 100,
+            pointerEvents: 'auto',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Debug: temporary background to see if it renders
+          }}
+        >
           <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
               const count = digitCounts[num] || 0;
@@ -670,6 +678,9 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                     console.log('[SOLO] Number clicked:', num);
                     handleNumberClick(num);
                   }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
                   disabled={gameStatus !== 'playing' || isLocked || depleted}
                   className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
                   style={{
@@ -681,6 +692,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                     minHeight: '44px',
                     WebkitTapHighlightColor: 'transparent',
                     cursor: 'pointer',
+                    pointerEvents: 'auto',
                   }}
                 >
                   {num}
@@ -691,9 +703,16 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
         </div>
       )}
       
-      {/* Toolbar */}
+      {/* Toolbar - positioned at bottom */}
       {gameStatus === 'playing' && (
-        <div className="px-3 py-1 pb-safe">
+        <div 
+          className="absolute left-0 right-0 px-3 py-1 pb-safe"
+          style={{ 
+            bottom: 0,
+            zIndex: 100,
+            pointerEvents: 'auto',
+          }}
+        >
           <div className="flex justify-center gap-3 max-w-md mx-auto">
             {/* Erase Button */}
             <button
