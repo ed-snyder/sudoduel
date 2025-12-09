@@ -350,7 +350,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
 
         {searching ? (
           <div className="w-full max-w-sm text-center">
-            <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="relative w-20 h-20 mx-auto mb-4">
               <div className="absolute inset-0 rounded-full border-4 border-surface" />
               <div 
                 className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
@@ -361,11 +361,8 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
               />
             </div>
             
-            <h2 className="text-xl font-display font-black text-primary mb-2 tracking-wide">SEARCHING...</h2>
-            <p className="text-secondary font-display mb-1">Looking for an opponent</p>
-            <p className="text-player text-lg font-display mb-6">
-              0:{String(30 - attemptsRef.current).padStart(2, '0')}
-            </p>
+            <h2 className="text-xl font-display font-black text-primary mb-1 tracking-wide">SEARCHING...</h2>
+            <p className="text-secondary font-display mb-4">Looking for an opponent</p>
             
             <button
               onClick={handleCancel}
