@@ -61,6 +61,7 @@ export default function BackgroundEffects() {
             linear-gradient(90deg, rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
+          willChange: 'opacity',
         }}
       />
       
@@ -74,6 +75,7 @@ export default function BackgroundEffects() {
           `,
           backgroundSize: '50px 50px',
           transform: 'translate(25px, 25px)',
+          willChange: 'opacity',
         }}
       />
 
