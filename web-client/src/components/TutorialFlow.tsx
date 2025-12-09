@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, memo, startTransition, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, memo, startTransition } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
