@@ -6,6 +6,7 @@ export default function UpgradeModal() {
   if (!isUpgradeModalOpen) return null;
 
   const handlePurchase = () => {
+    console.log('Purchase clicked, toggling premium...');
     // In dev mode: simulate purchase by toggling premium status
     if (import.meta.env.DEV) {
       togglePremiumStatus();

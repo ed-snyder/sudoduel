@@ -579,4 +579,54 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border: 1px solid rgba(255, 0, 255, 0.6);
 }
 
+/* ===========================================
+   Upgrade Button Animations
+   =========================================== */
+
+/* Upgrade Button Bob Animation */
+@keyframes button-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.upgrade-button-bob {
+  animation: button-bob 2s ease-in-out infinite;
+}
+
+/* Upgrade Button Sheen Effect */
+@keyframes button-sheen {
+  0% {
+    left: -100%;
+  }
+  50%, 100% {
+    left: 150%;
+  }
+}
+
+.upgrade-button-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.upgrade-button-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: button-sheen 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
 

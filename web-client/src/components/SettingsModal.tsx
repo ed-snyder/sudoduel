@@ -230,21 +230,22 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
 
           {/* DEV OPTIONS - only in development */}
-          {import.meta.env.DEV && (
-            <>
-              <div className="pt-4 mt-4 border-t border-grid-line/50 px-4">
-                <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
-                  Dev Options
-                </h3>
-              </div>
+          {(import.meta.env.DEV || import.meta.env.MODE === 'development') && (
+            <div className="px-4 py-4 border-t border-warning/30 bg-warning/5">
+              <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
+                ⚠️ Dev Options
+              </h3>
               
-              <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <div>
                   <span className="text-primary font-display">Sudoduel+ Status</span>
                   <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
                 </div>
                 <button
-                  onClick={togglePremiumStatus}
+                  onClick={() => {
+                    console.log('Toggling premium, current:', isPremium);
+                    togglePremiumStatus();
+                  }}
                   className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
                     isPremium 
                       ? 'bg-player/20 text-player border border-player' 
@@ -254,7 +255,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {isPremium ? 'PREMIUM' : 'FREE'}
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           {/* About */}

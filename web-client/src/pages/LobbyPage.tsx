@@ -316,7 +316,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">League</span>
-            <span className="text-secondary font-display text-sm italic">Coming soon to SudoDuel+</span>
+            <span className="text-secondary font-display text-sm italic">Coming soon to Sudoduel+</span>
           </div>
           <button
             onClick={() => {
@@ -402,14 +402,17 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                 ) : (
                   <button
                     onClick={openUpgradeModal}
-                    className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
+                    className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98] upgrade-button-bob upgrade-button-sheen"
                     style={{
-                      background: 'rgba(139, 0, 255, 0.15)',
-                      border: '2px solid rgba(139, 0, 255, 0.5)',
-                      color: '#8B00FF',
+                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 180, 0, 0.15) 100%)',
+                      border: '2px solid rgba(255, 215, 0, 0.6)',
+                      color: '#FFD700',
+                      boxShadow: '0 0 15px rgba(255, 215, 0, 0.2)',
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
-                    Upgrade to SudoDuel+
+                    Upgrade to Sudoduel+
                   </button>
                 )}
                 <button
