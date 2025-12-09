@@ -23,12 +23,18 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   // Check if dev options should be shown
   // Show if: dev mode, localhost, or localStorage flag is set
+  // To enable manually: localStorage.setItem('sudoduel_show_dev_options', 'true')
   const showDevOptions = (() => {
+    // Always check localStorage first (allows manual override)
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('sudoduel_show_dev_options') === 'true') return true;
+    }
+    // Check dev mode
     if (import.meta.env.DEV || import.meta.env.MODE === 'development') return true;
+    // Check if running on localhost
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-      if (localStorage.getItem('sudoduel_show_dev_options') === 'true') return true;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '') return true;
     }
     return false;
   })();
@@ -40,6 +46,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         'import.meta.env.DEV': import.meta.env.DEV,
         'import.meta.env.MODE': import.meta.env.MODE,
         'hostname': typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+        'localStorage flag': typeof window !== 'undefined' ? localStorage.getItem('sudoduel_show_dev_options') : 'N/A',
         'showDevOptions': showDevOptions,
       });
     }
