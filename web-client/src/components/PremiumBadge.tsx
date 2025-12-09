@@ -1,13 +1,6 @@
 export default function PremiumBadge() {
   return (
-    <div 
-      className="flex-1 py-3 px-4 rounded-xl flex items-center justify-center"
-      style={{
-        background: 'rgba(10, 5, 20, 0.95)',
-        border: '2px solid #00FFFF',
-        boxShadow: '0 0 15px rgba(0, 255, 255, 0.2)',
-      }}
-    >
+    <div className="flex-1 py-3 px-4 flex items-center justify-center">
       {/* Text container with shimmer - matches DRAW text exactly */}
       <div className="relative select-none">
         {/* Base silver gradient text - same as DRAW */}
@@ -22,6 +15,7 @@ export default function PremiumBadge() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
+            filter: 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6)) drop-shadow(0 0 12px rgba(0, 255, 255, 0.4))',
           }}
         >
           Sudoduel+
@@ -49,6 +43,7 @@ export default function PremiumBadge() {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             animation: 'logo-shimmer 3s ease-in-out infinite',
+            filter: 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6)) drop-shadow(0 0 12px rgba(0, 255, 255, 0.4))',
           }}
           aria-hidden="true"
         >
