@@ -566,7 +566,6 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         });
         setPlaced(true);
         onInteractionComplete?.();
-        setTimeout(onNext, 1200);
       } else {
         // Wrong
         setShowError(true);
@@ -620,13 +619,25 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         )}
         
         {placed && (
-          <div className="pt-2">
+          <div className="pt-2 space-y-4">
             <p 
               className="font-heading font-bold text-xl text-success"
               style={{ textShadow: '0 0 15px rgba(0, 255, 136, 0.6)' }}
             >
               Perfect! ✓
             </p>
+            
+            <button
+              onClick={onNext}
+              className="w-full py-3 px-6 rounded-xl font-body font-semibold transition-all active:scale-[0.98]"
+              style={{
+                background: 'rgba(0, 255, 255, 0.1)',
+                border: '2px solid rgba(0, 255, 255, 0.5)',
+                color: '#00FFFF',
+              }}
+            >
+              Next
+            </button>
           </div>
         )}
         
@@ -677,10 +688,6 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [time, setTime] = useState(195);
   const [showDelta, setShowDelta] = useState(false);
   
-  // Use refs to track timeouts for proper cleanup
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
   // Target: row 1, col 1 - answer is 7
   const targetRow = 1;
   const targetCol = 1;
@@ -692,14 +699,6 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       setSelectedCell({ row: targetRow, col: targetCol });
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Cleanup all timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
-    };
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -725,15 +724,11 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         });
         setPlaced(true);
         
-        // Animate time increase - use refs to track timeouts for cleanup
-        timeoutRef.current = setTimeout(() => {
+        // Animate time increase
+        setTimeout(() => {
           setTime(200);
           setShowDelta(true);
           onInteractionComplete?.();
-          // Auto-advance after animation, similar to SudokuBasics3Step
-          advanceTimeoutRef.current = setTimeout(() => {
-            onNext();
-          }, 1200);
         }, 300);
       }
       
@@ -742,7 +737,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   }, [placed, correctValue, targetRow, targetCol, onInteractionComplete, onNext]);
 
   return (
-    <TutorialOverlayComponent onTap={placed ? onNext : undefined} showTapPrompt={placed}>
+    <TutorialOverlayComponent showTapPrompt={false}>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
         <h2 
           className="font-heading font-bold text-2xl text-success"
