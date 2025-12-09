@@ -24,6 +24,12 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
+  
+  // Debug logging for premium state
+  useEffect(() => {
+    console.log('[LobbyPage] Premium state:', isPremium);
+    console.log('[LobbyPage] localStorage sudoduel_premium:', localStorage.getItem('sudoduel_premium'));
+  }, [isPremium]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);

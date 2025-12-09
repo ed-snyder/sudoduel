@@ -29,8 +29,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const closeUpgradeModal = useCallback(() => setIsUpgradeModalOpen(false), []);
   
   const togglePremiumStatus = useCallback(() => {
-    setIsPremium(prev => !prev);
-  }, []);
+    console.log('[SubscriptionContext] Toggling premium status, current:', isPremium);
+    setIsPremium(prev => {
+      const newValue = !prev;
+      console.log('[SubscriptionContext] New premium value:', newValue);
+      localStorage.setItem(STORAGE_KEY, String(newValue));
+      return newValue;
+    });
+  }, [isPremium]);
 
   return (
     <SubscriptionContext.Provider value={{

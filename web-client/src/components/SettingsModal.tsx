@@ -315,6 +315,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   onClick={() => {
                     console.log('Toggling premium, current:', isPremium);
                     togglePremiumStatus();
+                    console.log('Premium status toggled, new state should be:', !isPremium);
+                    // Force a small delay to ensure state updates
+                    setTimeout(() => {
+                      console.log('After toggle - localStorage:', localStorage.getItem('sudoduel_premium'));
+                    }, 100);
                   }}
                   className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
                     isPremium 

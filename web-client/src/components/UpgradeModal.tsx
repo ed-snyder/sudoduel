@@ -7,11 +7,10 @@ export default function UpgradeModal() {
 
   const handlePurchase = () => {
     console.log('Purchase clicked, toggling premium...');
-    // In dev mode: simulate purchase by toggling premium status
-    if (import.meta.env.DEV) {
-      togglePremiumStatus();
-    }
+    // Simulate purchase by toggling premium status (for testing/dev)
     // TODO: In production, integrate with RevenueCat IAP
+    togglePremiumStatus();
+    console.log('Premium status toggled, new state:', !localStorage.getItem('sudoduel_premium') === 'true');
     closeUpgradeModal();
   };
 
