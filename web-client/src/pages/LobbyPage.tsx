@@ -350,7 +350,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
 
         {searching ? (
           <div className="w-full max-w-sm text-center">
-            <div className="relative w-20 h-20 mx-auto mb-4">
+            <div className="relative w-16 h-16 mx-auto mb-4">
               <div className="absolute inset-0 rounded-full border-4 border-surface" />
               <div 
                 className="absolute inset-0 rounded-full border-4 border-transparent border-t-player animate-spin"
