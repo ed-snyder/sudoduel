@@ -1,4 +1,16 @@
+import { useState, useEffect } from 'react';
+
 export default function BackgroundEffects() {
+  // Breathing animation for grid opacity
+  const [gridOpacity, setGridOpacity] = useState(0.03);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const time = Date.now() / 3000;
+      setGridOpacity(0.035 + Math.sin(time) * 0.015);
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
@@ -38,6 +50,31 @@ export default function BackgroundEffects() {
           }}
         />
       </div>
+
+      {/* Animated grid overlay - purple */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+        }}
+      />
+      
+      {/* Secondary offset grid for depth - cyan tint */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          transform: 'translate(25px, 25px)',
+        }}
+      />
 
     </div>
   );
