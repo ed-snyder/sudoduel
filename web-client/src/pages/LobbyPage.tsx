@@ -322,7 +322,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
             onClick={() => {
               if (isPremium) {
                 // TODO: Open leaderboard (Phase 2)
-                console.log('Open leaderboard');
+                console.log('Open leaderboard - premium user');
               } else {
                 openUpgradeModal();
               }
@@ -332,21 +332,23 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
             <span className="text-muted font-display text-sm">Global Rank</span>
             <div className="flex items-center gap-2">
               {isPremium ? (
+                // Premium: Show actual rank
                 rankLoading ? (
                   <span className="text-primary font-display font-black">...</span>
                 ) : rankData ? (
                   <div className="text-right">
-                    <div className="text-primary font-display font-black">
+                    <span className="text-primary font-display font-black">
                       #{rankData.rank.toLocaleString()}
-                    </div>
-                    <div className="text-muted font-mono text-xs">
+                    </span>
+                    <span className="text-muted font-mono text-xs ml-1">
                       of {rankData.total_players.toLocaleString()}
-                    </div>
+                    </span>
                   </div>
                 ) : (
                   <span className="text-muted font-display text-sm">--</span>
                 )
               ) : (
+                // Free: Show upgrade prompt
                 <span className="text-secondary font-display text-sm italic">
                   Upgrade to see rank
                 </span>
@@ -404,7 +406,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                     onClick={openUpgradeModal}
                     className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98] upgrade-button-bob upgrade-button-sheen"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 180, 0, 0.15) 100%)',
+                      background: 'rgba(10, 5, 20, 0.95)',
                       border: '2px solid rgba(255, 215, 0, 0.6)',
                       color: '#FFD700',
                       boxShadow: '0 0 15px rgba(255, 215, 0, 0.2)',
@@ -417,7 +419,12 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                 )}
                 <button
                   onClick={() => onStartSoloMode?.()}
-                  className="flex-1 py-3 bg-surface border-2 border-player/50 text-player font-display font-black rounded-lg hover:border-player hover:shadow-glow-player-subtle active:scale-[0.98] transition-all flex items-center justify-center"
+                  className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
+                  style={{
+                    background: 'rgba(10, 5, 20, 0.95)',
+                    border: '2px solid rgba(0, 255, 255, 0.5)',
+                    color: '#00FFFF',
+                  }}
                 >
                   Solo Mode
                 </button>
