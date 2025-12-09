@@ -101,12 +101,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       
       {/* Modal */}
       <div 
-        className="relative bg-surface border border-grid-line rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
-        style={{ boxShadow: '0 0 30px rgba(139,0,255,0.2)' }}
+        className="relative bg-surface border border-grid-line rounded-xl w-full max-w-sm overflow-hidden animate-scale-in flex flex-col"
+        style={{ boxShadow: '0 0 30px rgba(139,0,255,0.2)', maxHeight: '85vh' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line">
+        {/* Header - Fixed at top */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line flex-shrink-0">
           <h2 className="font-heading font-bold text-lg text-primary">Settings</h2>
           <button
             onClick={onClose}
@@ -118,8 +118,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="divide-y divide-grid-line">
+        {/* Content - Scrollable */}
+        <div className="divide-y divide-grid-line overflow-y-auto flex-1" style={{ maxHeight: 'calc(85vh - 60px)' }}>
           {/* Music Volume */}
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-2">
@@ -229,35 +229,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </a>
           </div>
 
-          {/* DEV OPTIONS - only in development */}
-          {(import.meta.env.DEV || import.meta.env.MODE === 'development') && (
-            <div className="px-4 py-4 border-t border-warning/30 bg-warning/5">
-              <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
-                ⚠️ Dev Options
-              </h3>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-primary font-display">Sudoduel+ Status</span>
-                  <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
-                </div>
-                <button
-                  onClick={() => {
-                    console.log('Toggling premium, current:', isPremium);
-                    togglePremiumStatus();
-                  }}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
-                    isPremium 
-                      ? 'bg-player/20 text-player border border-player' 
-                      : 'bg-surface text-muted border border-grid-line'
-                  }`}
-                >
-                  {isPremium ? 'PREMIUM' : 'FREE'}
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* About */}
           <div className="px-4 py-4">
             <span className="font-body text-muted text-sm">SudoDuel v1.0.0</span>
@@ -296,6 +267,35 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               Delete Account
             </button>
           </div>
+
+          {/* DEV OPTIONS - only in development - placed at bottom after Danger Zone */}
+          {(import.meta.env.DEV || import.meta.env.MODE === 'development') && (
+            <div className="px-4 py-4 border-t border-warning/30 bg-warning/5">
+              <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
+                ⚠️ Dev Options
+              </h3>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-primary font-display">Sudoduel+ Status</span>
+                  <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
+                </div>
+                <button
+                  onClick={() => {
+                    console.log('Toggling premium, current:', isPremium);
+                    togglePremiumStatus();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
+                    isPremium 
+                      ? 'bg-player/20 text-player border border-player' 
+                      : 'bg-surface text-muted border border-grid-line'
+                  }`}
+                >
+                  {isPremium ? 'PREMIUM' : 'FREE'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
