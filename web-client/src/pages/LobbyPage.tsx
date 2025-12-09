@@ -328,9 +328,12 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
           </div>
           <button
             onClick={() => {
+              console.log('[LobbyPage] Global Rank clicked, isPremium:', isPremium);
               if (isPremium) {
+                console.log('[LobbyPage] Opening leaderboard...');
                 setShowLeaderboard(true);
               } else {
+                console.log('[LobbyPage] Opening upgrade modal...');
                 openUpgradeModal();
               }
             }}
@@ -480,6 +483,12 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         isOpen={showFriendsList}
         onClose={() => setShowFriendsList(false)}
         onMatchFound={onMatchFound}
+      />
+
+      {/* Leaderboard Screen */}
+      <LeaderboardScreen 
+        isOpen={showLeaderboard} 
+        onClose={() => setShowLeaderboard(false)} 
       />
 
       {/* Incoming Match Request Modal */}
