@@ -59,12 +59,22 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
     yourRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('[LeaderboardScreen] Not rendering - isOpen is false');
+    return null;
+  }
+
+  console.log('[LeaderboardScreen] Rendering leaderboard screen');
 
   return (
     <div 
       className="fixed inset-0 z-50 flex flex-col bg-void"
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)', 
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        border: '2px solid rgba(255, 0, 255, 0.6)',
+        boxShadow: '0 0 30px rgba(255, 0, 255, 0.3), inset 0 0 30px rgba(255, 0, 255, 0.1)',
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line bg-surface">
