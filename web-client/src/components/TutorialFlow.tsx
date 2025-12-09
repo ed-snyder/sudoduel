@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, memo } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -15,6 +15,9 @@ const TUTORIAL_GRID: number[][] = [
   [2, 8, 7, 4, 1, 9, 6, 3, 5],
   [3, 4, 5, 2, 8, 6, 1, 7, 9],
 ];
+
+// Empty grid constant to avoid recreating on every render
+const EMPTY_GRID: number[][] = Array(9).fill(null).map(() => Array(9).fill(0));
 
 type TutorialPath = 'undecided' | 'knows-sudoku' | 'new-to-sudoku';
 type TutorialStep = 
@@ -75,6 +78,19 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     setStep(steps[0]);
   }, []);
 
+  const handleComplete = useCallback(async () => {
+    try {
+      await playerAPI.markTutorialComplete();
+      localStorage.setItem('sudoduel_tutorial_completed', 'true');
+      onComplete();
+    } catch (error) {
+      console.error('Failed to mark tutorial complete:', error);
+      // Still complete locally
+      localStorage.setItem('sudoduel_tutorial_completed', 'true');
+      onComplete();
+    }
+  }, [onComplete]);
+
   const handleNext = useCallback(() => {
     if (path === 'undecided') return;
 
@@ -91,20 +107,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     } else {
       handleComplete();
     }
-  }, [path, step, gameMode]);
-
-  const handleComplete = useCallback(async () => {
-    try {
-      await playerAPI.markTutorialComplete();
-      localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete();
-    } catch (error) {
-      console.error('Failed to mark tutorial complete:', error);
-      // Still complete locally
-      localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete();
-    }
-  }, [onComplete]);
+  }, [path, step, gameMode, handleComplete]);
 
   const handleSkip = useCallback(async () => {
     try {
@@ -122,7 +125,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     setInteractionComplete(true);
   }, []);
 
-  const getCurrentStepIndex = () => {
+  const getCurrentStepIndex = useMemo(() => {
     if (path === 'undecided') return 0;
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
@@ -130,9 +133,9 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
         ? KNOWS_SUDOKU_STEPS 
         : NEW_TO_SUDOKU_STEPS;
     return steps.indexOf(step) + 1;
-  };
+  }, [path, step, gameMode]);
 
-  const getTotalSteps = () => {
+  const getTotalSteps = useMemo(() => {
     if (path === 'undecided') return 1;
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
@@ -140,17 +143,17 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
         ? KNOWS_SUDOKU_STEPS 
         : NEW_TO_SUDOKU_STEPS;
     return steps.length + 1; // +1 for ask-experience step
-  };
+  }, [path, gameMode]);
 
-  const renderStep = () => {
-    const stepProps = {
-      onNext: handleNext,
-      onSkip: handleSkip,
-      onInteractionComplete: handleInteractionComplete,
-      interactionComplete,
-      gameMode,
-    };
+  const stepProps = useMemo(() => ({
+    onNext: handleNext,
+    onSkip: handleSkip,
+    onInteractionComplete: handleInteractionComplete,
+    interactionComplete,
+    gameMode,
+  }), [handleNext, handleSkip, handleInteractionComplete, interactionComplete, gameMode]);
 
+  const renderStep = useMemo(() => {
     switch (step) {
       case 'ask-experience':
         return <AskExperienceStep {...stepProps} onPathSelect={handlePathSelect} />;
@@ -175,17 +178,17 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
       default:
         return null;
     }
-  };
+  }, [step, stepProps, handlePathSelect, handleComplete, gameMode]);
 
   return (
     <div className="tutorial-flow fixed inset-0 z-[2500]">
-      {renderStep()}
+      {renderStep}
       
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface/50">
         <div 
           className="h-full bg-player transition-all duration-300"
-          style={{ width: `${(getCurrentStepIndex() / getTotalSteps()) * 100}%` }}
+          style={{ width: `${(getCurrentStepIndex / getTotalSteps) * 100}%`, willChange: 'width' }}
         />
       </div>
 
@@ -205,7 +208,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
 }
 
 // Tutorial Overlay Component
-function TutorialOverlayComponent({ 
+const TutorialOverlayComponent = memo(function TutorialOverlayComponent({ 
   children, 
   onTap, 
   highlightBox,
@@ -216,13 +219,17 @@ function TutorialOverlayComponent({
   highlightBox?: { top: number; left: number; width: number; height: number };
   showTapPrompt?: boolean;
 }) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   return (
     <div 
       className="tutorial-overlay fixed inset-0 flex items-center justify-center p-4"
       onClick={onTap}
     >
       {/* Dimmed backdrop */}
-      <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" style={{ willChange: 'opacity' }} />
       
       {/* Highlight box (if provided) */}
       {highlightBox && (
@@ -236,6 +243,7 @@ function TutorialOverlayComponent({
             boxShadow: '0 0 30px rgba(0, 255, 255, 0.6), inset 0 0 30px rgba(0, 255, 255, 0.3)',
             borderRadius: '8px',
             zIndex: 2501,
+            willChange: 'transform, opacity',
           }}
         />
       )}
@@ -243,7 +251,7 @@ function TutorialOverlayComponent({
       {/* Content */}
       <div 
         className="relative z-[2502] max-w-lg w-full"
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleClick}
       >
         {children}
         {showTapPrompt && onTap && (
@@ -254,10 +262,10 @@ function TutorialOverlayComponent({
       </div>
     </div>
   );
-}
+});
 
 // NumberPad component for tutorial
-function NumberPad({ 
+const NumberPad = memo(function NumberPad({ 
   onNumberSelect, 
   highlightNumber, 
   disabled 
@@ -266,40 +274,47 @@ function NumberPad({
   highlightNumber?: number | null; 
   disabled?: boolean;
 }) {
+  const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
+
   return (
     <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-        <button
-          key={num}
-          onClick={() => onNumberSelect(num)}
-          disabled={disabled}
-          className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
-          style={{
-            fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-            background: num === highlightNumber 
-              ? 'rgba(0, 255, 255, 0.3)' 
-              : 'transparent',
-            border: num === highlightNumber
-              ? '2px solid #00FFFF'
-              : '2px solid rgba(139, 0, 255, 0.6)',
-            color: num === highlightNumber ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-            boxShadow: num === highlightNumber
-              ? '0 0 15px rgba(0, 255, 255, 0.5)'
-              : '0 0 10px rgba(139, 0, 255, 0.2)',
-            minHeight: '44px',
-            opacity: disabled ? 0.5 : 1,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {num}
-        </button>
-      ))}
+      {numbers.map((num) => {
+        const isHighlighted = num === highlightNumber;
+        return (
+          <button
+            key={num}
+            onClick={() => onNumberSelect(num)}
+            disabled={disabled}
+            className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+            style={{
+              fontSize: 'clamp(1rem, 4vw, 1.5rem)',
+              background: isHighlighted 
+                ? 'rgba(0, 255, 255, 0.3)' 
+                : 'transparent',
+              border: isHighlighted
+                ? '2px solid #00FFFF'
+                : '2px solid rgba(139, 0, 255, 0.6)',
+              color: isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
+              boxShadow: isHighlighted
+                ? '0 0 15px rgba(0, 255, 255, 0.5)'
+                : '0 0 10px rgba(139, 0, 255, 0.2)',
+              minHeight: '44px',
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              willChange: 'transform, opacity',
+              transform: 'scale(1)',
+            }}
+          >
+            {num}
+          </button>
+        );
+      })}
     </div>
   );
-}
+});
 
 // TimerDisplay component for tutorial
-function TimerDisplay({ 
+const TimerDisplay = memo(function TimerDisplay({ 
   time, 
   delta, 
   showDelta, 
@@ -310,51 +325,54 @@ function TimerDisplay({
   showDelta?: boolean; 
   color?: 'cyan' | 'magenta';
 }) {
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+  const formattedTime = useMemo(() => {
+    const mins = Math.floor(time / 60);
+    const secs = time % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, [time]);
 
-  const colorClass = color === 'cyan' ? 'text-player' : 'text-opponent';
-  const borderColor = color === 'cyan' ? 'border-player bg-player/20' : 'border-opponent bg-opponent/20';
+  const colorClass = useMemo(() => color === 'cyan' ? 'text-player' : 'text-opponent', [color]);
+  const borderColor = useMemo(() => color === 'cyan' ? 'border-player bg-player/20' : 'border-opponent bg-opponent/20', [color]);
 
   return (
     <div className="flex items-center gap-3">
       <div className={`px-4 py-2 rounded-lg border-2 ${borderColor}`}>
         <div className={`text-2xl font-mono font-bold ${colorClass}`}>
-          {formatTime(time)}
+          {formattedTime}
         </div>
       </div>
       {showDelta && delta && (
-        <div className={`text-xl font-bold ${delta > 0 ? 'text-success' : 'text-error'}`}>
+        <div 
+          className={`text-xl font-bold ${delta > 0 ? 'text-success' : 'text-error'}`}
+          style={{ willChange: 'transform, opacity' }}
+        >
           {delta > 0 ? '+' : ''}{delta}s
         </div>
       )}
     </div>
   );
-}
+});
 
 // HighlightBox component for tutorial
-function HighlightBox({ 
+const HighlightBox = memo(function HighlightBox({ 
   children, 
   color = 'cyan' 
 }: { 
   children: React.ReactNode; 
   color?: 'cyan' | 'magenta' | 'gold';
 }) {
-  const colorStyles = {
+  const colorStyles = useMemo(() => ({
     cyan: 'border-player bg-player/10',
     magenta: 'border-opponent bg-opponent/10',
     gold: 'border-warning bg-warning/10',
-  };
+  }), []);
 
   return (
     <div className={`px-4 py-3 rounded-lg border-2 ${colorStyles[color]}`}>
       {children}
     </div>
   );
-}
+});
 
 
 // Step Components
@@ -402,6 +420,8 @@ function AskExperienceStep({ onPathSelect }: StepProps & { onPathSelect: (path: 
 }
 
 function SudokuBasics1Step({ onNext }: StepProps) {
+  const handleCellClick = useCallback(() => {}, []);
+  
   return (
     <TutorialOverlayComponent>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
@@ -411,10 +431,10 @@ function SudokuBasics1Step({ onNext }: StepProps) {
         </p>
         <div className="flex justify-center">
           <SudokuGrid
-            grid={Array(9).fill(null).map(() => Array(9).fill(0))}
-            initialGrid={Array(9).fill(null).map(() => Array(9).fill(0))}
+            grid={EMPTY_GRID}
+            initialGrid={EMPTY_GRID}
             selectedCell={null}
-            onCellClick={() => {}}
+            onCellClick={handleCellClick}
             animateIn={false}
             countdownPhase="complete"
           />
@@ -426,6 +446,7 @@ function SudokuBasics1Step({ onNext }: StepProps) {
             background: 'rgba(0, 255, 255, 0.1)',
             border: '2px solid rgba(0, 255, 255, 0.5)',
             color: '#00FFFF',
+            willChange: 'transform',
           }}
         >
           Next
@@ -479,40 +500,43 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCellClick = (row: number, col: number) => {
+  const handleCellClick = useCallback((row: number, col: number) => {
     if (placed) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
     setShowError(false);
-  };
+  }, [placed]);
 
-  const handleNumberSelect = (num: number) => {
+  const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    // If no cell selected, select the target cell first
-    if (!selectedCell) {
-      setSelectedCell({ row: targetRow, col: targetCol });
-      return;
-    }
-    
-    const { row, col } = selectedCell;
-    
-    if (num === correctValue && row === targetRow && col === targetCol) {
-      // Correct!
-      setGrid(prev => {
-        const newGrid = prev.map(r => [...r]);
-        newGrid[row][col] = num;
-        return newGrid;
-      });
-      setPlaced(true);
-      onInteractionComplete?.();
-      setTimeout(onNext, 1200);
-    } else {
-      // Wrong
-      setShowError(true);
-      setTimeout(() => setShowError(false), 600);
-    }
-  };
+    setSelectedCell(prev => {
+      // If no cell selected, select the target cell first
+      if (!prev) {
+        return { row: targetRow, col: targetCol };
+      }
+      
+      const { row, col } = prev;
+      
+      if (num === correctValue && row === targetRow && col === targetCol) {
+        // Correct!
+        setGrid(prevGrid => {
+          const newGrid = prevGrid.map(r => [...r]);
+          newGrid[row][col] = num;
+          return newGrid;
+        });
+        setPlaced(true);
+        onInteractionComplete?.();
+        setTimeout(onNext, 1200);
+      } else {
+        // Wrong
+        setShowError(true);
+        setTimeout(() => setShowError(false), 600);
+      }
+      
+      return prev;
+    });
+  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete, onNext]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -627,37 +651,40 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCellClick = (row: number, col: number) => {
+  const handleCellClick = useCallback((row: number, col: number) => {
     if (placed) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
-  };
+  }, [placed]);
 
-  const handleNumberSelect = (num: number) => {
+  const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    if (!selectedCell) {
-      setSelectedCell({ row: targetRow, col: targetCol });
-      return;
-    }
-    
-    if (num === correctValue && selectedCell.row === targetRow && selectedCell.col === targetCol) {
-      // Correct!
-      setGrid(prev => {
-        const newGrid = prev.map(r => [...r]);
-        newGrid[targetRow][targetCol] = num;
-        return newGrid;
-      });
-      setPlaced(true);
+    setSelectedCell(prev => {
+      if (!prev) {
+        return { row: targetRow, col: targetCol };
+      }
       
-      // Animate time increase
-      setTimeout(() => {
-        setTime(200);
-        setShowDelta(true);
-        onInteractionComplete?.();
-      }, 300);
-    }
-  };
+      if (num === correctValue && prev.row === targetRow && prev.col === targetCol) {
+        // Correct!
+        setGrid(prevGrid => {
+          const newGrid = prevGrid.map(r => [...r]);
+          newGrid[targetRow][targetCol] = num;
+          return newGrid;
+        });
+        setPlaced(true);
+        
+        // Animate time increase
+        setTimeout(() => {
+          setTime(200);
+          setShowDelta(true);
+          onInteractionComplete?.();
+        }, 300);
+      }
+      
+      return prev;
+    });
+  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
 
   return (
     <TutorialOverlayComponent onTap={placed ? onNext : undefined} showTapPrompt={placed}>
@@ -754,9 +781,7 @@ function DuelWrongStep({ onNext }: StepProps) {
 }
 
 function DuelOpponentStep({ onNext }: StepProps) {
-  const [grid] = useState<number[][]>(
-    Array(9).fill(null).map(() => Array(9).fill(0))
-  );
+  const [grid] = useState(() => EMPTY_GRID);
   const opponentCells = useMemo(() => {
     const set = new Set<string>();
     set.add('0-0');
@@ -764,6 +789,8 @@ function DuelOpponentStep({ onNext }: StepProps) {
     set.add('1-0');
     return set;
   }, []);
+
+  const handleCellClick = useCallback(() => {}, []);
 
   return (
     <TutorialOverlayComponent>
@@ -775,9 +802,9 @@ function DuelOpponentStep({ onNext }: StepProps) {
         <div className="flex justify-center">
           <SudokuGrid
             grid={grid}
-            initialGrid={Array(9).fill(null).map(() => Array(9).fill(0))}
+            initialGrid={EMPTY_GRID}
             selectedCell={null}
-            onCellClick={() => {}}
+            onCellClick={handleCellClick}
             opponentScoredCells={opponentCells}
             animateIn={false}
             countdownPhase="complete"
@@ -790,6 +817,7 @@ function DuelOpponentStep({ onNext }: StepProps) {
             background: 'rgba(0, 255, 255, 0.1)',
             border: '2px solid rgba(0, 255, 255, 0.5)',
             color: '#00FFFF',
+            willChange: 'transform',
           }}
         >
           Next
