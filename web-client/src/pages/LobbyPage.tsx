@@ -10,6 +10,7 @@ import SettingsModal from '../components/SettingsModal';
 import PlayerInfoModal from '../components/PlayerInfoModal';
 import EmoteCustomizerModal from '../components/EmoteCustomizerModal';
 import FriendsListModal from '../components/FriendsListModal';
+import LeaderboardScreen from '../components/LeaderboardScreen';
 import PremiumBadge from '../components/PremiumBadge';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
@@ -38,6 +39,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const [showPlayerInfo, setShowPlayerInfo] = useState(false);
   const [showEmoteCustomizer, setShowEmoteCustomizer] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [incomingMatchRequest, setIncomingMatchRequest] = useState<MatchRequest | null>(null);
   const [matchRequestActionLoading, setMatchRequestActionLoading] = useState(false);
@@ -327,8 +329,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
           <button
             onClick={() => {
               if (isPremium) {
-                // TODO: Open leaderboard (Phase 2)
-                console.log('Open leaderboard - premium user');
+                setShowLeaderboard(true);
               } else {
                 openUpgradeModal();
               }

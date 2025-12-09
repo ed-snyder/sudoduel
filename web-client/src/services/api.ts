@@ -201,4 +201,28 @@ export const puzzleAPI = {
   }>,
 };
 
-export default { authAPI, playerAPI, matchmakingAPI, friendsAPI, puzzleAPI };
+// =====================================================
+// LEADERBOARD API
+// =====================================================
+
+export interface LeaderboardEntry {
+  rank: number;
+  player_id: number;
+  display_name: string;
+  rating: number;
+  is_you: boolean;
+}
+
+export interface LeaderboardResponse {
+  top100: LeaderboardEntry[];
+  neighborhood: LeaderboardEntry[];
+  your_rank: number;
+  total_players: number;
+}
+
+export const leaderboardAPI = {
+  getLeaderboard: () => 
+    api.get('/api/leaderboard') as Promise<LeaderboardResponse>,
+};
+
+export default { authAPI, playerAPI, matchmakingAPI, friendsAPI, puzzleAPI, leaderboardAPI };
