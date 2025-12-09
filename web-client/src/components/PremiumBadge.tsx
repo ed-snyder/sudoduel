@@ -8,12 +8,16 @@ export default function PremiumBadge() {
         boxShadow: '0 0 15px rgba(0, 255, 255, 0.2)',
       }}
     >
-      {/* Text container with shimmer */}
-      <div className="relative">
-        {/* Base silver gradient text */}
+      {/* Text container with shimmer - matches DRAW text exactly */}
+      <div className="relative select-none">
+        {/* Base silver gradient text - same as DRAW */}
         <span
-          className="font-body font-bold text-base"
           style={{
+            fontFamily: "'Industry', 'Orbitron', sans-serif",
+            fontWeight: 900,
+            fontStyle: 'italic',
+            letterSpacing: '-0.02em',
+            fontSize: '1rem', // text-base equivalent
             background: 'linear-gradient(180deg, #FFFFFF 0%, #B8B8B8 50%, #888888 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -23,10 +27,15 @@ export default function PremiumBadge() {
           Sudoduel+
         </span>
         
-        {/* Shimmer overlay on text */}
+        {/* Shimmer overlay on text - same as DRAW */}
         <span
-          className="absolute inset-0 font-body font-bold text-base pointer-events-none"
+          className="absolute inset-0 pointer-events-none select-none"
           style={{
+            fontFamily: "'Industry', 'Orbitron', sans-serif",
+            fontWeight: 900,
+            fontStyle: 'italic',
+            letterSpacing: '-0.02em',
+            fontSize: '1rem', // text-base equivalent
             background: `linear-gradient(
               120deg, 
               transparent 0%, 
