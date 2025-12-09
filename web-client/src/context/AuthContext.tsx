@@ -16,10 +16,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
+  justSignedUp: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  clearJustSignedUp: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   // Load user on mount if token exists
   useEffect(() => {
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(response.token);
     // After login, normalize user to player_profile via /player/me
     await refreshUser();
+    // NOTE: Do NOT set justSignedUp for login - only for signup
   };
 
   const signup = async (email: string, password: string, displayName: string) => {
@@ -68,6 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(response.token);
     // After signup, normalize user to player_profile via /player/me
     await refreshUser();
+    setJustSignedUp(true); // Mark as new signup
+  };
+
+  const clearJustSignedUp = () => {
+    setJustSignedUp(false);
   };
 
   const logout = () => {
@@ -77,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, loading, justSignedUp, login, signup, logout, refreshUser, clearJustSignedUp }}>
       {children}
     </AuthContext.Provider>
   );

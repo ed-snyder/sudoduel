@@ -44,10 +44,8 @@ export default function LoginPage() {
           return;
         }
         await signup(email, password, displayName.trim());
-        // Mark that we just signed up (for tutorial trigger)
-        sessionStorage.setItem('sudoduel_just_signed_up', 'true');
-        // After signup, refreshUser() is called automatically
-        // App.tsx will check tutorial_completed and show tutorial if needed
+        // After signup, justSignedUp is set in AuthContext
+        // App.tsx will show TutorialFlow automatically
       }
     } catch (err: any) {
       setError(err.message);

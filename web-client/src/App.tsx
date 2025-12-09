@@ -3,13 +3,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
-import TutorialFlow, { hasTutorialCompleted } from './components/TutorialFlow';
+import TutorialFlow from './components/TutorialFlow';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 function AppContent() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, justSignedUp, clearJustSignedUp } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
-  const [showTutorial, setShowTutorial] = useState(false);
 
   // Pre-warm haptics engine on app start (earliest possible)
   useEffect(() => {
@@ -69,76 +68,51 @@ function AppContent() {
     warmUp();
   }, []);
 
-  // Track if this is a fresh signup (tutorial should only show after signup, not login)
-  const [isFreshSignup, setIsFreshSignup] = useState(false);
-
-  // Check if tutorial should be shown (only for new signups, never on login)
-  useEffect(() => {
-    if (user && isFreshSignup && !hasTutorialCompleted(user)) {
-      // Check localStorage as backup
-      if (localStorage.getItem('sudoduel_tutorial_completed') !== 'true') {
-        setShowTutorial(true);
-        setIsFreshSignup(false); // Reset flag
-      }
-    } else if (user && !isFreshSignup) {
-      // User logged in or already processed, don't show tutorial
-      setShowTutorial(false);
-    }
-  }, [user, isFreshSignup]);
-
-  // Listen for signup completion (we'll need to pass this from LoginPage)
-  // For now, check localStorage for a signup flag
-  useEffect(() => {
-    const justSignedUp = sessionStorage.getItem('sudoduel_just_signed_up') === 'true';
-    if (justSignedUp) {
-      setIsFreshSignup(true);
-      sessionStorage.removeItem('sudoduel_just_signed_up');
-    }
-  }, []);
-
+  // Handle tutorial completion
   const handleTutorialComplete = async () => {
-    setShowTutorial(false);
-    // Refresh user to get updated tutorial_completed status
-    await refreshUser();
+    clearJustSignedUp();
+    // Also mark in localStorage as backup
+    localStorage.setItem('sudoduel_tutorial_completed', 'true');
   };
 
-  const handleTutorialSkip = async () => {
-    setShowTutorial(false);
-    // Refresh user to get updated tutorial_completed status
-    await refreshUser();
-  };
-
-  // Show tutorial overlay if needed (blocks everything else)
-  if (showTutorial) {
+  if (loading) {
     return (
-      <TutorialFlow
+      <div className="min-h-screen bg-void flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Not logged in - show login page
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // JUST signed up - show tutorial BEFORE lobby
+  if (justSignedUp) {
+    return (
+      <TutorialFlow 
         onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
+        onSkip={handleTutorialComplete}
         gameMode="duel"
       />
     );
   }
 
-  return (
-    <div className="min-h-screen bg-void">
-      {loading ? (
-        <div className="min-h-screen bg-void flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-      ) : !user ? (
-        <LoginPage />
-      ) : matchId ? (
+  // In a match - show game
+  if (matchId) {
+    return (
       <GamePage
         matchId={matchId}
         onGameEnd={() => setMatchId(null)}
         onRematch={(newMatchId) => setMatchId(newMatchId)}
         onFindNewMatch={(newMatchId) => setMatchId(newMatchId)}
       />
-      ) : (
-        <LobbyPage onMatchFound={setMatchId} />
-      )}
-    </div>
-  );
+    );
+  }
+
+  // Default - show lobby
+  return <LobbyPage onMatchFound={setMatchId} />;
 }
 
 export default function App() {
