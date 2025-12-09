@@ -614,7 +614,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       </div>
       
       {/* Sudoku Grid - Centered */}
-      <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+      <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }}>
         <div 
           className={`relative w-full max-w-full ${
             isLocked ? 'pointer-events-none opacity-50' : ''
@@ -651,12 +651,12 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
         </div>
       </div>
       
-      {/* Spacer to push number pad below grid */}
-      <div className="flex-shrink-0" style={{ minHeight: '50vh' }}></div>
-      
-      {/* Number Pad */}
+      {/* Spacer to push number pad and toolbar below the grid */}
+      <div className="flex-grow flex-shrink-0" style={{ minHeight: '50vh' }}></div>
+
+      {/* Number Pad - below grid */}
       {gameStatus === 'playing' && (
-        <div className="px-3 pt-1 pb-1">
+        <div className="px-3 pt-1 pb-1 flex-shrink-0" style={{ position: 'relative', zIndex: 10 }}>
           <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
               const count = digitCounts[num] || 0;
@@ -664,7 +664,9 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
               return (
                 <button
                   key={num}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     console.log('[SOLO] Number clicked:', num);
                     handleNumberClick(num);
                   }}
@@ -678,6 +680,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                     boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
                     minHeight: '44px',
                     WebkitTapHighlightColor: 'transparent',
+                    cursor: 'pointer',
                   }}
                 >
                   {num}
