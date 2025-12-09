@@ -789,11 +789,25 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         )}
         
         {placed && (
-          <HighlightBox color="cyan">
-            <p className="font-body text-primary text-sm">
-              Keep solving correctly to <strong className="text-success">build up time</strong>!
-            </p>
-          </HighlightBox>
+          <>
+            <HighlightBox color="cyan">
+              <p className="font-body text-primary text-sm">
+                Keep solving correctly to <strong className="text-success">build up time</strong>!
+              </p>
+            </HighlightBox>
+            
+            <button
+              onClick={onNext}
+              className="w-full py-3 px-6 rounded-xl font-body font-semibold transition-all active:scale-[0.98] mt-4"
+              style={{
+                background: 'rgba(0, 255, 255, 0.1)',
+                border: '2px solid rgba(0, 255, 255, 0.5)',
+                color: '#00FFFF',
+              }}
+            >
+              Next
+            </button>
+          </>
         )}
       </div>
     </TutorialOverlayComponent>
