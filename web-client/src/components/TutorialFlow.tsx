@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, memo } from 'react';
+import { useState, useCallback, useMemo, useEffect, memo, startTransition, useRef } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -94,6 +94,8 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   const handleNext = useCallback(() => {
     if (path === 'undecided') return;
 
+    console.time('Step transition');
+    
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
       : path === 'knows-sudoku' 
@@ -102,8 +104,14 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
 
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
-      setStep(steps[currentIndex + 1]);
-      setInteractionComplete(false);
+      // Use startTransition to mark this as non-urgent, allowing React to batch updates
+      startTransition(() => {
+        setStep(steps[currentIndex + 1]);
+        setInteractionComplete(false);
+        requestAnimationFrame(() => {
+          console.timeEnd('Step transition');
+        });
+      });
     } else {
       handleComplete();
     }
@@ -153,31 +161,62 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     gameMode,
   }), [handleNext, handleSkip, handleInteractionComplete, interactionComplete, gameMode]);
 
+  // Memoized step components for better performance
+  const MemoizedDuelCorrectStep = memo(DuelCorrectStep);
+  const MemoizedSudokuBasics3Step = memo(SudokuBasics3Step);
+  const MemoizedDuelTimerStep = memo(DuelTimerStep);
+  const MemoizedDuelWrongStep = memo(DuelWrongStep);
+  const MemoizedDuelOpponentStep = memo(DuelOpponentStep);
+  const MemoizedDuelWinConditionStep = memo(DuelWinConditionStep);
+  const MemoizedReadyStep = memo(ReadyStep);
+  const MemoizedAskExperienceStep = memo(AskExperienceStep);
+  const MemoizedSudokuBasics1Step = memo(SudokuBasics1Step);
+  const MemoizedSudokuBasics2Step = memo(SudokuBasics2Step);
+
   const renderStep = useMemo(() => {
+    console.time('TutorialFlow render');
+    let result;
+    
     switch (step) {
       case 'ask-experience':
-        return <AskExperienceStep {...stepProps} onPathSelect={handlePathSelect} />;
+        result = <MemoizedAskExperienceStep {...stepProps} onPathSelect={handlePathSelect} />;
+        break;
       case 'sudoku-basics-1':
-        return <SudokuBasics1Step {...stepProps} />;
+        result = <MemoizedSudokuBasics1Step {...stepProps} />;
+        break;
       case 'sudoku-basics-2':
-        return <SudokuBasics2Step {...stepProps} />;
+        result = <MemoizedSudokuBasics2Step {...stepProps} />;
+        break;
       case 'sudoku-basics-3':
-        return <SudokuBasics3Step {...stepProps} />;
+        result = <MemoizedSudokuBasics3Step {...stepProps} />;
+        break;
       case 'duel-timer':
-        return <DuelTimerStep {...stepProps} />;
+        result = <MemoizedDuelTimerStep {...stepProps} />;
+        break;
       case 'duel-correct':
-        return <DuelCorrectStep {...stepProps} />;
+        result = <MemoizedDuelCorrectStep {...stepProps} />;
+        break;
       case 'duel-wrong':
-        return <DuelWrongStep {...stepProps} />;
+        result = <MemoizedDuelWrongStep {...stepProps} />;
+        break;
       case 'duel-opponent':
-        return gameMode === 'solo' ? <DuelWinConditionStep {...stepProps} /> : <DuelOpponentStep {...stepProps} />;
+        result = gameMode === 'solo' ? <MemoizedDuelWinConditionStep {...stepProps} /> : <MemoizedDuelOpponentStep {...stepProps} />;
+        break;
       case 'duel-win-condition':
-        return <DuelWinConditionStep {...stepProps} />;
+        result = <MemoizedDuelWinConditionStep {...stepProps} />;
+        break;
       case 'ready':
-        return <ReadyStep {...stepProps} onComplete={handleComplete} />;
+        result = <MemoizedReadyStep {...stepProps} onComplete={handleComplete} />;
+        break;
       default:
-        return null;
+        result = null;
     }
+    
+    requestAnimationFrame(() => {
+      console.timeEnd('TutorialFlow render');
+    });
+    
+    return result;
   }, [step, stepProps, handlePathSelect, handleComplete, gameMode]);
 
   return (
@@ -638,6 +677,10 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [time, setTime] = useState(195);
   const [showDelta, setShowDelta] = useState(false);
   
+  // Use refs to track timeouts for proper cleanup
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // Target: row 1, col 1 - answer is 7
   const targetRow = 1;
   const targetCol = 1;
@@ -649,6 +692,14 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       setSelectedCell({ row: targetRow, col: targetCol });
     }, 800);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
+    };
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -666,7 +717,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       }
       
       if (num === correctValue && prev.row === targetRow && prev.col === targetCol) {
-        // Correct!
+        // Correct! Batch state updates for better performance
         setGrid(prevGrid => {
           const newGrid = prevGrid.map(r => [...r]);
           newGrid[targetRow][targetCol] = num;
@@ -674,13 +725,15 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         });
         setPlaced(true);
         
-        // Animate time increase
-        setTimeout(() => {
+        // Animate time increase - use refs to track timeouts for cleanup
+        timeoutRef.current = setTimeout(() => {
           setTime(200);
           setShowDelta(true);
           onInteractionComplete?.();
           // Auto-advance after animation, similar to SudokuBasics3Step
-          setTimeout(onNext, 1200);
+          advanceTimeoutRef.current = setTimeout(() => {
+            onNext();
+          }, 1200);
         }, 300);
       }
       
