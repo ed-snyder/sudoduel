@@ -21,6 +21,30 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  // Check if dev options should be shown
+  // Show if: dev mode, localhost, or localStorage flag is set
+  const showDevOptions = (() => {
+    if (import.meta.env.DEV || import.meta.env.MODE === 'development') return true;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+      if (localStorage.getItem('sudoduel_show_dev_options') === 'true') return true;
+    }
+    return false;
+  })();
+
+  // Debug logging
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[SettingsModal] Dev Options Check:', {
+        'import.meta.env.DEV': import.meta.env.DEV,
+        'import.meta.env.MODE': import.meta.env.MODE,
+        'hostname': typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+        'showDevOptions': showDevOptions,
+      });
+    }
+  }, [isOpen, showDevOptions]);
+
   // Load settings from localStorage
   useEffect(() => {
     const savedHaptic = localStorage.getItem('hapticEnabled');
@@ -268,8 +292,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </button>
           </div>
 
-          {/* DEV OPTIONS - only in development - placed at bottom after Danger Zone */}
-          {(import.meta.env.DEV || import.meta.env.MODE === 'development') && (
+          {/* DEV OPTIONS - placed at bottom after Danger Zone */}
+          {showDevOptions && (
             <div className="px-4 py-4 border-t border-warning/30 bg-warning/5">
               <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
                 ⚠️ Dev Options
