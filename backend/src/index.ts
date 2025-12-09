@@ -23,16 +23,18 @@ const PORT = process.env.PORT || 3001;
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const allowedOrigins = [
+  process.env.FRONTEND_URL, // From Railway environment variable
+  'https://app.sudoduel.com',
+  'https://sudoduel.com',
+  'https://www.sudoduel.com',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:3000',
-  'https://sudoduel.com',
-  'https://www.sudoduel.com',
   // Capacitor mobile apps
   'capacitor://localhost',
   'http://localhost',
-];
+].filter(Boolean); // Remove undefined values
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -53,6 +55,7 @@ app.use(cors({
     
     // Log rejected origin for debugging
     console.warn(`CORS: Rejected origin: ${origin}`);
+    console.log(`CORS: Allowed origins: ${allowedOrigins.join(', ')}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
