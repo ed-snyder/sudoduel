@@ -66,14 +66,18 @@ router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Safe delete that won't fail if table doesn't exist
-  const safeDelete = async (sql: string, params: any[]) => {
+  // Helper to safely run delete queries (ignores "table/column doesn't exist" errors)
+  const safeDelete = async (sql: string, params: any[]): Promise<void> => {
     try {
       await query(sql, params);
     } catch (err: any) {
-      if (!err.message.includes('does not exist') && !err.message.includes('relation') && !err.message.includes('table')) {
-        throw err;
+      const msg = err.message || '';
+      // Ignore missing table/column errors
+      if (msg.includes('does not exist') || msg.includes('column')) {
+        console.log(`[Delete Account] Skipping: ${msg}`);
+        return;
       }
+      throw err;
     }
   };
 
@@ -87,52 +91,58 @@ router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response
     );
     const playerProfileId = profileResult.rows[0]?.id;
 
+    console.log(`[Delete Account] Starting deletion for user ${userId}, player profile ${playerProfileId}`);
+
     if (playerProfileId) {
-      // Delete in order to respect foreign key constraints
-      // Most tables have ON DELETE CASCADE, but we'll be explicit
+      // Delete from all related tables (order matters for foreign keys)
       
-      // 1. Delete from matchmaking queue
+      // 1. Matchmaking queue
       await safeDelete('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerProfileId]);
       
-      // 2. Delete match players records (keeps match history but removes player link)
+      // 2. Match players (removes from match history but keeps matches for other player)
       await safeDelete('DELETE FROM match_players WHERE player_id = $1', [playerProfileId]);
       
-      // 3. Delete head-to-head stats
+      // 3. Head-to-head stats (both sides)
       await safeDelete('DELETE FROM head_to_head_stats WHERE player1_id = $1 OR player2_id = $1', [playerProfileId]);
       
-      // 4. Delete friend match requests
+      // 4. Friend match requests (both directions)
       await safeDelete('DELETE FROM friend_match_requests WHERE from_player_id = $1 OR to_player_id = $1', [playerProfileId]);
       
-      // 5. Delete friendships (both directions)
+      // 5. Friendships (both directions)
       await safeDelete('DELETE FROM friendships WHERE player_id = $1 OR friend_id = $1', [playerProfileId]);
       
-      // 6. Delete friend requests (both directions)
+      // 6. Friend requests (both directions)
       await safeDelete('DELETE FROM friend_requests WHERE from_player_id = $1 OR to_player_id = $1', [playerProfileId]);
       
-      // 7. Delete player ratings
+      // 7. Player ratings
       await safeDelete('DELETE FROM player_ratings WHERE player_id = $1', [playerProfileId]);
       
-      // 8. Delete blocks (user_id references users table, blocked_user_id references player_profiles)
+      // 8. Blocked users (user_id is users.id, blocked_user_id is player_profiles.id)
       await safeDelete('DELETE FROM blocked_users WHERE user_id = $1', [userId]);
       await safeDelete('DELETE FROM blocked_users WHERE blocked_user_id = $1', [playerProfileId]);
       
-      // 9. Delete reports BY this user (keep reports OF this user for moderation)
-      await safeDelete('DELETE FROM reports WHERE reporter_id = $1', [userId]);
+      // 9. Reports (reporter_id and target_user_id both reference player_profiles.id)
+      await safeDelete('DELETE FROM reports WHERE reporter_id = $1', [playerProfileId]);
+      await safeDelete('DELETE FROM reports WHERE target_user_id = $1', [playerProfileId]);
       
-      // 10. Delete player profile (this should cascade most things, but we've been explicit above)
+      // 10. Delete player profile itself
       await query('DELETE FROM player_profiles WHERE id = $1', [playerProfileId]);
+      console.log(`[Delete Account] Deleted player profile ${playerProfileId}`);
     }
 
-    // 11. Finally, delete the user account itself
+    // 11. Finally delete the user
     await query('DELETE FROM users WHERE id = $1', [userId]);
+    console.log(`[Delete Account] Deleted user ${userId}`);
 
     await query('COMMIT');
+    console.log(`[Delete Account] Successfully completed deletion for user ${userId}`);
 
     res.json({ success: true, message: 'Account permanently deleted' });
   } catch (error: any) {
     await query('ROLLBACK');
-    console.error('Delete account error:', error);
-    res.status(500).json({ error: 'Failed to delete account. Please try again.' });
+    console.error('[Delete Account] FAILED:', error);
+    // Return the actual error message for debugging
+    res.status(500).json({ error: error.message || 'Failed to delete account' });
   }
 });
 
