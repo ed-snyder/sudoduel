@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -236,14 +236,6 @@ function TutorialOverlayComponent({
   );
 }
 
-// Loading screen
-function TutorialLoadingScreen() {
-  return (
-    <div className="fixed inset-0 bg-void flex items-center justify-center">
-      <div className="text-player font-heading text-xl">Loading Tutorial...</div>
-    </div>
-  );
-}
 
 // Step Components
 interface StepProps {
@@ -347,7 +339,7 @@ function SudokuBasics2Step({ onNext }: StepProps) {
   );
 }
 
-function SudokuBasics3Step({ onNext, onInteractionComplete, interactionComplete }: StepProps) {
+function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [grid, setGrid] = useState<number[][]>(
     Array(9).fill(null).map(() => Array(9).fill(0))
@@ -450,7 +442,7 @@ function DuelTimerStep({ onNext }: StepProps) {
   );
 }
 
-function DuelCorrectStep({ onNext, onInteractionComplete, interactionComplete }: StepProps) {
+function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [grid, setGrid] = useState<number[][]>(
     Array(9).fill(null).map(() => Array(9).fill(0))
