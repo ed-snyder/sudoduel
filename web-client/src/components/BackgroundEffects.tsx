@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 
 export default function BackgroundEffects() {
-  // Breathing animation for grid opacity
-  const [gridOpacity, setGridOpacity] = useState(0.03);
+  // Breathing animation for grid opacity - increased visibility
+  const [gridOpacity, setGridOpacity] = useState(0.08);
   
   useEffect(() => {
     const interval = setInterval(() => {
       const time = Date.now() / 3000;
-      setGridOpacity(0.035 + Math.sin(time) * 0.015);
+      // Oscillate between 0.06 and 0.12 for better visibility
+      setGridOpacity(0.09 + Math.sin(time) * 0.03);
     }, 50);
     return () => clearInterval(interval);
   }, []);
