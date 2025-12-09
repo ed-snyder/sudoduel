@@ -1799,8 +1799,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         criticalTime={30}
       />
       
-      {/* Lobby-style blob effects */}
-      <BackgroundEffects />
+      {/* Lobby-style blob effects - grid hidden during gameplay */}
+      <BackgroundEffects showGrid={false} />
 
       <GameCountdown
         onPhaseChange={handleCountdownPhaseChange}

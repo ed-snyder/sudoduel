@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 
-export default function BackgroundEffects() {
+interface BackgroundEffectsProps {
+  showGrid?: boolean; // Show animated grid overlay (default: true)
+}
+
+export default function BackgroundEffects({ showGrid = true }: BackgroundEffectsProps) {
   // Breathing animation for grid opacity - increased visibility
   const [gridOpacity, setGridOpacity] = useState(0.08);
   
   useEffect(() => {
+    if (!showGrid) return;
+    
     const interval = setInterval(() => {
       const time = Date.now() / 3000;
       // Oscillate between 0.06 and 0.12 for better visibility
       setGridOpacity(0.09 + Math.sin(time) * 0.03);
     }, 50);
     return () => clearInterval(interval);
-  }, []);
+  }, [showGrid]);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
@@ -52,32 +58,36 @@ export default function BackgroundEffects() {
         />
       </div>
 
-      {/* Animated grid overlay - purple */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-          willChange: 'opacity',
-        }}
-      />
-      
-      {/* Secondary offset grid for depth - cyan tint */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-          transform: 'translate(25px, 25px)',
-          willChange: 'opacity',
-        }}
-      />
+      {/* Animated grid overlay - purple (only shown when showGrid is true) */}
+      {showGrid && (
+        <>
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 0, 255, ${gridOpacity}) 1px, transparent 1px)
+              `,
+              backgroundSize: '50px 50px',
+              willChange: 'opacity',
+            }}
+          />
+          
+          {/* Secondary offset grid for depth - cyan tint */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, ${gridOpacity * 0.5}) 1px, transparent 1px)
+              `,
+              backgroundSize: '50px 50px',
+              transform: 'translate(25px, 25px)',
+              willChange: 'opacity',
+            }}
+          />
+        </>
+      )}
 
     </div>
   );
