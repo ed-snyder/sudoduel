@@ -1,7 +1,20 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
+
+// Tutorial grid with some pre-filled cells for demonstration
+const TUTORIAL_GRID: number[][] = [
+  [5, 3, 0, 6, 7, 8, 9, 1, 2],
+  [6, 0, 9, 1, 9, 5, 3, 4, 8],
+  [1, 9, 8, 3, 4, 2, 5, 6, 7],
+  [8, 5, 9, 7, 6, 1, 4, 2, 3],
+  [4, 2, 6, 8, 5, 3, 7, 9, 1],
+  [7, 1, 3, 9, 2, 4, 8, 5, 6],
+  [9, 6, 1, 5, 3, 7, 2, 8, 4],
+  [2, 8, 7, 4, 1, 9, 6, 3, 5],
+  [3, 4, 5, 2, 8, 6, 1, 7, 9],
+];
 
 type TutorialPath = 'undecided' | 'knows-sudoku' | 'new-to-sudoku';
 type TutorialStep = 
@@ -195,11 +208,13 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
 function TutorialOverlayComponent({ 
   children, 
   onTap, 
-  highlightBox 
+  highlightBox,
+  showTapPrompt = false
 }: { 
   children: React.ReactNode; 
   onTap?: () => void;
   highlightBox?: { top: number; left: number; width: number; height: number };
+  showTapPrompt?: boolean;
 }) {
   return (
     <div 
@@ -231,7 +246,112 @@ function TutorialOverlayComponent({
         onClick={(e) => e.stopPropagation()}
       >
         {children}
+        {showTapPrompt && onTap && (
+          <div className="text-center mt-4">
+            <p className="text-muted text-sm font-body">Tap anywhere to continue</p>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// NumberPad component for tutorial
+function NumberPad({ 
+  onNumberSelect, 
+  highlightNumber, 
+  disabled 
+}: { 
+  onNumberSelect: (num: number) => void; 
+  highlightNumber?: number | null; 
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+        <button
+          key={num}
+          onClick={() => onNumberSelect(num)}
+          disabled={disabled}
+          className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+          style={{
+            fontSize: 'clamp(1rem, 4vw, 1.5rem)',
+            background: num === highlightNumber 
+              ? 'rgba(0, 255, 255, 0.3)' 
+              : 'transparent',
+            border: num === highlightNumber
+              ? '2px solid #00FFFF'
+              : '2px solid rgba(139, 0, 255, 0.6)',
+            color: num === highlightNumber ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
+            boxShadow: num === highlightNumber
+              ? '0 0 15px rgba(0, 255, 255, 0.5)'
+              : '0 0 10px rgba(139, 0, 255, 0.2)',
+            minHeight: '44px',
+            opacity: disabled ? 0.5 : 1,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {num}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// TimerDisplay component for tutorial
+function TimerDisplay({ 
+  time, 
+  delta, 
+  showDelta, 
+  color = 'cyan' 
+}: { 
+  time: number; 
+  delta?: number; 
+  showDelta?: boolean; 
+  color?: 'cyan' | 'magenta';
+}) {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const colorClass = color === 'cyan' ? 'text-player' : 'text-opponent';
+  const borderColor = color === 'cyan' ? 'border-player bg-player/20' : 'border-opponent bg-opponent/20';
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`px-4 py-2 rounded-lg border-2 ${borderColor}`}>
+        <div className={`text-2xl font-mono font-bold ${colorClass}`}>
+          {formatTime(time)}
+        </div>
+      </div>
+      {showDelta && delta && (
+        <div className={`text-xl font-bold ${delta > 0 ? 'text-success' : 'text-error'}`}>
+          {delta > 0 ? '+' : ''}{delta}s
+        </div>
+      )}
+    </div>
+  );
+}
+
+// HighlightBox component for tutorial
+function HighlightBox({ 
+  children, 
+  color = 'cyan' 
+}: { 
+  children: React.ReactNode; 
+  color?: 'cyan' | 'magenta' | 'gold';
+}) {
+  const colorStyles = {
+    cyan: 'border-player bg-player/10',
+    magenta: 'border-opponent bg-opponent/10',
+    gold: 'border-warning bg-warning/10',
+  };
+
+  return (
+    <div className={`px-4 py-3 rounded-lg border-2 ${colorStyles[color]}`}>
+      {children}
     </div>
   );
 }
@@ -340,72 +460,117 @@ function SudokuBasics2Step({ onNext }: StepProps) {
 }
 
 function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
+  // Target cell: row 0, col 2 - the answer is 4
+  const [grid, setGrid] = useState(() => TUTORIAL_GRID.map(row => [...row]));
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [grid, setGrid] = useState<number[][]>(
-    Array(9).fill(null).map(() => Array(9).fill(0))
-  );
-  const [highlightedNumber, setHighlightedNumber] = useState<number | null>(5);
+  const [placed, setPlaced] = useState(false);
+  const [showError, setShowError] = useState(false);
+  
+  const targetRow = 0;
+  const targetCol = 2;
+  const correctValue = 4;
 
-  const handleCellClick = useCallback((row: number, col: number) => {
-    setSelectedCell({ row, col });
+  // Auto-select the target cell on mount so user just needs to pick the number
+  useEffect(() => {
+    // Small delay so user sees the highlight first
+    const timer = setTimeout(() => {
+      setSelectedCell({ row: targetRow, col: targetCol });
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleNumberClick = useCallback((num: number) => {
-    if (selectedCell && highlightedNumber === num) {
-      const newGrid = grid.map(r => [...r]);
-      newGrid[selectedCell.row][selectedCell.col] = num;
-      setGrid(newGrid);
-      onInteractionComplete?.();
-      setTimeout(() => {
-        setHighlightedNumber(null);
-        setTimeout(onNext, 500);
-      }, 300);
+  const handleCellClick = (row: number, col: number) => {
+    if (placed) return;
+    if (TUTORIAL_GRID[row][col] !== 0) return;
+    setSelectedCell({ row, col });
+    setShowError(false);
+  };
+
+  const handleNumberSelect = (num: number) => {
+    if (placed) return;
+    
+    // If no cell selected, select the target cell first
+    if (!selectedCell) {
+      setSelectedCell({ row: targetRow, col: targetCol });
+      return;
     }
-  }, [selectedCell, highlightedNumber, grid, onInteractionComplete, onNext]);
+    
+    const { row, col } = selectedCell;
+    
+    if (num === correctValue && row === targetRow && col === targetCol) {
+      // Correct!
+      setGrid(prev => {
+        const newGrid = prev.map(r => [...r]);
+        newGrid[row][col] = num;
+        return newGrid;
+      });
+      setPlaced(true);
+      onInteractionComplete?.();
+      setTimeout(onNext, 1200);
+    } else {
+      // Wrong
+      setShowError(true);
+      setTimeout(() => setShowError(false), 600);
+    }
+  };
 
   return (
-    <TutorialOverlayComponent>
+    <TutorialOverlayComponent showTapPrompt={false}>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-player">Try It!</h2>
-        <p className="font-body text-secondary">
-          Tap the highlighted cell, then tap <span className="text-player font-bold">5</span> on the number pad.
+        <h2 
+          className="font-heading font-bold text-2xl text-player"
+          style={{ textShadow: '0 0 15px rgba(0, 255, 255, 0.5)' }}
+        >
+          TRY IT!
+        </h2>
+        
+        <p className="font-body text-secondary text-sm px-2">
+          {placed 
+            ? ''
+            : selectedCell 
+              ? <>Select <strong className="text-player">4</strong> to place it</>
+              : <>Tap the <strong className="text-player">highlighted cell</strong>, then select <strong className="text-player">4</strong></>
+          }
         </p>
+        
+        {/* Grid - always show with numbers */}
         <div className="flex justify-center">
-          <SudokuGrid
+          <SudokuGrid 
             grid={grid}
-            initialGrid={Array(9).fill(null).map(() => Array(9).fill(0))}
+            initialGrid={TUTORIAL_GRID}
             selectedCell={selectedCell}
             onCellClick={handleCellClick}
             animateIn={false}
             countdownPhase="complete"
           />
         </div>
-        {selectedCell && (
-          <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <button
-                key={num}
-                onClick={() => handleNumberClick(num)}
-                className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
-                style={{
-                  fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                  background: num === highlightedNumber 
-                    ? 'rgba(0, 255, 255, 0.3)' 
-                    : 'transparent',
-                  border: num === highlightedNumber
-                    ? '2px solid #00FFFF'
-                    : '2px solid rgba(139, 0, 255, 0.6)',
-                  color: num === highlightedNumber ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-                  boxShadow: num === highlightedNumber
-                    ? '0 0 15px rgba(0, 255, 255, 0.5)'
-                    : '0 0 10px rgba(139, 0, 255, 0.2)',
-                  minHeight: '44px',
-                }}
-              >
-                {num}
-              </button>
-            ))}
+        
+        {/* Number pad - ALWAYS visible, not just after selection */}
+        {!placed && (
+          <div className="pt-2">
+            <NumberPad 
+              onNumberSelect={handleNumberSelect}
+              highlightNumber={correctValue}
+              disabled={false}
+            />
           </div>
+        )}
+        
+        {placed && (
+          <div className="pt-2">
+            <p 
+              className="font-heading font-bold text-xl text-success"
+              style={{ textShadow: '0 0 15px rgba(0, 255, 136, 0.6)' }}
+            >
+              Perfect! ✓
+            </p>
+          </div>
+        )}
+        
+        {showError && (
+          <p className="font-body text-error text-sm">
+            Not quite - try 4!
+          </p>
         )}
       </div>
     </TutorialOverlayComponent>
@@ -443,78 +608,115 @@ function DuelTimerStep({ onNext }: StepProps) {
 }
 
 function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
+  const [grid, setGrid] = useState(() => TUTORIAL_GRID.map(row => [...row]));
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [grid, setGrid] = useState<number[][]>(
-    Array(9).fill(null).map(() => Array(9).fill(0))
-  );
-  const [highlightedNumber, setHighlightedNumber] = useState<number | null>(3);
-  const [showBonus, setShowBonus] = useState(false);
+  const [placed, setPlaced] = useState(false);
+  const [time, setTime] = useState(195);
+  const [showDelta, setShowDelta] = useState(false);
+  
+  // Target: row 1, col 1 - answer is 7
+  const targetRow = 1;
+  const targetCol = 1;
+  const correctValue = 7;
 
-  const handleCellClick = useCallback((row: number, col: number) => {
-    setSelectedCell({ row, col });
+  // Auto-select the target cell on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSelectedCell({ row: targetRow, col: targetCol });
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleNumberClick = useCallback((num: number) => {
-    if (selectedCell && highlightedNumber === num) {
-      const newGrid = grid.map(r => [...r]);
-      newGrid[selectedCell.row][selectedCell.col] = num;
-      setGrid(newGrid);
-      setShowBonus(true);
-      onInteractionComplete?.();
-      setTimeout(() => {
-        setShowBonus(false);
-        setHighlightedNumber(null);
-        setTimeout(onNext, 800);
-      }, 1000);
+  const handleCellClick = (row: number, col: number) => {
+    if (placed) return;
+    if (TUTORIAL_GRID[row][col] !== 0) return;
+    setSelectedCell({ row, col });
+  };
+
+  const handleNumberSelect = (num: number) => {
+    if (placed) return;
+    
+    if (!selectedCell) {
+      setSelectedCell({ row: targetRow, col: targetCol });
+      return;
     }
-  }, [selectedCell, highlightedNumber, grid, onInteractionComplete, onNext]);
+    
+    if (num === correctValue && selectedCell.row === targetRow && selectedCell.col === targetCol) {
+      // Correct!
+      setGrid(prev => {
+        const newGrid = prev.map(r => [...r]);
+        newGrid[targetRow][targetCol] = num;
+        return newGrid;
+      });
+      setPlaced(true);
+      
+      // Animate time increase
+      setTimeout(() => {
+        setTime(200);
+        setShowDelta(true);
+        onInteractionComplete?.();
+      }, 300);
+    }
+  };
 
   return (
-    <TutorialOverlayComponent>
+    <TutorialOverlayComponent onTap={placed ? onNext : undefined} showTapPrompt={placed}>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-player">Correct = +5s!</h2>
-        <p className="font-body text-secondary">
-          Place the correct number to earn time bonus.
-        </p>
+        <h2 
+          className="font-heading font-bold text-2xl text-success"
+          style={{ textShadow: '0 0 15px rgba(0, 255, 136, 0.5)' }}
+        >
+          CORRECT = +5 SECONDS
+        </h2>
+        
+        {/* Timer */}
         <div className="flex justify-center">
-          <SudokuGrid
+          <TimerDisplay 
+            time={time} 
+            delta={showDelta ? 5 : undefined}
+            showDelta={showDelta}
+            color="cyan" 
+          />
+        </div>
+        
+        <p className="font-body text-secondary text-sm">
+          {placed 
+            ? 'Every correct answer rewards you with time!'
+            : selectedCell 
+              ? <>Select <strong className="text-player">7</strong> to place it</>
+              : <>Tap the <strong className="text-player">highlighted cell</strong>, then select <strong className="text-player">7</strong></>
+          }
+        </p>
+        
+        {/* Grid - always show with numbers */}
+        <div className="flex justify-center">
+          <SudokuGrid 
             grid={grid}
-            initialGrid={Array(9).fill(null).map(() => Array(9).fill(0))}
+            initialGrid={TUTORIAL_GRID}
             selectedCell={selectedCell}
             onCellClick={handleCellClick}
             animateIn={false}
             countdownPhase="complete"
           />
         </div>
-        {showBonus && (
-          <div className="text-success text-2xl font-bold animate-pulse">+5s!</div>
-        )}
-        {selectedCell && !showBonus && (
-          <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <button
-                key={num}
-                onClick={() => handleNumberClick(num)}
-                className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
-                style={{
-                  fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                  background: num === highlightedNumber 
-                    ? 'rgba(0, 255, 255, 0.3)' 
-                    : 'transparent',
-                  border: num === highlightedNumber
-                    ? '2px solid #00FFFF'
-                    : '2px solid rgba(139, 0, 255, 0.6)',
-                  color: num === highlightedNumber ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-                  boxShadow: num === highlightedNumber
-                    ? '0 0 15px rgba(0, 255, 255, 0.5)'
-                    : '0 0 10px rgba(139, 0, 255, 0.2)',
-                  minHeight: '44px',
-                }}
-              >
-                {num}
-              </button>
-            ))}
+        
+        {/* Number pad - ALWAYS visible */}
+        {!placed && (
+          <div className="pt-2">
+            <NumberPad 
+              onNumberSelect={handleNumberSelect}
+              highlightNumber={correctValue}
+              disabled={false}
+            />
           </div>
+        )}
+        
+        {placed && (
+          <HighlightBox color="cyan">
+            <p className="font-body text-primary text-sm">
+              Keep solving correctly to <strong className="text-success">build up time</strong>!
+            </p>
+          </HighlightBox>
         )}
       </div>
     </TutorialOverlayComponent>
