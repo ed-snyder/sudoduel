@@ -10,7 +10,7 @@ export default function PremiumBadge() {
             fontWeight: 900,
             fontStyle: 'italic',
             letterSpacing: '-0.02em',
-            fontSize: '1.125rem', // text-lg - bigger to match Solo Mode button
+            fontSize: '1.5rem', // Larger to match total Solo Mode button size
             background: 'linear-gradient(180deg, #FFFFFF 0%, #B8B8B8 50%, #888888 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -29,7 +29,7 @@ export default function PremiumBadge() {
             fontWeight: 900,
             fontStyle: 'italic',
             letterSpacing: '-0.02em',
-            fontSize: '1.125rem', // text-lg - bigger to match Solo Mode button
+            fontSize: '1.5rem', // Larger to match total Solo Mode button size
             background: `linear-gradient(
               120deg, 
               transparent 0%, 
