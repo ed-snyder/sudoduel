@@ -21,6 +21,13 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
     if (isOpen) {
       console.log('[LeaderboardScreen] Loading leaderboard...');
       loadLeaderboard();
+    } else {
+      // Reset state when closed
+      setTop100([]);
+      setNeighborhood([]);
+      setYourRank(0);
+      setTotalPlayers(0);
+      setError('');
     }
   }, [isOpen]);
 
