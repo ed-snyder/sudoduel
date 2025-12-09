@@ -50,14 +50,18 @@ export const MatchmakingQueueModel = {
     const queryParams: any[] = [ladderId, playerId, rating - ratingWindow, rating + ratingWindow];
     
     if (userId) {
+      // Exclude players that userId has blocked
+      // AND exclude players who have blocked userId
       blockedUsersClause = `
-        AND player_id NOT IN (
-          SELECT blocked_user_id FROM blocked_users WHERE user_id = $5
+        AND mq.player_id NOT IN (
+          SELECT bu.blocked_user_id FROM blocked_users bu WHERE bu.user_id = $5
         )
-        AND $5 NOT IN (
-          SELECT user_id FROM blocked_users 
-          JOIN player_profiles ON player_profiles.user_id = blocked_users.user_id
-          WHERE blocked_users.blocked_user_id = player_id
+        AND mq.player_id NOT IN (
+          SELECT pp.id FROM blocked_users bu
+          JOIN player_profiles pp ON pp.user_id = bu.user_id
+          WHERE bu.blocked_user_id = (
+            SELECT id FROM player_profiles WHERE user_id = $5
+          )
         )`;
       queryParams.push(userId);
     }
