@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 import SoloModePage from './pages/SoloModePage';
 import TutorialFlow from './components/TutorialFlow';
+import UpgradeModal from './components/UpgradeModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 function AppContent() {
@@ -125,7 +127,10 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SubscriptionProvider>
+        <AppContent />
+        <UpgradeModal />
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

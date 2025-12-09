@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { authAPI } from '../services/api';
 
 interface SettingsModalProps {
@@ -9,6 +10,7 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
+  const { isPremium, togglePremiumStatus } = useSubscription();
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [simplifyGraphics, setSimplifyGraphics] = useState(false);
   const [musicVolume, setMusicVolume] = useState(70);
@@ -226,6 +228,34 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               Terms of Service ↗
             </a>
           </div>
+
+          {/* DEV OPTIONS - only in development */}
+          {import.meta.env.DEV && (
+            <>
+              <div className="pt-4 mt-4 border-t border-grid-line/50 px-4">
+                <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
+                  Dev Options
+                </h3>
+              </div>
+              
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div>
+                  <span className="text-primary font-display">Sudoduel+ Status</span>
+                  <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
+                </div>
+                <button
+                  onClick={togglePremiumStatus}
+                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
+                    isPremium 
+                      ? 'bg-player/20 text-player border border-player' 
+                      : 'bg-surface text-muted border border-grid-line'
+                  }`}
+                >
+                  {isPremium ? 'PREMIUM' : 'FREE'}
+                </button>
+              </div>
+            </>
+          )}
 
           {/* About */}
           <div className="px-4 py-4">

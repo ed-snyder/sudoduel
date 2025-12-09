@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { matchmakingAPI, friendsAPI, playerAPI, type UserRank } from '../services/api';
 import type { MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -9,6 +10,7 @@ import SettingsModal from '../components/SettingsModal';
 import PlayerInfoModal from '../components/PlayerInfoModal';
 import EmoteCustomizerModal from '../components/EmoteCustomizerModal';
 import FriendsListModal from '../components/FriendsListModal';
+import PremiumBadge from '../components/PremiumBadge';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
 
@@ -21,6 +23,7 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
 export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
+  const { isPremium, openUpgradeModal } = useSubscription();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);
@@ -36,8 +39,6 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const [rankLoading, setRankLoading] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
-
-  const isPremium = false;
 
   const difficulties: { key: Difficulty; label: string; available: boolean }[] = [
     { key: 'easy', label: 'Easy', available: true },
@@ -317,23 +318,44 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
             <span className="text-muted font-display text-sm">League</span>
             <span className="text-secondary font-display text-sm italic">Coming soon to SudoDuel+</span>
           </div>
-          <div className="flex justify-between items-center">
+          <button
+            onClick={() => {
+              if (isPremium) {
+                // TODO: Open leaderboard (Phase 2)
+                console.log('Open leaderboard');
+              } else {
+                openUpgradeModal();
+              }
+            }}
+            className="flex justify-between items-center w-full hover:bg-player/5 -mx-2 px-2 py-1 rounded transition-colors"
+          >
             <span className="text-muted font-display text-sm">Global Rank</span>
-            {rankLoading ? (
-              <span className="text-primary font-display font-black">...</span>
-            ) : rankData ? (
-              <div className="text-right">
-                <div className="text-primary font-display font-black">
-                  #{rankData.rank.toLocaleString()}
-                </div>
-                <div className="text-muted font-mono text-xs">
-                  of {rankData.total_players.toLocaleString()}
-                </div>
-              </div>
-            ) : (
-              <span className="text-muted font-display text-sm">--</span>
-            )}
-          </div>
+            <div className="flex items-center gap-2">
+              {isPremium ? (
+                rankLoading ? (
+                  <span className="text-primary font-display font-black">...</span>
+                ) : rankData ? (
+                  <div className="text-right">
+                    <div className="text-primary font-display font-black">
+                      #{rankData.rank.toLocaleString()}
+                    </div>
+                    <div className="text-muted font-mono text-xs">
+                      of {rankData.total_players.toLocaleString()}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-muted font-display text-sm">--</span>
+                )
+              ) : (
+                <span className="text-secondary font-display text-sm italic">
+                  Upgrade to see rank
+                </span>
+              )}
+              <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -375,12 +397,21 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
           <>
             <div className="w-full max-w-sm mb-6">
               <div className="flex gap-3">
-                <button
-                  onClick={() => {/* TODO: Premium flow */}}
-                  className="flex-1 py-3 bg-void bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/50 text-gold font-display font-black rounded-lg hover:from-gold/30 hover:to-gold/20 hover:shadow-glow-gold transition-all flex items-center justify-center"
-                >
-                  Upgrade to SudoDuel+
-                </button>
+                {isPremium ? (
+                  <PremiumBadge />
+                ) : (
+                  <button
+                    onClick={openUpgradeModal}
+                    className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
+                    style={{
+                      background: 'rgba(139, 0, 255, 0.15)',
+                      border: '2px solid rgba(139, 0, 255, 0.5)',
+                      color: '#8B00FF',
+                    }}
+                  >
+                    Upgrade to SudoDuel+
+                  </button>
+                )}
                 <button
                   onClick={() => onStartSoloMode?.()}
                   className="flex-1 py-3 bg-surface border-2 border-player/50 text-player font-display font-black rounded-lg hover:border-player hover:shadow-glow-player-subtle active:scale-[0.98] transition-all flex items-center justify-center"
