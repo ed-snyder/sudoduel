@@ -624,9 +624,6 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
           style={{ 
             pointerEvents: gameStatus !== 'playing' ? 'none' : 'auto',
             transition: 'opacity 0.2s ease-out',
-            // Constrain pointer events to grid bounds only
-            width: 'fit-content',
-            maxWidth: '100%',
           }}
         >
           {myGrid.length > 0 && (
@@ -662,7 +659,6 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
             bottom: '120px', // Space for toolbar below
             zIndex: 100,
             pointerEvents: 'auto',
-            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Debug: temporary background to see if it renders
           }}
         >
           <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
