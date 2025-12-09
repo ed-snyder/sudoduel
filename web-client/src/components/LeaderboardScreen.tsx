@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, forwardRef } from 'react';
-import { leaderboardAPI, LeaderboardEntry } from '../services/api';
+import { leaderboardAPI } from '../services/api';
+import type { LeaderboardEntry } from '../services/api';
 
 interface LeaderboardScreenProps {
   isOpen: boolean;
