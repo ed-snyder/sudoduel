@@ -1,34 +1,55 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { puzzleAPI } from '../services/api';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
+import { useGameSounds } from '../hooks/useGameSounds';
+import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import BackgroundEffects from '../components/BackgroundEffects';
+import { puzzleAPI } from '../services/api';
 import { STARTING_TIME_SECONDS, TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT } from '../constants';
+import { log } from '../utils/logger';
 
 interface SoloModePageProps {
   onExit: () => void;
 }
 
 export default function SoloModePage({ onExit }: SoloModePageProps) {
-  const { } = useAuth();
+  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, initAudio } = useGameSounds();
+  const { error: hapticError, vibrate } = useHaptics();
   
-  // Puzzle state
+  // Grid state
+  const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
   const [solutionGrid, setSolutionGrid] = useState<number[][]>([]);
-  const [myGrid, setMyGrid] = useState<number[][]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   
   // Game state
   const [gameStatus, setGameStatus] = useState<'loading' | 'playing' | 'won' | 'lost'>('loading');
   const [timeRemaining, setTimeRemaining] = useState(STARTING_TIME_SECONDS);
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [, setCellsCompleted] = useState(0); // Used in setter for win condition check
-  const [notes, setNotes] = useState<Map<string, number[]>>(new Map());
+  const [cellsCompleted, setCellsCompleted] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  
+  // Visual feedback state
+  const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
+  const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
+  const [erroredCells, setErroredCells] = useState<Set<string>>(new Set());
+  const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
+  const [showMicroShake, setShowMicroShake] = useState(false);
+  
+  // Notes state
   const [notesMode, setNotesMode] = useState(false);
+  const [notes, setNotes] = useState<Map<string, number[]>>(new Map());
+  
+  // Streak tracking
+  const myStreakRef = useRef(0);
+  const [_longestStreak, setLongestStreak] = useState(0);
   
   // Timer ref
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCellPlacementRef = useRef(0);
+  
+  // Initialize audio on mount
+  useEffect(() => {
+    initAudio();
+  }, [initAudio]);
   
   // Load puzzle on mount
   useEffect(() => {
@@ -38,17 +59,26 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
     };
   }, []);
   
+  const parseGridString = (str: string): number[][] => {
+    const grid: number[][] = [];
+    for (let i = 0; i < 9; i++) {
+      grid.push([]);
+      for (let j = 0; j < 9; j++) {
+        grid[i].push(parseInt(str[i * 9 + j]) || 0);
+      }
+    }
+    return grid;
+  };
+  
   const loadPuzzle = async () => {
     try {
-      setLoading(true);
+      setGameStatus('loading');
       setError('');
       
-      // Fetch random puzzle with solution for solo mode
       const response = await puzzleAPI.getRandom();
       
-      // Parse grids (assuming they come as strings of 81 chars)
-      const initial = parseGrid(response.initial_grid);
-      const solution = parseGrid(response.solution_grid);
+      const initial = parseGridString(response.initial_grid);
+      const solution = parseGridString(response.solution_grid);
       
       setInitialGrid(initial);
       setSolutionGrid(solution);
@@ -59,26 +89,24 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       setCellsCompleted(initialCount);
       
       setGameStatus('playing');
-      setLoading(false);
+      setIsLocked(false);
+      setTimeRemaining(STARTING_TIME_SECONDS);
+      setSelectedCell(null);
+      setNotes(new Map());
+      setNotesMode(false);
+      setLastMoveResult(null);
+      setCompletedCells(new Set());
+      setErroredCells(new Set());
+      setLastScoredCell(null);
+      myStreakRef.current = 0;
+      setLongestStreak(0);
       
       // Start timer
       startTimer();
     } catch (err: any) {
       setError(err.message || 'Failed to load puzzle');
-      setLoading(false);
+      setGameStatus('loading');
     }
-  };
-  
-  const parseGrid = (gridString: string): number[][] => {
-    const grid: number[][] = [];
-    for (let i = 0; i < 9; i++) {
-      const row: number[] = [];
-      for (let j = 0; j < 9; j++) {
-        row.push(parseInt(gridString[i * 9 + j]) || 0);
-      }
-      grid.push(row);
-    }
-    return grid;
   };
   
   const startTimer = () => {
@@ -87,8 +115,8 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          // Time's up - lose
           if (timerRef.current) clearInterval(timerRef.current);
+          setIsLocked(true);
           setGameStatus('lost');
           return 0;
         }
@@ -97,68 +125,270 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
     }, 1000);
   };
   
-  const handleCellClick = useCallback((row: number, col: number) => {
-    if (gameStatus !== 'playing') return;
-    if (initialGrid[row]?.[col] !== 0) return; // Can't select initial clues
+  // Synchronized feedback function
+  const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
+    const now = performance.now();
+    log.feedback(`Triggered at ${now}ms for streak ${streak}`);
     
-    if (selectedCell?.row === row && selectedCell?.col === col) {
-      setSelectedCell(null);
+    // 1. Haptic
+    if (streak >= 8) {
+      vibrate([15, 25, 15, 25, 40]);
+    } else if (streak >= 5) {
+      vibrate([10, 20, 30]);
+    } else if (streak >= 3) {
+      vibrate([8, 40, 12]);
     } else {
-      setSelectedCell({ row, col });
+      vibrate([12, 0, 8]);
     }
-  }, [gameStatus, initialGrid, selectedCell]);
+    
+    // 2. Sound
+    playCorrectSound();
+    
+    // 3. Visual state updates
+    setLastMoveResult({ correct: true, row, col });
+    
+    // 4. Cell pop animation
+    setLastScoredCell({ row, col });
+    setTimeout(() => setLastScoredCell(null), 300);
+    
+    // 5. Screen shake after 5 correct guesses
+    if (streak >= 5) {
+      setShowMicroShake(true);
+      setTimeout(() => setShowMicroShake(false), 150);
+    }
+  }, [playCorrectSound, vibrate]);
+  
+  const handleCellClick = useCallback((row: number, col: number) => {
+    if (gameStatus !== 'playing' || isLocked) return;
+    
+    // If tapping the same cell again, clear selection
+    if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+      setSelectedCell(null);
+      return;
+    }
+    
+    // Select the cell (works for empty cells and cells with numbers for highlighting)
+    setSelectedCell({ row, col });
+  }, [gameStatus, isLocked, selectedCell]);
+  
+  // Check for completed rows/columns/boxes
+  const checkCompletions = useCallback((grid: number[][], row: number, col: number) => {
+    const newCompletedCells = new Set<string>();
+    
+    if (!grid || grid.length === 0 || !grid[row]) return;
+    
+    // Check row
+    if (grid[row].every(v => v !== 0)) {
+      for (let c = 0; c < 9; c++) newCompletedCells.add(`${row}-${c}`);
+    }
+    
+    // Check column
+    if (grid.every(r => r[col] !== 0)) {
+      for (let r = 0; r < 9; r++) newCompletedCells.add(`${r}-${col}`);
+    }
+    
+    // Check box
+    const boxRowStart = Math.floor(row / 3) * 3;
+    const boxColStart = Math.floor(col / 3) * 3;
+    let boxComplete = true;
+    for (let r = boxRowStart; r < boxRowStart + 3; r++) {
+      for (let c = boxColStart; c < boxColStart + 3; c++) {
+        if (grid[r][c] === 0) boxComplete = false;
+      }
+    }
+    if (boxComplete) {
+      for (let r = boxRowStart; r < boxRowStart + 3; r++) {
+        for (let c = boxColStart; c < boxColStart + 3; c++) {
+          newCompletedCells.add(`${r}-${c}`);
+        }
+      }
+    }
+    
+    if (newCompletedCells.size > 0) {
+      setCompletedCells(newCompletedCells);
+      setTimeout(() => setCompletedCells(new Set()), 400);
+    }
+  }, []);
+  
+  // Calculate almost-complete cells
+  const calculateAlmostCompleteCells = useCallback((grid: number[][]): Set<string> => {
+    const result = new Set<string>();
+    
+    if (!grid || grid.length === 0 || !grid[0] || grid[0].length === 0) {
+      return result;
+    }
+    
+    // Check each row
+    for (let row = 0; row < 9; row++) {
+      if (!grid[row]) continue;
+      const emptyCells: string[] = [];
+      for (let col = 0; col < 9; col++) {
+        if (grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
+      }
+      if (emptyCells.length === 1) result.add(emptyCells[0]);
+    }
+    
+    // Check each column
+    for (let col = 0; col < 9; col++) {
+      const emptyCells: string[] = [];
+      for (let row = 0; row < 9; row++) {
+        if (grid[row] && grid[row][col] === 0) emptyCells.push(`${row}-${col}`);
+      }
+      if (emptyCells.length === 1) result.add(emptyCells[0]);
+    }
+    
+    // Check each 3x3 box
+    for (let boxRow = 0; boxRow < 3; boxRow++) {
+      for (let boxCol = 0; boxCol < 3; boxCol++) {
+        const emptyCells: string[] = [];
+        for (let r = boxRow * 3; r < boxRow * 3 + 3; r++) {
+          for (let c = boxCol * 3; c < boxCol * 3 + 3; c++) {
+            if (grid[r] && grid[r][c] === 0) emptyCells.push(`${r}-${c}`);
+          }
+        }
+        if (emptyCells.length === 1) result.add(emptyCells[0]);
+      }
+    }
+    
+    return result;
+  }, []);
+  
+  const deferredGrid = useDeferredValue(myGrid);
+  const almostCompleteCells = useMemo(() => calculateAlmostCompleteCells(deferredGrid), [deferredGrid, calculateAlmostCompleteCells]);
+  
+  // Clear notes containing a value from the same row, column, and 3x3 box
+  const clearRelatedNotes = useCallback((row: number, col: number, value: number) => {
+    setNotes(prev => {
+      const newNotes = new Map(prev);
+      
+      const boxStartRow = Math.floor(row / 3) * 3;
+      const boxStartCol = Math.floor(col / 3) * 3;
+      const boxEndRow = boxStartRow + 3;
+      const boxEndCol = boxStartCol + 3;
+      
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          if (r === row && c === col) continue;
+          
+          const sameRow = r === row;
+          const sameCol = c === col;
+          const sameBox = r >= boxStartRow && r < boxEndRow && c >= boxStartCol && c < boxEndCol;
+          
+          if (sameRow || sameCol || sameBox) {
+            const cellKey = `${r}-${c}`;
+            const cellNotes = newNotes.get(cellKey);
+            
+            if (cellNotes && cellNotes.includes(value)) {
+              const updated = cellNotes.filter(n => n !== value);
+              if (updated.length === 0) {
+                newNotes.delete(cellKey);
+              } else {
+                newNotes.set(cellKey, updated);
+              }
+            }
+          }
+        }
+      }
+      
+      return newNotes;
+    });
+  }, []);
   
   const handleNumberClick = useCallback((num: number) => {
-    if (gameStatus !== 'playing' || !selectedCell) return;
+    if (!selectedCell || gameStatus !== 'playing' || isLocked) return;
     
     const { row, col } = selectedCell;
     
-    // Can't modify initial clues
+    // Prevent placing numbers in initial clue cells
     if (initialGrid[row]?.[col] !== 0) return;
     
     if (notesMode) {
-      // Toggle note
+      // Notes mode: toggle the number in notes
       const cellKey = `${row}-${col}`;
-      setNotes(prev => {
+      setNotes((prev) => {
         const newNotes = new Map(prev);
-        const current = newNotes.get(cellKey) || [];
-        if (current.includes(num)) {
-          const updated = current.filter(n => n !== num);
+        const currentNotes = newNotes.get(cellKey) || [];
+        
+        if (currentNotes.includes(num)) {
+          const updated = currentNotes.filter(n => n !== num);
           if (updated.length === 0) {
             newNotes.delete(cellKey);
           } else {
             newNotes.set(cellKey, updated);
           }
         } else {
-          newNotes.set(cellKey, [...current, num].sort());
+          newNotes.set(cellKey, [...currentNotes, num].sort());
         }
+        
         return newNotes;
       });
     } else {
-      // Place number
-      const isCorrect = solutionGrid[row]?.[col] === num;
-      
-      // Update grid
-      setMyGrid(prev => {
-        const newGrid = prev.map(r => [...r]);
-        newGrid[row][col] = num;
-        return newGrid;
-      });
-      
-      // Clear notes for this cell
-      const cellKey = `${row}-${col}`;
-      setNotes(prev => {
-        const newNotes = new Map(prev);
-        newNotes.delete(cellKey);
-        return newNotes;
-      });
+      // Normal mode: place number
+      const isCorrect = solutionGrid.length > 0 && solutionGrid[row]?.[col] === num;
+      const wasEmpty = myGrid[row]?.[col] === 0;
+      const isInitialClue = initialGrid[row]?.[col] !== 0;
       
       if (isCorrect) {
+        // Update streak
+        const newStreak = myStreakRef.current + 1;
+        myStreakRef.current = newStreak;
+        setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
+        
+        // Trigger synchronized feedback
+        triggerScoreFeedback(newStreak, row, col);
+        
+        // Update grid
+        const newGrid = myGrid.map((r) => [...r]);
+        newGrid[row][col] = num;
+        setMyGrid(newGrid);
+        lastCellPlacementRef.current = Date.now();
+        
+        // Clear errored cell tracking
+        const cellKey = `${row}-${col}`;
+        setErroredCells(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(cellKey);
+          return newSet;
+        });
+        
+        // Defer completion checks
+        const deferCompletionCheck = () => {
+          checkCompletions(newGrid, row, col);
+        };
+        
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(deferCompletionCheck, { timeout: 100 });
+        } else {
+          setTimeout(deferCompletionCheck, 0);
+        }
+        
+        // Clear notes for this cell
+        setNotes(prev => {
+          const newNotes = new Map(prev);
+          newNotes.delete(cellKey);
+          return newNotes;
+        });
+        
+        // Clear selection
+        setSelectedCell(null);
+        
+        // Defer clearing related notes
+        const deferClearNotes = () => {
+          clearRelatedNotes(row, col, num);
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(deferClearNotes, { timeout: 100 });
+        } else {
+          setTimeout(deferClearNotes, 0);
+        }
+        
         // +5 seconds
         setTimeRemaining(prev => prev + TIME_BONUS_CORRECT);
+        
+        // Update cells completed count and check for win
         setCellsCompleted(prev => {
-          const newCount = prev + 1;
-          // Check for win (81 cells filled correctly)
+          const newCount = prev + (wasEmpty && !isInitialClue ? 1 : 0);
+          // Check for win (all 81 cells filled correctly)
           if (newCount >= 81) {
             if (timerRef.current) clearInterval(timerRef.current);
             setGameStatus('won');
@@ -166,27 +396,85 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
           return newCount;
         });
       } else {
+        // Incorrect move
+        const cellKey = `${row}-${col}`;
+        const isFirstError = !erroredCells.has(cellKey);
+        
+        setLastMoveResult({ correct: false, row, col });
+        
+        if (isFirstError) {
+          setErroredCells(prev => new Set(prev).add(cellKey));
+        }
+        
+        if (isFirstError) {
+          playIncorrectSound();
+        } else {
+          playSofterErrorSound();
+        }
+        hapticError();
+        myStreakRef.current = 0;
+        
+        // Clear selection
+        setSelectedCell(null);
+        
         // -30 seconds
         setTimeRemaining(prev => {
           const newTime = Math.max(0, prev - TIME_PENALTY_INCORRECT);
           if (newTime <= 0) {
             if (timerRef.current) clearInterval(timerRef.current);
+            setIsLocked(true);
             setGameStatus('lost');
           }
           return newTime;
         });
       }
     }
-  }, [gameStatus, selectedCell, initialGrid, solutionGrid, notesMode]);
+  }, [selectedCell, gameStatus, isLocked, notesMode, initialGrid, solutionGrid, myGrid, cellsCompleted, erroredCells, triggerScoreFeedback, playIncorrectSound, playSofterErrorSound, hapticError, clearRelatedNotes, checkCompletions]);
   
-  const handlePlayAgain = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeRemaining(STARTING_TIME_SECONDS);
+  const handleErase = () => {
+    if (!selectedCell || gameStatus !== 'playing' || isLocked) return;
+    
+    const { row, col } = selectedCell;
+    
+    // Can't erase initial clues
+    if (initialGrid[row]?.[col] !== 0) return;
+    
+    // Can only erase if cell has a value
+    const currentValue = myGrid[row]?.[col];
+    if (currentValue === 0) {
+      // Clear notes if any
+      const cellKey = `${row}-${col}`;
+      setNotes((prev) => {
+        const newNotes = new Map(prev);
+        newNotes.delete(cellKey);
+        return newNotes;
+      });
+      return;
+    }
+    
+    // Erase the cell
+    setMyGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      newGrid[row][col] = 0;
+      return newGrid;
+    });
+    
+    // Update cells completed count
+    setCellsCompleted(prev => prev - 1);
+    
+    // Clear notes for this cell
+    const cellKey = `${row}-${col}`;
+    setNotes((prev) => {
+      const newNotes = new Map(prev);
+      newNotes.delete(cellKey);
+      return newNotes;
+    });
+    
     setSelectedCell(null);
-    setNotes(new Map());
-    setNotesMode(false);
-    setGameStatus('loading');
-    loadPuzzle();
+  };
+  
+  const handleToggleNotes = () => {
+    setNotesMode((prev) => !prev);
   };
   
   const formatTime = (seconds: number) => {
@@ -195,126 +483,211 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Calculate digit counts for number pad
+  // Calculate digit counts for number pad depletion styling
   const digitCounts = useMemo(() => {
     const counts: Record<number, number> = {};
-    for (let i = 1; i <= 9; i++) counts[i] = 0;
-    myGrid.forEach(row => {
-      row.forEach(cell => {
-        if (cell !== 0) counts[cell]++;
+    myGrid.forEach((row) => {
+      row.forEach((value) => {
+        if (value >= 1 && value <= 9) {
+          counts[value] = (counts[value] || 0) + 1;
+        }
       });
     });
     return counts;
   }, [myGrid]);
-
-  if (loading) {
+  
+  // Clear last move result after animation
+  useEffect(() => {
+    if (lastMoveResult) {
+      const timer = setTimeout(() => setLastMoveResult(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [lastMoveResult]);
+  
+  const [error, setError] = useState('');
+  
+  const handlePlayAgain = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    loadPuzzle();
+  };
+  
+  if (gameStatus === 'loading') {
     return (
       <div className="min-h-screen bg-void flex items-center justify-center">
-        <div className="text-player text-xl font-display">Loading puzzle...</div>
+        <div className="text-center">
+          <div 
+            className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              border: '3px solid rgba(139, 0, 255, 0.3)',
+              borderTopColor: '#00FFFF',
+            }}
+          />
+          <div className="text-player text-xl font-display">Loading puzzle...</div>
+        </div>
       </div>
     );
   }
-
+  
   if (error) {
     return (
       <div className="min-h-screen bg-void flex flex-col items-center justify-center gap-4">
         <div className="text-error text-xl font-display">{error}</div>
         <button
           onClick={onExit}
-          className="px-6 py-3 bg-surface border border-player text-player rounded-lg"
+          className="px-6 py-3 bg-surface border border-player text-player rounded-lg font-display font-bold"
         >
           Back to Lobby
         </button>
       </div>
     );
   }
-
+  
   return (
-    <div className="min-h-screen bg-void flex flex-col">
+    <div className={`min-h-screen bg-void flex flex-col relative overflow-hidden ${showMicroShake ? 'animate-micro-shake' : ''}`}>
       <BackgroundEffects />
       
       {/* Header */}
-      <div className="flex justify-between items-center p-4 relative z-10">
-        <button
-          onClick={onExit}
-          className="text-muted hover:text-player transition-colors"
-        >
-          ← Exit
-        </button>
-        
-        <div className="text-center">
-          <div className="text-xs text-muted font-body uppercase tracking-wider">Solo Mode</div>
-          <div 
-            className="text-2xl font-mono font-bold text-player"
-            style={{ textShadow: '0 0 15px rgba(0,255,255,0.5)' }}
+      <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
+        <div className="flex justify-between items-center px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
+          <button
+            onClick={onExit}
+            className="p-2 text-muted hover:text-secondary transition-colors"
+            aria-label="Exit"
           >
-            {formatTime(timeRemaining)}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <div className="text-center">
+            <div className="text-xs text-muted font-body uppercase tracking-wider">Solo Mode</div>
+            <div 
+              className="text-2xl font-mono font-bold text-player"
+              style={{ textShadow: '0 0 15px rgba(0, 255, 255, 0.5)' }}
+            >
+              {formatTime(timeRemaining)}
+            </div>
           </div>
+          
+          <div className="w-12" />
         </div>
-        
-        <div className="w-12" /> {/* Spacer for centering */}
       </div>
       
-      {/* Game area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 relative z-10">
-        {gameStatus === 'playing' && (
-          <>
-            <SudokuGrid
-              grid={myGrid}
-              initialGrid={initialGrid}
-              selectedCell={selectedCell}
-              onCellClick={handleCellClick}
-              notes={notes}
-              notesMode={notesMode}
-              lockedOut={false}
-              animateIn={false}
-              countdownPhase="complete"
-            />
-            
-            {/* Number pad */}
-            <div className="mt-6 grid grid-cols-9 gap-1.5 max-w-md w-full">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-                const depleted = digitCounts[num] >= 9;
-                return (
-                  <button
-                    key={num}
-                    onClick={() => handleNumberClick(num)}
-                    disabled={depleted}
-                    className="aspect-square rounded-lg font-heading font-bold transition-all touch-manipulation"
-                    style={{
-                      fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                      background: depleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
-                      border: depleted ? '2px solid rgba(139, 0, 255, 0.2)' : '2px solid rgba(139, 0, 255, 0.6)',
-                      color: depleted ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.95)',
-                      boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
-                      minHeight: '44px',
-                    }}
-                  >
-                    {num}
-                  </button>
-                );
-              })}
+      {/* Sudoku Grid - Centered */}
+      <div className="absolute left-0 right-0 flex justify-center items-center px-2 sm:px-4" style={{ top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+        <div 
+          className={`relative w-full max-w-full ${
+            isLocked ? 'pointer-events-none opacity-50' : ''
+          } ${
+            gameStatus !== 'playing' ? 'pointer-events-none' : ''
+          }`}
+          style={{ 
+            pointerEvents: gameStatus !== 'playing' ? 'none' : 'auto',
+            transition: 'opacity 0.2s ease-out',
+          }}
+        >
+          {myGrid.length > 0 && (
+            <div className="w-full flex justify-center">
+              <SudokuGrid
+                grid={myGrid}
+                initialGrid={initialGrid}
+                selectedCell={selectedCell}
+                onCellClick={handleCellClick}
+                notes={notes}
+                notesMode={notesMode}
+                lockedOut={isLocked || gameStatus !== 'playing'}
+                animateIn={false}
+                countdownPhase="complete"
+                lastMoveResult={lastMoveResult}
+                opponentScoredCells={new Set()}
+                lastScoredCell={lastScoredCell}
+                completedCells={completedCells}
+                almostCompleteCells={almostCompleteCells}
+                currentStreak={myStreakRef.current}
+                erroredCells={erroredCells}
+              />
             </div>
-            
-            {/* Notes toggle */}
+          )}
+        </div>
+      </div>
+      
+      {/* Spacer to push number pad below grid */}
+      <div className="flex-shrink-0" style={{ minHeight: '50vh' }}></div>
+      
+      {/* Number Pad */}
+      {gameStatus === 'playing' && (
+        <div className="px-3 pt-1 pb-1">
+          <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+              const count = digitCounts[num] || 0;
+              const depleted = count >= 9;
+              return (
+                <button
+                  key={num}
+                  onClick={() => handleNumberClick(num)}
+                  disabled={gameStatus !== 'playing' || isLocked || depleted}
+                  className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+                  style={{
+                    fontSize: 'clamp(1rem, 4vw, 1.5rem)',
+                    background: depleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
+                    border: depleted ? '2px solid rgba(139, 0, 255, 0.2)' : '2px solid rgba(139, 0, 255, 0.6)',
+                    color: depleted ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.95)',
+                    boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
+                    minHeight: '44px',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  {num}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Toolbar */}
+      {gameStatus === 'playing' && (
+        <div className="px-3 py-1 pb-safe">
+          <div className="flex justify-center gap-3 max-w-md mx-auto">
+            {/* Erase Button */}
             <button
-              onClick={() => setNotesMode(!notesMode)}
-              className={`mt-4 px-6 py-2 rounded-lg font-body transition-all ${
-                notesMode 
-                  ? 'bg-player/20 border-2 border-player text-player' 
-                  : 'bg-surface border-2 border-grid-line text-secondary'
-              }`}
+              onClick={handleErase}
+              disabled={!selectedCell || gameStatus !== 'playing' || isLocked}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-40"
+              style={{
+                background: 'rgba(20, 12, 30, 0.8)',
+                border: '2px solid rgba(139, 0, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
             >
-              Notes {notesMode ? 'ON' : 'OFF'}
+              Erase
             </button>
-          </>
-        )}
-        
-        {/* Win/Lose screens */}
-        {(gameStatus === 'won' || gameStatus === 'lost') && (
-          <div className="text-center space-y-6">
+            
+            {/* Notes Button */}
+            <button
+              onClick={handleToggleNotes}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
+              style={{
+                background: notesMode ? 'rgba(0, 255, 255, 0.2)' : 'rgba(20, 12, 30, 0.8)',
+                border: notesMode ? '2px solid #00FFFF' : '2px solid rgba(139, 0, 255, 0.5)',
+                color: notesMode ? '#00FFFF' : 'rgba(255, 255, 255, 0.9)',
+                boxShadow: notesMode ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {notesMode ? 'Notes ON' : 'Notes'}
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Win/Lose Screen */}
+      {(gameStatus === 'won' || gameStatus === 'lost') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/95">
+          <div className="text-center space-y-6 px-4">
             <h1 
-              className={`text-4xl font-display font-black ${
+              className={`text-4xl sm:text-5xl font-display font-black ${
                 gameStatus === 'won' ? 'text-success' : 'text-error'
               }`}
               style={{ 
@@ -323,10 +696,10 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                   : '0 0 30px rgba(255, 51, 102, 0.5)'
               }}
             >
-              {gameStatus === 'won' ? 'PUZZLE COMPLETE!' : 'TIME\'S UP!'}
+              {gameStatus === 'won' ? 'PUZZLE COMPLETE!' : "TIME'S UP!"}
             </h1>
             
-            <p className="text-secondary font-body">
+            <p className="text-secondary font-body text-lg">
               {gameStatus === 'won' 
                 ? `Finished with ${formatTime(timeRemaining)} remaining`
                 : 'Better luck next time!'
@@ -344,12 +717,12 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                 onClick={onExit}
                 className="px-6 py-3 bg-surface border-2 border-grid-line text-secondary font-display font-bold rounded-lg hover:border-player hover:text-player transition-all"
               >
-                Back to Lobby
+                Exit
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

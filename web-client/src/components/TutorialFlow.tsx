@@ -679,12 +679,14 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
           setTime(200);
           setShowDelta(true);
           onInteractionComplete?.();
+          // Auto-advance after animation, similar to SudokuBasics3Step
+          setTimeout(onNext, 1200);
         }, 300);
       }
       
       return prev;
     });
-  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
+  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete, onNext]);
 
   return (
     <TutorialOverlayComponent onTap={placed ? onNext : undefined} showTapPrompt={placed}>
