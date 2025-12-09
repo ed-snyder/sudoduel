@@ -1,0 +1,32 @@
+/* Tutorial Flow Styles */
+
+.tutorial-flow {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tutorial-overlay {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Smooth transitions */
+.tutorial-overlay * {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Ensure tutorial is above everything */
+.tutorial-flow {
+  z-index: 2500 !important;
+}
+
+.tutorial-overlay {
+  z-index: 2501 !important;
+}

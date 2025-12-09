@@ -33,6 +33,8 @@ export default function LoginPage() {
     try {
       if (isLogin) {
         await login(email, password);
+        // After login, user state will update and App.tsx will show LobbyPage
+        // No tutorial check needed for login
       } else {
         // Validate display name before signup
         const validation = validateUsername(displayName);
@@ -42,6 +44,10 @@ export default function LoginPage() {
           return;
         }
         await signup(email, password, displayName.trim());
+        // Mark that we just signed up (for tutorial trigger)
+        sessionStorage.setItem('sudoduel_just_signed_up', 'true');
+        // After signup, refreshUser() is called automatically
+        // App.tsx will check tutorial_completed and show tutorial if needed
       }
     } catch (err: any) {
       setError(err.message);

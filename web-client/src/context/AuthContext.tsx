@@ -9,6 +9,7 @@ interface User {
   display_name: string;
   rating?: number;
   games_played?: number;
+  tutorial_completed?: boolean;
 }
 
 interface AuthContextType {
@@ -39,12 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const playerInfo = await playerAPI.getMe() as { id: number; display_name: string; rating?: number; games_played?: number };
+      const playerInfo = await playerAPI.getMe() as { id: number; display_name: string; rating?: number; games_played?: number; tutorial_completed?: boolean };
       setUser({
         id: playerInfo.id,
         display_name: playerInfo.display_name,
         rating: playerInfo.rating,
         games_played: playerInfo.games_played,
+        tutorial_completed: playerInfo.tutorial_completed,
       });
     } catch (error) {
       console.error('Failed to fetch user:', error);

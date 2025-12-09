@@ -158,6 +158,10 @@ export const playerAPI = {
   // Check if display name is available
   checkDisplayName: (name: string) => 
     api.get(`/api/player/check-name?name=${encodeURIComponent(name)}`) as Promise<{ available: boolean; reason?: string }>,
+  
+  // Mark tutorial as complete
+  markTutorialComplete: () => 
+    api.patch('/api/player/tutorial-complete', {}) as Promise<{ success: boolean; tutorial_completed: boolean; tutorial_completed_at: string }>,
 };
 
 // =====================================================

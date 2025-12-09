@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { PlayerService } from '../services/playerService';
 import { FriendService } from '../services/friendService';
+import { PlayerProfileModel } from '../models/PlayerProfile';
 import { query } from '../config/database';
 import { validateUsername } from '../utils/usernameValidator';
 
@@ -121,6 +122,31 @@ router.get('/rank', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json(rankData);
   } catch (error: any) {
     console.error('Get player rank error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/player/tutorial-complete - Mark tutorial as complete
+router.patch('/tutorial-complete', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const profile = await PlayerProfileModel.findByUserId(req.userId!);
+    if (!profile) {
+      return res.status(404).json({ error: 'Player profile not found' });
+    }
+
+    // Mark tutorial as complete (idempotent)
+    await PlayerProfileModel.markTutorialComplete(profile.id);
+
+    // Get updated profile to return timestamp
+    const updatedProfile = await PlayerProfileModel.findById(profile.id);
+
+    res.json({
+      success: true,
+      tutorial_completed: true,
+      tutorial_completed_at: updatedProfile?.tutorial_completed_at || new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('Mark tutorial complete error:', error);
     res.status(500).json({ error: error.message });
   }
 });

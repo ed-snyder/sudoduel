@@ -6,6 +6,8 @@ export interface PlayerProfile {
   display_name: string;
   avatar_url: string | null;
   country_code: string | null;
+  tutorial_completed?: boolean;
+  tutorial_completed_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -38,5 +40,33 @@ export const PlayerProfileModel = {
       [playerId]
     );
     return result.rows[0] || null;
+  },
+
+  // Mark tutorial as complete
+  async markTutorialComplete(playerId: number): Promise<void> {
+    // Ensure tutorial columns exist (for existing databases)
+    try {
+      await query(`SELECT tutorial_completed FROM player_profiles LIMIT 1`);
+    } catch (err: any) {
+      if (err.message.includes('column "tutorial_completed" does not exist')) {
+        await query(`
+          ALTER TABLE player_profiles 
+          ADD COLUMN IF NOT EXISTS tutorial_completed BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN IF NOT EXISTS tutorial_completed_at TIMESTAMP NULL
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_player_profiles_tutorial ON player_profiles(tutorial_completed)`);
+      } else {
+        throw err;
+      }
+    }
+
+    // Mark as complete (idempotent - safe to call multiple times)
+    await query(
+      `UPDATE player_profiles 
+       SET tutorial_completed = TRUE, 
+           tutorial_completed_at = COALESCE(tutorial_completed_at, NOW())
+       WHERE id = $1`,
+      [playerId]
+    );
   },
 };
