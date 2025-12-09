@@ -186,4 +186,17 @@ export const matchmakingAPI = {
   status: () => api.get('/api/matchmaking/status'),
 };
 
-export default { authAPI, playerAPI, matchmakingAPI, friendsAPI };
+// =====================================================
+// PUZZLE API
+// =====================================================
+
+export const puzzleAPI = {
+  getRandom: () => api.get('/api/puzzle/random?solo=true') as Promise<{
+    id: number;
+    initial_grid: string;
+    solution_grid: string;
+    difficulty: string;
+  }>,
+};
+
+export default { authAPI, playerAPI, matchmakingAPI, friendsAPI, puzzleAPI };

@@ -14,11 +14,12 @@ import BackgroundEffects from '../components/BackgroundEffects';
 
 interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
+  onStartSoloMode?: () => void;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
-export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
+export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -384,10 +385,10 @@ export default function LobbyPage({ onMatchFound }: LobbyPageProps) {
                   Upgrade to SudoDuel+
                 </button>
                 <button
-                  onClick={() => alert('Coming Soon')}
+                  onClick={() => onStartSoloMode?.()}
                   className="flex-1 py-3 bg-surface border-2 border-player/50 text-player font-display font-black rounded-lg hover:border-player hover:shadow-glow-player-subtle active:scale-[0.98] transition-all flex items-center justify-center"
                 >
-                  Practice Mode
+                  Solo Mode
                 </button>
               </div>
             </div>

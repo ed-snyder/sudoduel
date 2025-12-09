@@ -3,12 +3,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
+import SoloModePage from './pages/SoloModePage';
 import TutorialFlow from './components/TutorialFlow';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 function AppContent() {
   const { user, loading, justSignedUp, clearJustSignedUp } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
+  const [soloMode, setSoloMode] = useState(false);
 
   // Pre-warm haptics engine on app start (earliest possible)
   useEffect(() => {
@@ -99,6 +101,11 @@ function AppContent() {
     );
   }
 
+  // Solo mode - show solo game
+  if (soloMode) {
+    return <SoloModePage onExit={() => setSoloMode(false)} />;
+  }
+
   // In a match - show game
   if (matchId) {
     return (
@@ -112,7 +119,7 @@ function AppContent() {
   }
 
   // Default - show lobby
-  return <LobbyPage onMatchFound={setMatchId} />;
+  return <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setSoloMode(true)} />;
 }
 
 export default function App() {
