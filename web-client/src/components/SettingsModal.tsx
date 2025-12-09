@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [musicVolume, setMusicVolume] = useState(70);
   const [sfxVolume, setSfxVolume] = useState(80);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Load settings from localStorage
   useEffect(() => {
@@ -62,6 +67,24 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleLogoutCancel = () => {
     setShowLogoutConfirm(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    
+    setDeleteLoading(true);
+    setDeleteError('');
+    
+    try {
+      await authAPI.deleteAccount();
+      // Clear all local data
+      localStorage.clear();
+      // Redirect to login (force refresh to clear all state)
+      window.location.href = '/';
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete account');
+      setDeleteLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -223,6 +246,25 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               Log Out
             </button>
           </div>
+
+          {/* Danger Zone */}
+          <div className="mt-8 pt-6 border-t border-error/20 px-4 pb-4">
+            <h3 className="text-error font-display font-bold text-sm mb-4 uppercase tracking-wider">
+              Danger Zone
+            </h3>
+            
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full py-3 rounded-lg font-body font-semibold transition-all active:scale-95"
+              style={{
+                background: 'rgba(255,51,102,0.1)',
+                border: '2px solid rgba(255,51,102,0.5)',
+                color: '#FF3366',
+              }}
+            >
+              Delete Account
+            </button>
+          </div>
         </div>
       </div>
 
@@ -266,6 +308,106 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 }}
               >
                 Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-void/95 backdrop-blur-sm"
+            onClick={() => {
+              setShowDeleteConfirm(false);
+              setDeleteConfirmText('');
+              setDeleteError('');
+            }}
+          />
+          
+          <div 
+            className="relative bg-surface border-2 border-error/50 rounded-xl p-6 max-w-sm w-full animate-scale-in"
+            style={{
+              boxShadow: '0 0 30px rgba(255,51,102,0.3), 0 10px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'rgba(255,51,102,0.2)',
+                  border: '2px solid #FF3366',
+                }}
+              >
+                <svg className="w-8 h-8 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            
+            <h3 className="font-heading font-bold text-xl text-error text-center mb-2">
+              Delete Account?
+            </h3>
+            
+            <p className="text-secondary font-body text-sm text-center mb-4">
+              This action is <strong className="text-error">permanent</strong> and cannot be undone. 
+              All your data will be deleted including:
+            </p>
+            
+            <ul className="text-muted font-body text-xs mb-4 space-y-1 pl-4">
+              <li>• Your profile and display name</li>
+              <li>• Match history and statistics</li>
+              <li>• Friends list and pending requests</li>
+              <li>• Rating and ranking data</li>
+            </ul>
+            
+            <p className="text-secondary font-body text-sm text-center mb-4">
+              Type <strong className="text-error font-mono">DELETE</strong> to confirm:
+            </p>
+            
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+              placeholder="Type DELETE"
+              className="w-full px-4 py-3 bg-elevated border border-grid-line rounded-lg text-primary font-mono text-center focus:outline-none focus:border-error transition-all mb-4"
+              autoComplete="off"
+            />
+            
+            {deleteError && (
+              <p className="text-error text-sm text-center mb-4">{deleteError}</p>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText('');
+                  setDeleteError('');
+                }}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
+                style={{
+                  background: 'rgb(20, 12, 30)',
+                  border: '2px solid rgba(139,0,255,0.4)',
+                  color: 'rgba(255,255,255,0.8)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: deleteConfirmText === 'DELETE' ? 'rgba(255,51,102,0.3)' : 'rgba(255,51,102,0.1)',
+                  border: '2px solid #FF3366',
+                  color: '#FF3366',
+                }}
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Forever'}
               </button>
             </div>
           </div>

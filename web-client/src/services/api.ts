@@ -174,6 +174,8 @@ export const authAPI = {
 
   login: (email: string, password: string) =>
     api.post('/api/auth/login', { email, password }),
+
+  deleteAccount: () => api.delete('/api/auth/account') as Promise<{ success: boolean; message: string }>,
 };
 
 // =====================================================
