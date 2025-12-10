@@ -3,7 +3,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { purchaseService, PRODUCT_IDS } from '../services/purchaseService';
 
 export default function UpgradeModal() {
-  const { isUpgradeModalOpen, closeUpgradeModal, updatePremiumStatus } = useSubscription();
+  const { isUpgradeModalOpen, closeUpgradeModal, updatePremiumStatus, purchaseSubscription, restorePurchases: contextRestorePurchases } = useSubscription();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,16 +46,14 @@ export default function UpgradeModal() {
     setError(null);
     
     try {
-      const productId = plan === 'monthly' ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY;
       console.log(`[UpgradeModal] Purchasing ${plan}...`);
       
-      const result = await purchaseService.purchase(productId);
+      // Use context method which handles premium status update
+      const result = await purchaseSubscription(plan);
       console.log('[UpgradeModal] Purchase result:', result);
       
       if (result.success) {
-        // Update backend premium status
-        await updatePremiumStatus(true);
-        console.log('[UpgradeModal] Premium status updated!');
+        console.log('[UpgradeModal] Purchase successful! Modal closing...');
         closeUpgradeModal();
       } else {
         setError(result.error || 'Purchase failed. Please try again.');
@@ -76,12 +74,12 @@ export default function UpgradeModal() {
     
     try {
       console.log('[UpgradeModal] Restoring purchases...');
-      const result = await purchaseService.restorePurchases();
+      // Use context method which handles premium status update
+      const result = await contextRestorePurchases();
       console.log('[UpgradeModal] Restore result:', result);
       
       if (result.success) {
-        await updatePremiumStatus(true);
-        console.log('[UpgradeModal] Restored! Premium status updated.');
+        console.log('[UpgradeModal] Restored! Modal closing...');
         closeUpgradeModal();
       } else {
         setError(result.error || 'No active subscription found.');
