@@ -42,7 +42,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio } = useGameSounds();
-  const { error: hapticError, impact } = useHaptics();
+  const { error: hapticError, impact, victory: hapticVictory, defeat: hapticDefeat } = useHaptics();
   
   // Event banner system - defined early for use in triggerScoreFeedback
   interface BannerMessage {
@@ -419,6 +419,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       }
     }
   }, [gameStatus, gameResult, user?.id, mySlot]); // Removed displayedRating from dependencies to prevent infinite loop
+
+  // Victory/Defeat haptic feedback on game end
+  useEffect(() => {
+    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !showGameEndOverlay) {
+      const winnerSlot = gameResult.winner_slot;
+      const reason = gameResult.reason || 'DRAW';
+      const isDraw = winnerSlot === null || reason === 'DRAW';
+      
+      if (!isDraw) {
+        const didWin = winnerSlot !== null && winnerSlot === mySlot;
+        if (didWin) {
+          hapticVictory();
+        } else {
+          hapticDefeat();
+        }
+      }
+    }
+  }, [gameStatus, gameResult, mySlot, showGameEndOverlay, hapticVictory, hapticDefeat]);
 
   // Clear last move result after animation
   useEffect(() => {
