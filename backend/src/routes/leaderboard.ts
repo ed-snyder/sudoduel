@@ -38,13 +38,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     );
 
     // Get current user's rank
+    // Count players with higher rating, then add 1
     const userRankResult = await query(
-      `SELECT COUNT(*) + 1 as rank
+      `SELECT COUNT(*)::int as rank
        FROM player_ratings
        WHERE ladder_id = $1 AND rating > $2`,
       [DEFAULT_LADDER_ID, currentUserRating]
     );
-    const userRank = parseInt(userRankResult.rows[0].rank, 10);
+    const userRank = parseInt(userRankResult.rows[0].rank, 10) + 1;
 
     // Get total player count
     const totalResult = await query(

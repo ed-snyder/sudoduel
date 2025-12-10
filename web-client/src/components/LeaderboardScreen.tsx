@@ -94,17 +94,17 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       <div className="px-4 py-3 bg-surface/50 border-b border-grid-line">
         <div className="flex justify-between text-sm">
           <div>
-            <span className="text-muted">Season: </span>
-            <span className="text-secondary italic">Coming Soon</span>
+            <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Season: </span>
+            <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Coming Soon</span>
           </div>
           <div>
-            <span className="text-muted">League: </span>
-            <span className="text-secondary italic">Coming Soon</span>
+            <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>League: </span>
+            <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Coming Soon</span>
           </div>
         </div>
         <div className="text-sm mt-1">
-          <span className="text-muted">Time Remaining: </span>
-          <span className="text-secondary italic">N/A</span>
+          <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Time Remaining: </span>
+          <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>N/A</span>
         </div>
       </div>
 
@@ -166,10 +166,11 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       {/* Sticky Footer - Your Rank */}
       {!loading && !error && (
         <div 
-          className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-surface border-t border-player/50"
+          className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-surface border-t"
           style={{ 
             paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
-            boxShadow: '0 -4px 20px rgba(0, 255, 255, 0.2)'
+            borderColor: 'rgba(255, 0, 255, 0.5)',
+            boxShadow: '0 -4px 20px rgba(255, 0, 255, 0.3), 0 -8px 40px rgba(255, 0, 255, 0.15)'
           }}
         >
           <button
