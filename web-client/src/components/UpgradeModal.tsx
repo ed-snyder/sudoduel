@@ -5,6 +5,29 @@ import { purchaseService, PRODUCT_IDS } from '../services/purchaseService';
 const PRIVACY_POLICY_URL = 'https://sudoduel.com/privacy';
 const TERMS_OF_SERVICE_URL = 'https://sudoduel.com/terms';
 
+const FEATURES = [
+  {
+    title: 'Custom Emotes',
+    subtitle: <>Say <em>whatever</em> you want</>,
+  },
+  {
+    title: 'No Ads',
+    subtitle: 'Improve your UX AND lower our hosting costs ;)',
+  },
+  {
+    title: 'Global Ranking & Leaderboard',
+    subtitle: 'Get the recognition you deserve.',
+  },
+  {
+    title: 'Advanced Stats',
+    subtitle: 'Use them to improve, or brag',
+  },
+  {
+    title: 'Premium Name Styling',
+    subtitle: 'Stunt on em',
+  },
+];
+
 export default function UpgradeModal() {
   const {
     isUpgradeModalOpen,
@@ -18,17 +41,22 @@ export default function UpgradeModal() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
   const [yearlyPrice, setYearlyPrice] = useState('$29.99');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isUpgradeModalOpen) {
       setError(null);
+      setIsLoading(true);
+      
       const loadPrices = async () => {
         await purchaseService.initialize();
         const monthly = purchaseService.getProduct(PRODUCT_IDS.MONTHLY);
         const yearly = purchaseService.getProduct(PRODUCT_IDS.YEARLY);
         if (monthly?.price) setMonthlyPrice(monthly.price);
         if (yearly?.price) setYearlyPrice(yearly.price);
+        setIsLoading(false);
       };
+      
       loadPrices();
     }
   }, [isUpgradeModalOpen]);
@@ -37,14 +65,14 @@ export default function UpgradeModal() {
 
   const handlePurchase = async (plan: 'monthly' | 'yearly') => {
     setError(null);
-    console.log(`[UpgradeModal] Purchasing ${plan} plan...`);
+    console.log(`[UpgradeModal] Purchasing ${plan}...`);
 
     const result = await purchaseSubscription(plan);
 
     if (!result.success) {
       setError(result.error || 'Purchase failed. Please try again.');
     } else {
-      console.log(`[UpgradeModal] Purchased ${plan} plan successfully`);
+      console.log(`[UpgradeModal] Success!`);
     }
   };
 
@@ -65,17 +93,19 @@ export default function UpgradeModal() {
     window.open(url, '_blank');
   };
 
+  const isDisabled = isProcessingPurchase || isRestoring || isLoading;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={closeUpgradeModal}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
 
       {/* Modal */}
       <div
-        className="relative bg-surface rounded-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto"
+        className="relative bg-surface rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto"
         style={{
           border: '2px solid rgba(255,215,0,0.5)',
           boxShadow: '0 0 30px rgba(255,215,0,0.2)',
@@ -92,7 +122,7 @@ export default function UpgradeModal() {
           </svg>
         </button>
 
-        {/* Header */}
+        {/* Header - No Crown */}
         <div className="px-6 pt-6 pb-4 text-center">
           <h2
             className="text-2xl font-display font-black tracking-wide"
@@ -106,19 +136,17 @@ export default function UpgradeModal() {
           </h2>
         </div>
 
-        {/* Features */}
-        <div className="px-6 pb-4">
-          <div className="space-y-2">
-            {[
-              { icon: '🚫', text: 'No ads' },
-              { icon: '📊', text: 'Advanced statistics' },
-              { icon: '😎', text: 'Custom emotes' },
-              { icon: '⚡', text: 'Priority matchmaking' },
-              { icon: '🏆', text: 'Exclusive badge' },
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-3 py-1">
-                <span className="text-lg">{feature.icon}</span>
-                <span className="text-white text-sm font-body">{feature.text}</span>
+        {/* Features with Custom Copy */}
+        <div className="px-6 pb-5">
+          <div className="space-y-4">
+            {FEATURES.map((feature, index) => (
+              <div key={index}>
+                <div className="text-white font-display font-bold text-sm">
+                  {feature.title}
+                </div>
+                <div className="text-muted text-xs font-body mt-0.5">
+                  {feature.subtitle}
+                </div>
               </div>
             ))}
           </div>
@@ -136,7 +164,7 @@ export default function UpgradeModal() {
           {/* Monthly */}
           <button
             onClick={() => handlePurchase('monthly')}
-            disabled={isProcessingPurchase || isRestoring}
+            disabled={isDisabled}
             className="w-full py-3 rounded-xl font-display font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50"
             style={{
               background: 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,165,0,0.15) 100%)',
@@ -144,13 +172,13 @@ export default function UpgradeModal() {
               color: '#FFD700',
             }}
           >
-            {isProcessingPurchase ? 'Processing...' : `${monthlyPrice} / month`}
+            {isProcessingPurchase ? 'Processing...' : isLoading ? 'Loading...' : `${monthlyPrice} / month`}
           </button>
 
           {/* Yearly */}
           <button
             onClick={() => handlePurchase('yearly')}
-            disabled={isProcessingPurchase || isRestoring}
+            disabled={isDisabled}
             className="w-full py-3 rounded-xl font-display font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50 relative"
             style={{
               background: 'linear-gradient(135deg, rgba(255,215,0,0.25) 0%, rgba(255,165,0,0.25) 100%)',
@@ -168,7 +196,7 @@ export default function UpgradeModal() {
             >
               BEST VALUE
             </span>
-            {isProcessingPurchase ? 'Processing...' : `${yearlyPrice} / year`}
+            {isProcessingPurchase ? 'Processing...' : isLoading ? 'Loading...' : `${yearlyPrice} / year`}
           </button>
         </div>
 
@@ -176,7 +204,7 @@ export default function UpgradeModal() {
         <div className="px-6 pb-3">
           <button
             onClick={handleRestore}
-            disabled={isProcessingPurchase || isRestoring}
+            disabled={isDisabled}
             className="w-full py-2 text-muted text-sm font-body hover:text-white transition-colors disabled:opacity-50"
           >
             {isRestoring ? 'Restoring...' : 'Restore Purchases'}
