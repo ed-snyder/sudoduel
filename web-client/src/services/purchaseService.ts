@@ -91,7 +91,7 @@ class PurchaseServiceImpl {
           console.log('[PurchaseService] Receipt verified');
           return receipt.finish();
         })
-        .finished((transaction: any) => {
+        .finished(() => {
           console.log('[PurchaseService] Transaction finished');
         });
 
