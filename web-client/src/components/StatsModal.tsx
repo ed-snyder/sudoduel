@@ -29,16 +29,23 @@ interface StatsModalProps {
   onClose: () => void;
 }
 
-function StatCard({ label, value, sublabel, highlight, fire }: { 
+function StatCard({ label, value, sublabel, highlight, fire, color }: { 
   label: string; 
   value: string; 
   sublabel?: string;
   highlight?: boolean;
   fire?: boolean;
+  color?: 'cyan' | 'magenta' | 'gray';
 }) {
+  const textColorClass = color === 'cyan' ? 'text-player' 
+    : color === 'magenta' ? 'text-opponent'
+    : color === 'gray' ? 'text-muted'
+    : highlight ? 'text-player' 
+    : 'text-primary';
+
   return (
     <div className={`bg-elevated/50 rounded-lg p-3 border ${highlight ? 'border-player/50' : 'border-grid-line/50'}`}>
-      <div className={`text-xl font-mono font-bold ${highlight ? 'text-player' : 'text-primary'}`}>
+      <div className={`text-xl font-mono font-bold ${textColorClass}`}>
         {fire && <span className="mr-1">🔥</span>}
         {value}
       </div>
@@ -125,6 +132,16 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                   {Math.round(stats.current_rating)}
                 </div>
                 <div className="text-sm text-muted font-display mt-1">Current Rating</div>
+              </div>
+
+              {/* W-L-D Record */}
+              <div>
+                <h3 className="text-sm font-display font-black text-primary uppercase tracking-wider mb-3">Record</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Wins" value={stats.wins.toString()} color="cyan" />
+                  <StatCard label="Losses" value={stats.losses.toString()} color="magenta" />
+                  <StatCard label="Draws" value={stats.draws.toString()} color="gray" />
+                </div>
               </div>
 
               {/* Speed Stats */}
