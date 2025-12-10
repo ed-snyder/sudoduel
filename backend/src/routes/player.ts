@@ -172,6 +172,11 @@ router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: R
 
     // Get rank if player is premium
     let rank = null;
+    console.log('[Player Profile] Checking premium status:', {
+      playerId: targetPlayerId,
+      is_premium: profile.is_premium,
+      rating: playerRating
+    });
     if (profile.is_premium) {
       const rankResult = await query(
         `SELECT COUNT(*) + 1 as rank
@@ -180,6 +185,9 @@ router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: R
         [playerRating]
       );
       rank = parseInt(rankResult.rows[0].rank, 10);
+      console.log('[Player Profile] Calculated rank:', rank);
+    } else {
+      console.log('[Player Profile] Player is not premium, rank will be null');
     }
 
     // Get total players for context
@@ -189,14 +197,16 @@ router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: R
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
 
-    res.json({
+    const response = {
       player_id: profile.id,
       display_name: profile.display_name,
       rating: Math.round(playerRating),
       is_premium: profile.is_premium || false,
       rank: rank,
       total_players: totalPlayers,
-    });
+    };
+    console.log('[Player Profile] Returning response:', response);
+    res.json(response);
   } catch (error: any) {
     console.error('Get player profile error:', error);
     res.status(500).json({ error: error.message });
