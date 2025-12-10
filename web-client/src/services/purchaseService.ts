@@ -230,9 +230,14 @@ class PurchaseServiceImpl {
         updatedProduct = this.rawProducts.get(productId);
       }
       
-      console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned);
+      // Check multiple ways ownership might be indicated
+      const isOwned = updatedProduct?.owned === true || 
+                      updatedProduct?.state === 'owned' ||
+                      updatedProduct?.canPurchase === false && updatedProduct?.state === 'valid';
       
-      if (updatedProduct?.owned) {
+      console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned, 'state:', updatedProduct?.state, 'canPurchase:', updatedProduct?.canPurchase, 'isOwned:', isOwned);
+      
+      if (isOwned) {
         console.log('[PurchaseService] Purchase successful!');
         return { success: true, productId, transactionId: 'completed' };
       }
