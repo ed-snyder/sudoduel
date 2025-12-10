@@ -27,6 +27,21 @@ export const PlayerProfileModel = {
 
   // Get profile by user ID
   async findByUserId(userId: number): Promise<PlayerProfile | null> {
+    // Ensure is_premium column exists (for existing databases)
+    try {
+      await query(`SELECT is_premium FROM player_profiles LIMIT 1`);
+    } catch (err: any) {
+      if (err.message.includes('column "is_premium" does not exist')) {
+        await query(`
+          ALTER TABLE player_profiles 
+          ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT FALSE
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_player_profiles_is_premium ON player_profiles(is_premium)`);
+      } else {
+        throw err;
+      }
+    }
+
     const result = await query(
       `SELECT id, user_id, display_name, avatar_url, country_code, 
               tutorial_completed, tutorial_completed_at, is_premium, created_at, updated_at
@@ -38,6 +53,21 @@ export const PlayerProfileModel = {
 
   // Get profile by player ID
   async findById(playerId: number): Promise<PlayerProfile | null> {
+    // Ensure is_premium column exists (for existing databases)
+    try {
+      await query(`SELECT is_premium FROM player_profiles LIMIT 1`);
+    } catch (err: any) {
+      if (err.message.includes('column "is_premium" does not exist')) {
+        await query(`
+          ALTER TABLE player_profiles 
+          ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT FALSE
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_player_profiles_is_premium ON player_profiles(is_premium)`);
+      } else {
+        throw err;
+      }
+    }
+
     const result = await query(
       `SELECT id, user_id, display_name, avatar_url, country_code, 
               tutorial_completed, tutorial_completed_at, is_premium, created_at, updated_at
