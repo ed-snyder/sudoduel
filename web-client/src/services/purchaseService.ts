@@ -121,7 +121,7 @@ class PurchaseServiceImpl {
         }
       });
 
-      this.store.when().finished((transaction: any) => {
+      this.store.when().finished(() => {
         console.log('[PurchaseService] >>> FINISHED - resolving purchase');
         
         // Resolve the global promise if one is waiting
