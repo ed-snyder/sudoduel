@@ -1015,10 +1015,9 @@ export default function ResultScreen({
                 style={{ 
                   color: '#FFFFFF',
                   textShadow: '0 0 15px rgba(255,255,255,0.3)',
-                  opacity: displayedRating && !isNaN(displayedRating) ? 1 : 0,
                 }}
               >
-                {displayedRating && !isNaN(displayedRating) ? Math.round(displayedRating) : Math.round(myResult.rating_after || myResult.rating_before || 1500)}
+                {Math.round(displayedRating || myResult.rating_after || myResult.rating_before || 1500)}
               </span>
               {isRanked && ratingChange !== 0 && (
                 <span 
