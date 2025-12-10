@@ -1411,8 +1411,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       
       const { row, col } = selectedCell;
       
-      console.log(`[PERF] Before validation: ${(performance.now() - startTime).toFixed(2)}ms`);
-      
       // INSTANT LOCAL VALIDATION: Check correctness using solution grid
       const isCorrect = solutionGrid.length > 0 && solutionGrid[row]?.[col] === num;
       const wasEmpty = myGrid[row]?.[col] === 0;
@@ -1428,10 +1426,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         myStreakRef.current = newStreak;
         setLongestStreak((prevLongest) => Math.max(prevLongest, newStreak));
         
-        console.log(`[PERF] Before triggerScoreFeedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Trigger synchronized feedback instantly
         triggerScoreFeedback(newStreak, row, col);
-        console.log(`[PERF] After triggerScoreFeedback: ${(performance.now() - startTime).toFixed(2)}ms`);
         
         // OPTIMISTIC: Update score counter immediately (increment if cell was empty and not initial clue)
         log.perf(`Before setMyState: ${(performance.now() - startTime).toFixed(2)}ms`);
@@ -2292,7 +2288,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 key={num}
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player"
+                className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player active:ring-2 active:ring-player active:ring-offset-0"
                 style={{
                   fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
                   color: depleted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',

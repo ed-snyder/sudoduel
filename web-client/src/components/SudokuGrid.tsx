@@ -94,8 +94,6 @@ function SudokuGrid({
   animateIn = false,
   countdownPhase = 'complete',
 }: SudokuGridProps) {
-  const renderStart = performance.now();
-  log.perf(`SudokuGrid render START`);
 
   // Pre-initialize error audio context on first user interaction
   useEffect(() => {
@@ -298,33 +296,6 @@ function SudokuGrid({
     };
   };
 
-  const renderEnd = performance.now();
-  const renderTime = renderEnd - renderStart;
-  log.perf(`SudokuGrid render took: ${renderTime.toFixed(2)}ms`);
-  
-  // Track when grid changes (cell placement) actually commits to DOM
-  const prevGridRef = useRef(grid);
-  useEffect(() => {
-    // Only track if grid actually changed (cell was placed)
-    const gridChanged = prevGridRef.current !== grid;
-    prevGridRef.current = grid;
-    
-    if (gridChanged) {
-      const commitTime = performance.now();
-      log.perf(`SudokuGrid GRID CHANGE COMMITTED to DOM: ${commitTime.toFixed(2)}ms (render started at ${renderStart.toFixed(2)}ms)`);
-      
-      // Measure paint time
-      requestAnimationFrame(() => {
-        const paintScheduled = performance.now();
-        log.perf(`SudokuGrid GRID CHANGE paint SCHEDULED: ${paintScheduled.toFixed(2)}ms`);
-        
-        requestAnimationFrame(() => {
-          const paintComplete = performance.now();
-          log.perf(`SudokuGrid GRID CHANGE paint COMPLETE: ${paintComplete.toFixed(2)}ms (${(paintComplete - renderStart).toFixed(2)}ms from render start)`);
-        });
-      });
-    }
-  }, [grid, renderStart]);
 
   return (
     <div

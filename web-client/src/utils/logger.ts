@@ -1,7 +1,23 @@
 // Development-only logger utility
 // In production, all logs are disabled to prevent performance issues
 
-const isDev = import.meta.env.DEV;
+const isDev = (() => {
+  // Explicit production mode check
+  if (import.meta.env.PROD) return false;
+  if (import.meta.env.MODE === 'production') return false;
+  
+  // Check if running in Capacitor production build
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    // Capacitor apps use capacitor:// or file:// protocols in production
+    if (protocol === 'capacitor:' || protocol === 'file:') {
+      return false;
+    }
+  }
+  
+  // Default to checking DEV flag
+  return import.meta.env.DEV === true;
+})();
 
 export const log = {
   perf: (...args: any[]) => {
@@ -25,7 +41,6 @@ export const log = {
   game: (...args: any[]) => {
     if (isDev) console.log('[GamePage]', ...args);
   },
-  // Generic log for other cases
   debug: (...args: any[]) => {
     if (isDev) console.log(...args);
   },

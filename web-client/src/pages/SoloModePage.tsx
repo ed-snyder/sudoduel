@@ -679,7 +679,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                     e.stopPropagation();
                   }}
                   disabled={gameStatus !== 'playing' || isLocked || depleted}
-                  className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player"
+                  className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player active:ring-2 active:ring-player active:ring-offset-0"
                   style={{
                     fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
                     color: depleted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',

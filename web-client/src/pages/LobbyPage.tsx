@@ -1,18 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { matchmakingAPI, friendsAPI, playerAPI, type UserRank } from '../services/api';
 import type { MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import MatchHistoryModal from '../components/MatchHistoryModal';
-import StatsModal from '../components/StatsModal';
-import SettingsModal from '../components/SettingsModal';
-import PlayerInfoModal from '../components/PlayerInfoModal';
-import EmoteCustomizerModal from '../components/EmoteCustomizerModal';
-import FriendsListModal from '../components/FriendsListModal';
-import LeaderboardScreen from '../components/LeaderboardScreen';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
+
+// Lazy load modals for code splitting
+const MatchHistoryModal = lazy(() => import('../components/MatchHistoryModal'));
+const StatsModal = lazy(() => import('../components/StatsModal'));
+const SettingsModal = lazy(() => import('../components/SettingsModal'));
+const PlayerInfoModal = lazy(() => import('../components/PlayerInfoModal'));
+const EmoteCustomizerModal = lazy(() => import('../components/EmoteCustomizerModal'));
+const FriendsListModal = lazy(() => import('../components/FriendsListModal'));
+const LeaderboardScreen = lazy(() => import('../components/LeaderboardScreen'));
 
 interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
@@ -21,14 +23,19 @@ interface LobbyPageProps {
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
 
+// Simple loading component for modals
+function ModalLoader() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/80">
+      <div className="w-8 h-8 border-2 border-player border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   
-  // Debug logging for premium state
-  useEffect(() => {
-    // Premium state tracking
-  }, [isPremium]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showMatchHistory, setShowMatchHistory] = useState(false);
@@ -138,17 +145,25 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
       }
     };
 
-    const interval = setInterval(checkForMatchRequests, 2500);
-    checkForMatchRequests(); // Check immediately
+    // Defer initial check to not block first paint
+    const initialDelay = setTimeout(() => {
+      checkForMatchRequests();
+    }, 1500);
 
-    return () => clearInterval(interval);
+    const interval = setInterval(checkForMatchRequests, 2500);
+
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
   }, []);
 
   // Fetch global rank - refresh when user data changes (e.g., after a game)
   useEffect(() => {
-    const loadRank = async () => {
-      if (!token) return;
-      
+    if (!token) return;
+    
+    // Defer rank loading to let UI render first
+    const timeoutId = setTimeout(async () => {
       setRankLoading(true);
       try {
         const data = await playerAPI.getRank();
@@ -158,9 +173,9 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
       } finally {
         setRankLoading(false);
       }
-    };
-    
-    loadRank();
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
   }, [token, user?.rating]); // Refresh when rating changes
 
   const handleAcceptMatchRequest = async () => {
@@ -462,45 +477,69 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         )}
       </div>
       
-      {/* Modals */}
-      <PlayerInfoModal
-        isOpen={showPlayerInfo}
-        onClose={() => setShowPlayerInfo(false)}
-        onOpenStats={() => setShowStats(true)}
-        onOpenHistory={() => setShowMatchHistory(true)}
-      />
-      <MatchHistoryModal
-        isOpen={showMatchHistory}
-        onClose={() => setShowMatchHistory(false)}
-        playerName={user?.display_name || 'Player'}
-        currentRating={user?.rating || 1500}
-      />
-      <StatsModal
-        isOpen={showStats}
-        onClose={() => setShowStats(false)}
-      />
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
-      {/* Emote Customizer Modal */}
-      <EmoteCustomizerModal
-        isOpen={showEmoteCustomizer}
-        onClose={() => setShowEmoteCustomizer(false)}
-        isPremium={isPremium}
-      />
-      {/* Friends List Modal */}
-      <FriendsListModal
-        isOpen={showFriendsList}
-        onClose={() => setShowFriendsList(false)}
-        onMatchFound={onMatchFound}
-      />
-
-      {/* Leaderboard Screen */}
-      <LeaderboardScreen 
-        isOpen={showLeaderboard} 
-        onClose={() => setShowLeaderboard(false)} 
-      />
+      {/* Modals - Only render when open, wrapped with Suspense */}
+      {showPlayerInfo && (
+        <Suspense fallback={<ModalLoader />}>
+          <PlayerInfoModal
+            isOpen={showPlayerInfo}
+            onClose={() => setShowPlayerInfo(false)}
+            onOpenStats={() => setShowStats(true)}
+            onOpenHistory={() => setShowMatchHistory(true)}
+          />
+        </Suspense>
+      )}
+      {showMatchHistory && (
+        <Suspense fallback={<ModalLoader />}>
+          <MatchHistoryModal
+            isOpen={showMatchHistory}
+            onClose={() => setShowMatchHistory(false)}
+            playerName={user?.display_name || 'Player'}
+            currentRating={user?.rating || 1500}
+          />
+        </Suspense>
+      )}
+      {showStats && (
+        <Suspense fallback={<ModalLoader />}>
+          <StatsModal
+            isOpen={showStats}
+            onClose={() => setShowStats(false)}
+          />
+        </Suspense>
+      )}
+      {showSettings && (
+        <Suspense fallback={<ModalLoader />}>
+          <SettingsModal
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        </Suspense>
+      )}
+      {showEmoteCustomizer && (
+        <Suspense fallback={<ModalLoader />}>
+          <EmoteCustomizerModal
+            isOpen={showEmoteCustomizer}
+            onClose={() => setShowEmoteCustomizer(false)}
+            isPremium={isPremium}
+          />
+        </Suspense>
+      )}
+      {showFriendsList && (
+        <Suspense fallback={<ModalLoader />}>
+          <FriendsListModal
+            isOpen={showFriendsList}
+            onClose={() => setShowFriendsList(false)}
+            onMatchFound={onMatchFound}
+          />
+        </Suspense>
+      )}
+      {showLeaderboard && (
+        <Suspense fallback={<ModalLoader />}>
+          <LeaderboardScreen 
+            isOpen={showLeaderboard} 
+            onClose={() => setShowLeaderboard(false)} 
+          />
+        </Suspense>
+      )}
 
       {/* Incoming Match Request Modal */}
       {incomingMatchRequest && (

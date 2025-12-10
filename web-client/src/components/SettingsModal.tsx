@@ -40,19 +40,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     return false;
   })();
 
-  // Debug logging
-  useEffect(() => {
-    if (isOpen) {
-      console.log('[SettingsModal] Dev Options Check:', {
-        'import.meta.env.DEV': import.meta.env.DEV,
-        'import.meta.env.MODE': import.meta.env.MODE,
-        'hostname': typeof window !== 'undefined' ? window.location.hostname : 'N/A',
-        'localStorage flag': typeof window !== 'undefined' ? localStorage.getItem('sudoduel_show_dev_options') : 'N/A',
-        'showDevOptions': showDevOptions,
-      });
-    }
-  }, [isOpen, showDevOptions]);
-
   // Load settings from localStorage
   useEffect(() => {
     const savedHaptic = localStorage.getItem('hapticEnabled');

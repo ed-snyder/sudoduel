@@ -1388,7 +1388,20 @@
 }
 
 /* =========================================
-   24. PARALLAX BLOB ANIMATIONS
+   24. BREATHE ANIMATION (Grid Opacity)
+   ========================================= */
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.06; }
+  50% { opacity: 0.12; }
+}
+
+.animate-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* =========================================
+   25. PARALLAX BLOB ANIMATIONS
    ========================================= */
 
 /* Parallax blob animations - Far layer (slowest) */

@@ -15,27 +15,32 @@ function AppContent() {
   const [matchId, setMatchId] = useState<number | null>(null);
   const [soloMode, setSoloMode] = useState(false);
 
-  // Initialize ads early for faster loading
+  // Initialize ads - deferred to not block initial render
   useEffect(() => {
-    adService.initialize();
+    const timeoutId = setTimeout(() => {
+      adService.initialize();
+    }, 2000);
+    return () => clearTimeout(timeoutId);
   }, []);
 
-  // Pre-warm haptics engine on app start (earliest possible)
+  // Pre-warm haptics engine - deferred
   useEffect(() => {
     const warmUpHaptics = async () => {
       try {
-        console.log('[PERF] Pre-warming haptics engine...');
         await Haptics.impact({ style: ImpactStyle.Light });
-        console.log('[PERF] Haptics engine ready');
       } catch (e) {
         // Ignore - haptics may not be available (web, etc.)
-        console.log('[PERF] Haptics not available:', e);
       }
     };
-    warmUpHaptics();
+    
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => warmUpHaptics(), { timeout: 2000 });
+    } else {
+      setTimeout(warmUpHaptics, 1000);
+    }
   }, []);
 
-  // Warm up renderer immediately on app load (earlier initialization)
+  // Warm up renderer - deferred
   useEffect(() => {
     const warmUp = () => {
       try {
@@ -72,10 +77,14 @@ function AppContent() {
         });
       } catch {
         // Silently fail - warm-up is non-critical
-        // Warm-up failed, but that's okay
       }
     };
-    warmUp();
+    
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => warmUp(), { timeout: 3000 });
+    } else {
+      setTimeout(warmUp, 1500);
+    }
   }, []);
 
   // Handle tutorial completion

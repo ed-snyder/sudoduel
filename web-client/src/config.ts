@@ -38,57 +38,33 @@ const isCapacitor = (): boolean => {
 const getApiUrl = (): string => {
   // Environment variable (production or build-time config)
   if (import.meta.env.VITE_API_URL) {
-    const url = import.meta.env.VITE_API_URL;
-    if (typeof window !== 'undefined') {
-      console.log('[Config] Using API URL from env:', url);
-    }
-    return url;
+    return import.meta.env.VITE_API_URL;
   }
   
   // If running in Capacitor (mobile app), use production API
   const capacitorDetected = isCapacitor();
   if (capacitorDetected) {
-    const url = 'https://api.sudoduel.com';
-    if (typeof window !== 'undefined') {
-      console.log('[Config] Capacitor detected, using production API:', url);
-    }
-    return url;
+    return 'https://api.sudoduel.com';
   }
   
   // Local development
-  const url = 'http://localhost:3001';
-  if (typeof window !== 'undefined') {
-    console.log('[Config] Using localhost API URL:', url, 'Capacitor detected:', capacitorDetected);
-  }
-  return url;
+  return 'http://localhost:3001';
 };
 
 const getWsUrl = (): string => {
   // Environment variable (production or build-time config)
   if (import.meta.env.VITE_WS_URL) {
-    const url = import.meta.env.VITE_WS_URL;
-    if (typeof window !== 'undefined') {
-      console.log('[Config] Using WS URL from env:', url);
-    }
-    return url;
+    return import.meta.env.VITE_WS_URL;
   }
   
   // If running in Capacitor (mobile app), use production WebSocket
   const capacitorDetected = isCapacitor();
   if (capacitorDetected) {
-    const url = 'wss://api.sudoduel.com';
-    if (typeof window !== 'undefined') {
-      console.log('[Config] Capacitor detected, using production WS:', url);
-    }
-    return url;
+    return 'wss://api.sudoduel.com';
   }
   
   // Local development
-  const url = 'ws://localhost:3001';
-  if (typeof window !== 'undefined') {
-    console.log('[Config] Using localhost WS URL:', url, 'Capacitor detected:', capacitorDetected);
-  }
-  return url;
+  return 'ws://localhost:3001';
 };
 
 export const API_URL = getApiUrl();

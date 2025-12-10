@@ -29,29 +29,31 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
 
-  // Initialize purchase service on mount
+  // Initialize purchase service - deferred
   useEffect(() => {
-    purchaseService.initialize();
+    const timeoutId = setTimeout(() => {
+      purchaseService.initialize();
+    }, 2000);
+    return () => clearTimeout(timeoutId);
   }, []);
 
-  // Load premium status from backend when user logs in
+  // Load premium status from backend when user logs in - deferred
   useEffect(() => {
-    const fetchPremiumStatus = async () => {
-      if (token && user) {
-        try {
-          const playerInfo = await playerAPI.getMe() as { is_premium?: boolean };
-          const backendPremium = playerInfo.is_premium || false;
-          setIsPremium(backendPremium);
-          localStorage.setItem(STORAGE_KEY, String(backendPremium));
-          console.log('[Subscription] Loaded premium status from backend:', backendPremium);
-        } catch (error) {
-          console.error('[Subscription] Failed to fetch premium status:', error);
-          // Keep localStorage value if API call fails
-        }
+    if (!token || !user) return;
+    
+    const timeoutId = setTimeout(async () => {
+      try {
+        const playerInfo = await playerAPI.getMe() as { is_premium?: boolean };
+        const backendPremium = playerInfo.is_premium || false;
+        setIsPremium(backendPremium);
+        localStorage.setItem(STORAGE_KEY, String(backendPremium));
+      } catch (error) {
+        console.error('[Subscription] Failed to fetch premium status:', error);
+        // Keep localStorage value if API call fails
       }
-    };
-
-    fetchPremiumStatus();
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
   }, [token, user?.id]); // Re-fetch when user changes
 
   // Sync to localStorage when premium status changes
