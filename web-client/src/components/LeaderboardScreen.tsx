@@ -17,9 +17,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
   const yourRowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log('[LeaderboardScreen] isOpen changed:', isOpen);
     if (isOpen) {
-      console.log('[LeaderboardScreen] Loading leaderboard...');
       loadLeaderboard();
     } else {
       // Reset state when closed
@@ -35,14 +33,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
     setLoading(true);
     setError('');
     try {
-      console.log('[LeaderboardScreen] Fetching leaderboard data...');
       const data = await leaderboardAPI.getLeaderboard();
-      console.log('[LeaderboardScreen] Leaderboard data received:', {
-        top100Count: data.top100.length,
-        neighborhoodCount: data.neighborhood.length,
-        yourRank: data.your_rank,
-        totalPlayers: data.total_players,
-      });
       setTop100(data.top100);
       setNeighborhood(data.neighborhood);
       setYourRank(data.your_rank);
@@ -60,11 +51,8 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
   };
 
   if (!isOpen) {
-    console.log('[LeaderboardScreen] Not rendering - isOpen is false');
     return null;
   }
-
-  console.log('[LeaderboardScreen] Rendering leaderboard screen');
 
   return (
     <>

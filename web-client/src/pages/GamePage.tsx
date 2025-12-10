@@ -653,8 +653,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
         setOpponentName(message.data.opponent_name || 'Opponent');
         const opponentPremiumStatus = message.data.opponent_is_premium || false;
-        console.log('[GamePage] GAME_STATE received:', message.data);
-        console.log('[GamePage] opponent_is_premium:', opponentPremiumStatus);
         setOpponentIsPremium(opponentPremiumStatus);
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);

@@ -170,12 +170,8 @@ export default function ResultScreen({
 
   const loadOpponentData = async () => {
     if (!opponentResult.playerId) {
-      console.log('[ResultScreen] No opponent playerId for H2H');
       return;
     }
-    
-    console.log('[ResultScreen] Loading H2H for opponent:', opponentResult.playerId);
-    console.log('[ResultScreen] opponentResult:', opponentResult);
     
     setH2hLoading(true);
     setFriendError('');
@@ -183,7 +179,6 @@ export default function ResultScreen({
     try {
       // Load head-to-head stats
       const h2hResponse = await friendsAPI.getHeadToHeadStats(opponentResult.playerId);
-      console.log('[ResultScreen] H2H response:', h2hResponse);
       setH2hStats(h2hResponse.stats);
       
       // Check friend status
@@ -207,16 +202,12 @@ export default function ResultScreen({
 
   const loadOpponentProfile = async () => {
     if (!opponentResult.playerId) {
-      console.log('[ResultScreen] No opponent playerId for profile');
       return;
     }
     
-    console.log('[ResultScreen] Loading opponent profile for playerId:', opponentResult.playerId);
     setProfileLoading(true);
     try {
       const profile = await playerAPI.getPlayerProfile(opponentResult.playerId);
-      console.log('[ResultScreen] Opponent profile response:', profile);
-      console.log('[ResultScreen] is_premium:', profile.is_premium, 'rank:', profile.rank);
       setOpponentProfile({
         rank: profile.rank,
         is_premium: profile.is_premium,
@@ -357,16 +348,7 @@ export default function ResultScreen({
     const endRating = myResult.rating_after;
     const diff = endRating - startRating;
     
-    console.log('🎰 Rating animation triggered:', {
-      startRating,
-      endRating,
-      diff,
-      rating_before: myResult.rating_before,
-      rating_after: myResult.rating_after
-    });
-    
     if (diff === 0) {
-      console.log('🎰 No rating change, skipping animation');
       setDisplayedRating(endRating || startRating || 1500);
       setRatingLanded(true);
       return;
@@ -374,7 +356,6 @@ export default function ResultScreen({
     
     // Ensure we have valid ratings
     if (!startRating || !endRating || isNaN(startRating) || isNaN(endRating)) {
-      console.log('🎰 Invalid ratings, setting to endRating or default');
       setDisplayedRating(endRating || startRating || 1500);
       setRatingLanded(true);
       return;
@@ -384,10 +365,7 @@ export default function ResultScreen({
     ratingAnimationStartedRef.current = true;
 
     // Wait for slam animation to complete (0.8s)
-    console.log('🎰 Starting rating animation in 800ms...');
-    
     ratingAnimationRef.current = setTimeout(() => {
-      console.log('🎰 Rating animation starting now!');
       
       const steps = Math.max(30, Math.min(Math.abs(diff), 50));
       let currentStep = 0;
@@ -535,16 +513,12 @@ export default function ResultScreen({
       }
       
       if (result.status === 'queued') {
-        console.log('[ResultScreen] Queued, starting to poll...');
-        
         // Poll for match status
         pollIntervalRef.current = setInterval(async () => {
           try {
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
-            console.log('[ResultScreen] Poll status:', status);
             
             if (status.status === 'matched' && status.match_id) {
-              console.log('[ResultScreen] Match found via polling:', status.match_id);
               if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
@@ -553,7 +527,6 @@ export default function ResultScreen({
               onFindNewMatch(status.match_id);
             } else if (status.status !== 'queued') {
               // No longer queued and not matched - something went wrong
-              console.log('[ResultScreen] Unexpected status:', status.status);
               if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
@@ -585,7 +558,6 @@ export default function ResultScreen({
     try {
       const { matchmakingAPI } = await import('../services/api');
       await matchmakingAPI.leave();
-      console.log('[ResultScreen] Left matchmaking queue');
     } catch (error) {
       console.error('[ResultScreen] Failed to cancel search:', error);
     }

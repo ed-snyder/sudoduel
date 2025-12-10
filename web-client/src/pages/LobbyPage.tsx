@@ -28,8 +28,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   
   // Debug logging for premium state
   useEffect(() => {
-    console.log('[LobbyPage] Premium state:', isPremium);
-    console.log('[LobbyPage] localStorage sudoduel_premium:', localStorage.getItem('sudoduel_premium'));
+    // Premium state tracking
   }, [isPremium]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -328,12 +327,9 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
           </div>
           <button
             onClick={() => {
-              console.log('[LobbyPage] Global Rank clicked, isPremium:', isPremium);
               if (isPremium) {
-                console.log('[LobbyPage] Opening leaderboard...');
                 setShowLeaderboard(true);
               } else {
-                console.log('[LobbyPage] Opening upgrade modal...');
                 openUpgradeModal();
               }
             }}
