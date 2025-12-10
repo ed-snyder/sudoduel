@@ -149,10 +149,12 @@ router.get('/head-to-head/:opponentId', authMiddleware, async (req: AuthRequest,
     if (isNaN(opponentId)) {
       return res.status(400).json({ error: 'Invalid opponent ID' });
     }
+    console.log('[H2H API] Request from userId:', req.userId, 'for opponentId:', opponentId);
     const stats = await FriendService.getHeadToHeadStats(req.userId!, opponentId);
+    console.log('[H2H API] Returning stats:', stats);
     res.json({ stats });
   } catch (error: any) {
-    console.error('Get head-to-head stats error:', error);
+    console.error('[H2H API] Get head-to-head stats error:', error);
     res.status(400).json({ error: error.message });
   }
 });

@@ -552,7 +552,29 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
-/* Non-Premium Name Styling - Clean but less flashy */
+/* Non-Premium Player Name - Solid Cyan */
+.non-premium-player-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #00FFFF;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  /* No animation - static text */
+}
+
+/* Non-Premium Opponent Name - Solid Magenta */
+.non-premium-opponent-name {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #FF00FF;
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
+  /* No animation - static text */
+}
+
+/* Legacy class for backward compatibility (can be removed later) */
 .non-premium-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 700;

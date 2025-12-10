@@ -169,7 +169,13 @@ export default function ResultScreen({
   }, [showOpponentModal, opponentResult.playerId]);
 
   const loadOpponentData = async () => {
-    if (!opponentResult.playerId) return;
+    if (!opponentResult.playerId) {
+      console.log('[ResultScreen] No opponent playerId for H2H');
+      return;
+    }
+    
+    console.log('[ResultScreen] Loading H2H for opponent:', opponentResult.playerId);
+    console.log('[ResultScreen] opponentResult:', opponentResult);
     
     setH2hLoading(true);
     setFriendError('');
@@ -177,6 +183,7 @@ export default function ResultScreen({
     try {
       // Load head-to-head stats
       const h2hResponse = await friendsAPI.getHeadToHeadStats(opponentResult.playerId);
+      console.log('[ResultScreen] H2H response:', h2hResponse);
       setH2hStats(h2hResponse.stats);
       
       // Check friend status
@@ -191,7 +198,8 @@ export default function ResultScreen({
         setFriendRequestSent(hasPending);
       }
     } catch (err: any) {
-      console.error('Failed to load opponent data:', err);
+      console.error('[ResultScreen] Failed to load opponent data:', err);
+      setH2hStats(null);
     } finally {
       setH2hLoading(false);
     }

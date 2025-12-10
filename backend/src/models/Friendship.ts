@@ -296,6 +296,8 @@ export const FriendshipModel = {
 
   // Get head-to-head stats with another player
   async getHeadToHeadStats(playerId: number, opponentId: number): Promise<HeadToHeadStats | null> {
+    console.log('[H2H] Getting stats for player:', playerId, 'vs opponent:', opponentId);
+    
     // Ensure consistent ordering
     const [lowerId, higherId] = playerId < opponentId 
       ? [playerId, opponentId] 
@@ -303,30 +305,45 @@ export const FriendshipModel = {
     
     const isPlayer1 = playerId < opponentId;
 
+    // Get opponent name
+    const opponentProfile = await PlayerProfileModel.findById(opponentId);
+    const opponentName = opponentProfile?.display_name || 'Opponent';
+
     const result = await query(
-      `SELECT 
-        h2h.*,
-        pp.display_name as opponent_name
-       FROM head_to_head_stats h2h
-       JOIN player_profiles pp ON pp.id = $3
-       WHERE h2h.player1_id = $1 AND h2h.player2_id = $2`,
-      [lowerId, higherId, opponentId]
+      `SELECT * FROM head_to_head_stats 
+       WHERE player1_id = $1 AND player2_id = $2`,
+      [lowerId, higherId]
     );
 
+    console.log('[H2H] Query result:', result.rows);
+
     if (result.rows.length === 0) {
-      return null;
+      // No H2H record exists yet - return zeros
+      console.log('[H2H] No record found, returning zeros');
+      return {
+        opponent_id: opponentId,
+        opponent_name: opponentName,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        total_matches: 0,
+        last_match_at: null,
+      };
     }
 
     const row = result.rows[0];
-    return {
+    const stats = {
       opponent_id: opponentId,
-      opponent_name: row.opponent_name,
-      wins: isPlayer1 ? row.player1_wins : row.player2_wins,
-      losses: isPlayer1 ? row.player2_wins : row.player1_wins,
-      draws: row.draws,
-      total_matches: row.player1_wins + row.player2_wins + row.draws,
+      opponent_name: opponentName,
+      wins: isPlayer1 ? (row.player1_wins || 0) : (row.player2_wins || 0),
+      losses: isPlayer1 ? (row.player2_wins || 0) : (row.player1_wins || 0),
+      draws: row.draws || 0,
+      total_matches: (row.player1_wins || 0) + (row.player2_wins || 0) + (row.draws || 0),
       last_match_at: row.last_match_at,
     };
+    
+    console.log('[H2H] Returning stats:', stats);
+    return stats;
   },
 
   // Update head-to-head stats after a match
