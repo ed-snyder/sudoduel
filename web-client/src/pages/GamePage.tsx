@@ -1898,7 +1898,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             </div>
             {/* Right: Opponent */}
             <div className="flex items-center gap-2">
-              <div className={`text-lg sm:text-xl ${opponentIsPremium ? 'premium-opponent-name' : 'non-premium-opponent-name'}`}>
+              <div className={`text-lg sm:text-xl ${
+                opponentIsPremium 
+                  ? 'premium-opponent-name' 
+                  : isPremium 
+                    ? 'non-premium-opponent-name' 
+                    : 'non-premium-opponent-name-with-sheen'
+              }`}>
                 {opponentName}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">

@@ -467,6 +467,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 }
 
+@keyframes cyan-sheen-shimmer {
+  0% {
+    background-position: -200% center;
+    filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(0, 255, 255, 0.6)) drop-shadow(0 0 8px rgba(255, 0, 255, 0.4));
+  }
+  100% {
+    background-position: 200% center;
+    filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.4));
+  }
+}
+
 .premium-player-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 900;
@@ -563,7 +577,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   /* No animation - static text */
 }
 
-/* Non-Premium Opponent Name - Solid Magenta */
+/* Non-Premium Opponent Name - Solid Magenta (when player IS premium) */
 .non-premium-opponent-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 700;
@@ -572,6 +586,21 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: #FF00FF;
   text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
   /* No animation - static text */
+}
+
+/* Non-Premium Opponent Name - Magenta with Cyan Sheen (when player is NOT premium) */
+.non-premium-opponent-name-with-sheen {
+  font-family: 'Industry', 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #FF00FF 0%, #FF7FFF 25%, #00FFFF 50%, #FF00FF 75%, #8B00FF 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.4));
+  animation: cyan-sheen-shimmer 6s linear infinite;
 }
 
 /* Legacy class for backward compatibility (can be removed later) */
