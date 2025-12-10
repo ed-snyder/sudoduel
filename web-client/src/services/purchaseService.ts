@@ -100,6 +100,47 @@ class PurchaseServiceImpl {
           raw: product,
         });
       });
+      
+      // Also listen for when products are loaded/valid
+      this.store.when().loaded((products: any[]) => {
+        console.log('[PurchaseService] Products loaded:', products);
+        products.forEach((product: any) => {
+          if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
+            if (!this.rawProducts.has(product.id)) {
+              console.log('[PurchaseService] Adding product from loaded event:', product.id);
+              this.rawProducts.set(product.id, product);
+              this.products.set(product.id, {
+                id: product.id,
+                title: product.title || product.id,
+                description: product.description || '',
+                price: product.pricing?.price || '$?.??',
+                priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
+                currency: product.pricing?.currency || 'USD',
+                raw: product,
+              });
+            }
+          }
+        });
+      });
+      
+      // Listen for valid products
+      this.store.when().valid((product: any) => {
+        console.log('[PurchaseService] Product valid:', product.id);
+        if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
+          if (!this.rawProducts.has(product.id)) {
+            this.rawProducts.set(product.id, product);
+            this.products.set(product.id, {
+              id: product.id,
+              title: product.title || product.id,
+              description: product.description || '',
+              price: product.pricing?.price || '$?.??',
+              priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
+              currency: product.pricing?.currency || 'USD',
+              raw: product,
+            });
+          }
+        }
+      });
 
       // Handle purchase flow
       this.store.when()
@@ -126,7 +167,7 @@ class PurchaseServiceImpl {
       await this.store.update();
       
       // Wait for products to populate - try multiple times
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 10; i++) {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Try to get products from store directly
@@ -134,20 +175,38 @@ class PurchaseServiceImpl {
           this.store.products.forEach((product: any) => {
             if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
               if (!this.rawProducts.has(product.id)) {
-                console.log('[PurchaseService] Found product from store.products:', product.id);
+                console.log('[PurchaseService] Found product from store.products:', product.id, product);
                 this.rawProducts.set(product.id, product);
                 this.products.set(product.id, {
                   id: product.id,
                   title: product.title || product.id,
                   description: product.description || '',
-                  price: product.pricing?.price || '$?.??',
+                  price: product.pricing?.price || product.price || '$?.??',
                   priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-                  currency: product.pricing?.currency || 'USD',
+                  currency: product.pricing?.currency || product.currency || 'USD',
                   raw: product,
                 });
               }
             }
           });
+        }
+        
+        // Also check if store has a get method
+        if (typeof this.store.get === 'function') {
+          try {
+            const monthly = this.store.get(PRODUCT_IDS.MONTHLY);
+            const yearly = this.store.get(PRODUCT_IDS.YEARLY);
+            if (monthly && !this.rawProducts.has(PRODUCT_IDS.MONTHLY)) {
+              console.log('[PurchaseService] Found monthly via store.get()');
+              this.rawProducts.set(PRODUCT_IDS.MONTHLY, monthly);
+            }
+            if (yearly && !this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
+              console.log('[PurchaseService] Found yearly via store.get()');
+              this.rawProducts.set(PRODUCT_IDS.YEARLY, yearly);
+            }
+          } catch (e) {
+            // store.get might not be available
+          }
         }
         
         // Check if we have both products
@@ -162,8 +221,24 @@ class PurchaseServiceImpl {
       console.log('[PurchaseService] Raw products:', Array.from(this.rawProducts.keys()));
       
       // Log store state for debugging
+      console.log('[PurchaseService] Store object keys:', Object.keys(this.store));
       if (this.store.products) {
-        console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ id: p.id, valid: !!p.valid })));
+        console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ id: p.id, valid: !!p.valid, state: p.state })));
+      } else {
+        console.log('[PurchaseService] Store.products is not an array or undefined');
+      }
+      
+      // Check if products are registered
+      if (this.store.registeredProducts) {
+        console.log('[PurchaseService] Registered products:', this.store.registeredProducts);
+      }
+      
+      // Warn if no products found (might be simulator or products not configured)
+      if (this.rawProducts.size === 0) {
+        console.warn('[PurchaseService] WARNING: No products loaded. This might be because:');
+        console.warn('1. Products are not configured in App Store Connect');
+        console.warn('2. Running in iOS Simulator (StoreKit may not work)');
+        console.warn('3. Products are still loading (check console for productUpdated events)');
       }
 
     } catch (error) {
