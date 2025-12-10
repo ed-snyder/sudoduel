@@ -206,17 +206,23 @@ export default function ResultScreen({
   };
 
   const loadOpponentProfile = async () => {
-    if (!opponentResult.playerId) return;
+    if (!opponentResult.playerId) {
+      console.log('[ResultScreen] No opponent playerId for profile');
+      return;
+    }
     
+    console.log('[ResultScreen] Loading opponent profile for playerId:', opponentResult.playerId);
     setProfileLoading(true);
     try {
       const profile = await playerAPI.getPlayerProfile(opponentResult.playerId);
+      console.log('[ResultScreen] Opponent profile response:', profile);
+      console.log('[ResultScreen] is_premium:', profile.is_premium, 'rank:', profile.rank);
       setOpponentProfile({
         rank: profile.rank,
         is_premium: profile.is_premium,
       });
     } catch (error) {
-      console.error('Failed to load opponent profile:', error);
+      console.error('[ResultScreen] Failed to load opponent profile:', error);
       setOpponentProfile(null);
     } finally {
       setProfileLoading(false);
@@ -1213,7 +1219,7 @@ export default function ResultScreen({
                 {/* Show rank if opponent is premium and we have it */}
                 {profileLoading ? (
                   <span className="text-muted text-sm">•  Loading...</span>
-                ) : opponentProfile?.is_premium && opponentProfile?.rank ? (
+                ) : opponentProfile?.is_premium && opponentProfile?.rank !== null && opponentProfile?.rank !== undefined ? (
                   <>
                     <span className="text-muted text-sm">•</span>
                     <span className="text-muted text-sm font-body">Rank:</span>
@@ -1224,6 +1230,8 @@ export default function ResultScreen({
                       #{opponentProfile.rank.toLocaleString()}
                     </span>
                   </>
+                ) : opponentProfile && !profileLoading ? (
+                  <span className="text-muted text-xs">• Not ranked</span>
                 ) : null}
               </div>
 
