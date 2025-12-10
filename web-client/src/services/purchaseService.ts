@@ -125,11 +125,46 @@ class PurchaseServiceImpl {
       // Fetch products
       await this.store.update();
       
-      // Wait a moment for products to populate
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for products to populate - try multiple times
+      for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Try to get products from store directly
+        if (this.store.products && Array.isArray(this.store.products)) {
+          this.store.products.forEach((product: any) => {
+            if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
+              if (!this.rawProducts.has(product.id)) {
+                console.log('[PurchaseService] Found product from store.products:', product.id);
+                this.rawProducts.set(product.id, product);
+                this.products.set(product.id, {
+                  id: product.id,
+                  title: product.title || product.id,
+                  description: product.description || '',
+                  price: product.pricing?.price || '$?.??',
+                  priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
+                  currency: product.pricing?.currency || 'USD',
+                  raw: product,
+                });
+              }
+            }
+          });
+        }
+        
+        // Check if we have both products
+        if (this.rawProducts.has(PRODUCT_IDS.MONTHLY) && this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
+          console.log('[PurchaseService] Both products found, breaking early');
+          break;
+        }
+      }
 
       this.initialized = true;
       console.log('[PurchaseService] Ready. Products:', Array.from(this.products.keys()));
+      console.log('[PurchaseService] Raw products:', Array.from(this.rawProducts.keys()));
+      
+      // Log store state for debugging
+      if (this.store.products) {
+        console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ id: p.id, valid: !!p.valid })));
+      }
 
     } catch (error) {
       console.error('[PurchaseService] Init failed:', error);
@@ -182,18 +217,57 @@ class PurchaseServiceImpl {
       return { success: true, productId, transactionId: `mock_${Date.now()}` };
     }
 
-    // Get the raw product
-    const product = this.rawProducts.get(productId);
+    // Try multiple ways to get the product
+    let product = this.rawProducts.get(productId);
+    
+    // If not found, try getting from store.products array
+    if (!product && this.store.products && Array.isArray(this.store.products)) {
+      product = this.store.products.find((p: any) => p.id === productId);
+      if (product) {
+        console.log('[PurchaseService] Found product from store.products array');
+        this.rawProducts.set(productId, product);
+      }
+    }
+    
+    // If still not found, try store.get() if it exists
+    if (!product && typeof this.store.get === 'function') {
+      try {
+        product = this.store.get(productId);
+        if (product) {
+          console.log('[PurchaseService] Found product via store.get()');
+          this.rawProducts.set(productId, product);
+        }
+      } catch (e) {
+        console.log('[PurchaseService] store.get() failed:', e);
+      }
+    }
+    
+    // If still not found, try refreshing products
+    if (!product) {
+      console.error('[PurchaseService] Product not found, attempting refresh...');
+      console.log('[PurchaseService] Available in rawProducts:', Array.from(this.rawProducts.keys()));
+      console.log('[PurchaseService] Store.products:', this.store.products);
+      
+      // Try one more update
+      try {
+        await this.store.update();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check again
+        product = this.rawProducts.get(productId);
+        if (!product && this.store.products) {
+          product = this.store.products.find((p: any) => p.id === productId);
+        }
+      } catch (e) {
+        console.error('[PurchaseService] Refresh failed:', e);
+      }
+    }
     
     if (!product) {
-      console.error('[PurchaseService] Product not in rawProducts:', productId);
-      console.log('[PurchaseService] Available:', Array.from(this.rawProducts.keys()));
-      
-      // Try to get directly from store
-      const allProducts = this.store.products;
-      console.log('[PurchaseService] Store products:', allProducts);
-      
-      return { success: false, error: 'Product not available. Please restart the app and try again.' };
+      return { 
+        success: false, 
+        error: 'Product not available. Please ensure you have internet connection and try again.' 
+      };
     }
 
     return new Promise((resolve) => {
