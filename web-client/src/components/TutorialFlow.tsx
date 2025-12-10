@@ -290,7 +290,7 @@ const NumberPad = memo(function NumberPad({
   const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
 
   return (
-    <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
+    <div className="grid grid-cols-9 gap-2 w-full px-4">
       {numbers.map((num) => {
         const isHighlighted = num === highlightNumber;
         return (
@@ -515,11 +515,13 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
       // Set placed state - this will trigger re-render and show Next button
       setPlaced(true);
       
+      // Reset ref after state update completes
       // Call interaction complete immediately - Next button will appear
-      // Use setTimeout(0) to ensure state updates are flushed first
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure state updates are flushed first
+      requestAnimationFrame(() => {
+        isProcessingRef.current = false;
         onInteractionComplete?.();
-      }, 0);
+      });
     } else {
       // Wrong number - show error and allow retry by resetting ref
       isProcessingRef.current = false;
@@ -692,11 +694,13 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       setTime(200);
       setShowDelta(false);
       
+      // Reset ref after state update completes
       // Call interaction complete immediately - Next button will appear
-      // Use setTimeout(0) to ensure state updates are flushed first
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure state updates are flushed first
+      requestAnimationFrame(() => {
+        isProcessingRef.current = false;
         onInteractionComplete?.();
-      }, 0);
+      });
     } else {
       // Wrong number - allow retry by resetting ref
       isProcessingRef.current = false;
