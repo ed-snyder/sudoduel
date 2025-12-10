@@ -109,9 +109,17 @@ class PurchaseServiceImpl {
         receipt.finish();
       });
 
-      this.store.when().finished(() => {
-        console.log('[PurchaseService] Finished - purchase completed');
-        // Don't try to unsubscribe - just log
+      this.store.when().finished((transaction: any) => {
+        console.log('[PurchaseService] Finished - purchase completed', transaction);
+        // Update products if transaction has product info
+        if (transaction?.products) {
+          transaction.products.forEach((p: any) => {
+            if (p.id === PRODUCT_IDS.MONTHLY || p.id === PRODUCT_IDS.YEARLY) {
+              console.log('[PurchaseService] Updating product from finished transaction:', p.id, 'owned:', p.owned);
+              this.rawProducts.set(p.id, p);
+            }
+          });
+        }
       });
 
       await this.store.initialize([this.CdvPurchase.Platform.APPLE_APPSTORE]);
@@ -182,6 +190,29 @@ class PurchaseServiceImpl {
       return { success: false, error: 'Product not available for purchase.' };
     }
 
+    // Set up a promise that resolves when purchase completes
+    let purchaseCompleted = false;
+    const purchasePromise = new Promise<boolean>((resolve) => {
+      // Listen for finished event specifically for this purchase
+      const checkFinished = (transaction: any) => {
+        if (transaction?.products?.some((p: any) => p.id === productId)) {
+          console.log('[PurchaseService] Purchase finished for product:', productId);
+          purchaseCompleted = true;
+          resolve(true);
+        }
+      };
+      
+      // Set up one-time listener
+      this.store.when().finished(checkFinished);
+      
+      // Timeout after 60 seconds
+      setTimeout(() => {
+        if (!purchaseCompleted) {
+          resolve(false);
+        }
+      }, 60000);
+    });
+
     // Start the purchase
     console.log('[PurchaseService] Starting order...');
     
@@ -190,86 +221,80 @@ class PurchaseServiceImpl {
       this.store.order(offer);
     } catch (e) {
       console.error('[PurchaseService] Order start error:', e);
+      return { success: false, error: 'Failed to start purchase.' };
     }
 
-    // Poll for ownership - this is the reliable way to detect completion
-    console.log('[PurchaseService] Polling for ownership...');
+    // Wait for purchase to complete (via finished event) OR poll for ownership
+    console.log('[PurchaseService] Waiting for purchase completion...');
     
-    // After purchase starts, wait a moment for the purchase flow to begin
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    for (let i = 0; i < 120; i++) { // 60 seconds max
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Always refresh product from store - don't rely on cache
-      let updatedProduct = null;
-      
-      // Try to get fresh product from store first
-      if (typeof this.store.get === 'function') {
-        try {
-          updatedProduct = this.store.get(productId);
-          if (updatedProduct) {
-            // Update cache with fresh product
-            this.rawProducts.set(productId, updatedProduct);
+    // Race between finished event and polling
+    const pollForOwnership = async (): Promise<boolean> => {
+      for (let i = 0; i < 120; i++) { // 60 seconds max
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Always refresh product from store - don't rely on cache
+        let updatedProduct = null;
+        
+        // Try to get fresh product from store first
+        if (typeof this.store.get === 'function') {
+          try {
+            updatedProduct = this.store.get(productId);
+            if (updatedProduct) {
+              this.rawProducts.set(productId, updatedProduct);
+            }
+          } catch (e) {
+            // Ignore
           }
-        } catch (e) {
-          // Ignore - store.get might fail
+        }
+        
+        if (!updatedProduct) {
+          updatedProduct = this.rawProducts.get(productId);
+        }
+        
+        // Refresh store every 2 polls
+        if (i % 2 === 0 && i > 0) {
+          try {
+            if (typeof this.store.update === 'function') {
+              this.store.update();
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
+        
+        // Check ownership
+        const isOwned = updatedProduct?.owned === true || updatedProduct?.state === 'owned';
+        
+        if (i % 5 === 0) {
+          console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned, 'state:', updatedProduct?.state);
+        }
+        
+        if (isOwned) {
+          console.log('[PurchaseService] Ownership detected via polling!');
+          return true;
         }
       }
-      
-      // Fallback to cache if store.get didn't work
-      if (!updatedProduct) {
-        updatedProduct = this.rawProducts.get(productId);
-      }
-      
-      // Refresh store every 3 polls to ensure we get latest state
-      if (i % 3 === 0 && i > 0) {
-        try {
-          if (typeof this.store.update === 'function') {
-            this.store.update(); // Don't await - fire and forget
-          }
-        } catch (e) {
-          // Ignore update errors
-        }
-      }
-      
-      // Check multiple ways ownership might be indicated
-      const owned = updatedProduct?.owned === true;
-      const stateOwned = updatedProduct?.state === 'owned';
-      const validAndCantPurchase = updatedProduct?.canPurchase === false && updatedProduct?.state === 'valid';
-      
-      const isOwned = owned || stateOwned || validAndCantPurchase;
-      
-      console.log('[PurchaseService] Poll', i, '- owned:', owned, 'state:', updatedProduct?.state, 'canPurchase:', updatedProduct?.canPurchase, 'isOwned:', isOwned);
-      
-      if (isOwned) {
-        console.log('[PurchaseService] Purchase successful! Ownership detected.');
+      return false;
+    };
+    
+    // Wait for either finished event or ownership detection
+    const finished = await purchasePromise;
+    if (finished) {
+      // Give it a moment for product to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check ownership one more time
+      const finalProduct = this.rawProducts.get(productId) || (typeof this.store.get === 'function' ? this.store.get(productId) : null);
+      if (finalProduct?.owned || finalProduct?.state === 'owned') {
+        console.log('[PurchaseService] Purchase successful via finished event!');
         return { success: true, productId, transactionId: 'completed' };
       }
-      
-      // If we've been polling for a while and purchase events completed, check one more time
-      if (i === 10) {
-        console.log('[PurchaseService] 5 seconds elapsed - forcing store refresh...');
-        try {
-          if (typeof this.store.update === 'function') {
-            await this.store.update();
-            await new Promise(resolve => setTimeout(resolve, 500));
-            // Re-check after refresh
-            if (typeof this.store.get === 'function') {
-              const refreshed = this.store.get(productId);
-              if (refreshed) {
-                this.rawProducts.set(productId, refreshed);
-                if (refreshed.owned || refreshed.state === 'owned') {
-                  console.log('[PurchaseService] Purchase successful after refresh!');
-                  return { success: true, productId, transactionId: 'completed' };
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[PurchaseService] Refresh error:', e);
-        }
-      }
+    }
+    
+    // Also poll in parallel
+    const owned = await pollForOwnership();
+    if (owned) {
+      console.log('[PurchaseService] Purchase successful via polling!');
+      return { success: true, productId, transactionId: 'completed' };
     }
 
     return { success: false, error: 'Purchase timed out. If charged, restart the app.' };
