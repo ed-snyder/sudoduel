@@ -290,36 +290,39 @@ const NumberPad = memo(function NumberPad({
   const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
 
   return (
-    <div className="grid grid-cols-9 gap-1.5" style={{ width: '100%' }}>
+    <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
       {numbers.map((num) => {
         const isHighlighted = num === highlightNumber;
+        const isDepleted = false; // Tutorial doesn't track depletion
         return (
           <button
             key={num}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (!disabled) {
+              if (!disabled && !isDepleted) {
                 onNumberSelect(num);
               }
             }}
-            disabled={disabled}
+            disabled={disabled || isDepleted}
             className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
             style={{
               fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-              background: disabled ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
-              border: disabled 
-                ? '2px solid rgba(139, 0, 255, 0.2)' 
+              background: disabled || isDepleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
+              border: disabled || isDepleted
+                ? '2px solid rgba(139, 0, 255, 0.2)'
                 : isHighlighted
                 ? '2px solid #00FFFF'
                 : '2px solid rgba(139, 0, 255, 0.6)',
-              color: disabled ? 'rgba(255, 255, 255, 0.3)' : isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-              boxShadow: disabled ? 'none' : isHighlighted
+              color: disabled || isDepleted ? 'rgba(255, 255, 255, 0.3)' : isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
+              boxShadow: disabled || isDepleted ? 'none' : isHighlighted
                 ? '0 0 15px rgba(0, 255, 255, 0.5)'
                 : '0 0 10px rgba(139, 0, 255, 0.2)',
-              width: '100%',
-              maxWidth: '100%',
-              aspectRatio: '1',
+              minHeight: '44px',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
@@ -471,6 +474,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const [showError, setShowError] = useState(false);
   const isProcessingRef = useRef(false);
   const placedRef = useRef(false);
+  const lastProcessedTimeRef = useRef<number>(0);
   
   const targetRow = 0;
   const targetCol = 2;
@@ -502,6 +506,14 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
       console.log('[Tutorial] Blocked duplicate tap');
       return;
     }
+    
+    // Debounce: prevent processing the same number within 300ms
+    const now = Date.now();
+    if (now - lastProcessedTimeRef.current < 300) {
+      console.log('[Tutorial] Blocked rapid duplicate tap');
+      return;
+    }
+    lastProcessedTimeRef.current = now;
     
     // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
@@ -564,7 +576,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="w-full -mx-6 px-4 pt-1 pb-1" style={{ width: 'calc(100% + 3rem)', maxWidth: 'calc(100vw - 2rem)' }}>
+          <div className="px-3 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -644,6 +656,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [showDelta, setShowDelta] = useState(false);
   const isProcessingRef = useRef(false);
   const placedRef = useRef(false);
+  const lastProcessedTimeRef = useRef<number>(0);
   
   // Target: row 1, col 1 - answer is 7
   const targetRow = 1;
@@ -748,7 +761,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="w-full -mx-6 px-4 pt-1 pb-1" style={{ width: 'calc(100% + 3rem)', maxWidth: 'calc(100vw - 2rem)' }}>
+          <div className="px-3 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
