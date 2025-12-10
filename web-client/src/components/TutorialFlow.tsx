@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef, memo, startTransition } from 'react';
+import { flushSync } from 'react-dom';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -290,7 +291,7 @@ const NumberPad = memo(function NumberPad({
   const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
 
   return (
-    <div className="grid grid-cols-9 gap-2 w-full px-4">
+    <div className="grid grid-cols-9 gap-1.5 w-full">
       {numbers.map((num) => {
         const isHighlighted = num === highlightNumber;
         return (
@@ -512,16 +513,15 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state - this will trigger re-render and show Next button
-      setPlaced(true);
-      
-      // Reset ref after state update completes
-      // Call interaction complete immediately - Next button will appear
-      // Use requestAnimationFrame to ensure state updates are flushed first
-      requestAnimationFrame(() => {
-        isProcessingRef.current = false;
-        onInteractionComplete?.();
+      // Set placed state and call interaction complete in a single flush
+      // This ensures both state updates complete before any re-renders
+      flushSync(() => {
+        setPlaced(true);
       });
+      
+      // Call interaction complete after state is flushed
+      // Don't reset ref here - keep it true to prevent double-taps
+      onInteractionComplete?.();
     } else {
       // Wrong number - show error and allow retry by resetting ref
       isProcessingRef.current = false;
@@ -563,7 +563,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="px-3 pt-1 pb-1">
+          <div className="w-full px-4 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -687,20 +687,17 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state - this will trigger re-render and show Next button
-      setPlaced(true);
-      
-      // Update time
-      setTime(200);
-      setShowDelta(false);
-      
-      // Reset ref after state update completes
-      // Call interaction complete immediately - Next button will appear
-      // Use requestAnimationFrame to ensure state updates are flushed first
-      requestAnimationFrame(() => {
-        isProcessingRef.current = false;
-        onInteractionComplete?.();
+      // Set placed state and call interaction complete in a single flush
+      // This ensures both state updates complete before any re-renders
+      flushSync(() => {
+        setPlaced(true);
+        setTime(200);
+        setShowDelta(false);
       });
+      
+      // Call interaction complete after state is flushed
+      // Don't reset ref here - keep it true to prevent double-taps
+      onInteractionComplete?.();
     } else {
       // Wrong number - allow retry by resetting ref
       isProcessingRef.current = false;
@@ -750,7 +747,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="px-3 pt-1 pb-1">
+          <div className="w-full px-4 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -832,7 +829,7 @@ function DuelOpponentStep({ onNext }: StepProps) {
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
         <h2 className="font-heading font-bold text-2xl text-opponent">Your Opponent</h2>
         <p className="font-body text-secondary">
-          Magenta cells show where your opponent scored first. You can still fill any empty cell!
+          Magenta cells show where your opponent has already scored. You can still score here!
         </p>
         <div className="flex justify-center">
           <SudokuGrid
