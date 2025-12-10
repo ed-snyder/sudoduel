@@ -78,7 +78,7 @@ class PurchaseServiceImpl {
 
       // Track products and ownership changes
       this.store.when().productUpdated((product: any) => {
-        console.log('[PurchaseService] Product updated:', product.id, 'owned:', product.owned);
+        console.log('[PurchaseService] Product updated:', product.id, 'owned:', product.owned, 'state:', product.state);
         this.rawProducts.set(product.id, product);
         if (product.pricing) {
           this.products.set(product.id, {
@@ -90,6 +90,12 @@ class PurchaseServiceImpl {
             currency: product.pricing.currency || 'USD',
           });
         }
+      });
+      
+      // Also listen for when products become owned
+      this.store.when().owned((product: any) => {
+        console.log('[PurchaseService] Product owned:', product.id);
+        this.rawProducts.set(product.id, product);
       });
 
       // Auto-finish transactions
