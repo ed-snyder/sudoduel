@@ -70,9 +70,9 @@ function AppContent() {
             }
           });
         });
-      } catch (e) {
+      } catch {
         // Silently fail - warm-up is non-critical
-        console.warn('[PERF] Warm-up failed:', e);
+        // Warm-up failed, but that's okay
       }
     };
     warmUp();

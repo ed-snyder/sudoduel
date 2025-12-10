@@ -21,9 +21,10 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length === 4) {
-          setEmotes(parsed);
+          // Use setTimeout to avoid calling setState synchronously in effect
+          setTimeout(() => setEmotes(parsed), 0);
         }
-      } catch (e) {
+      } catch {
         console.error('Failed to parse saved emotes');
       }
     }
