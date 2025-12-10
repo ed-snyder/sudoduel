@@ -142,35 +142,35 @@ export default function UpgradeModal() {
           <div className="space-y-3">
             <div>
               <h3 className="font-heading font-bold text-base text-primary">Custom Emotes</h3>
-              <p className="font-body text-secondary text-sm italic">
+              <p className="font-body text-secondary text-sm">
                 Say <em>whatever</em> you want
               </p>
             </div>
 
             <div>
               <h3 className="font-heading font-bold text-base text-primary">No Ads</h3>
-              <p className="font-body text-secondary text-sm italic">
+              <p className="font-body text-secondary text-sm">
                 Improve your UX AND lower our hosting costs ;)
               </p>
             </div>
 
             <div>
               <h3 className="font-heading font-bold text-base text-primary">Global Ranking & Leaderboard</h3>
-              <p className="font-body text-secondary text-sm italic">
+              <p className="font-body text-secondary text-sm">
                 Get the recognition you deserve.
               </p>
             </div>
 
             <div>
               <h3 className="font-heading font-bold text-base text-primary">Advanced Stats</h3>
-              <p className="font-body text-secondary text-sm italic">
+              <p className="font-body text-secondary text-sm">
                 Use them to improve, or brag
               </p>
             </div>
 
             <div>
               <h3 className="font-heading font-bold text-base text-primary">Premium Name Styling</h3>
-              <p className="font-body text-secondary text-sm italic">
+              <p className="font-body text-secondary text-sm">
                 Stunt on em
               </p>
             </div>
