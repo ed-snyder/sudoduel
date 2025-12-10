@@ -191,6 +191,17 @@ class PurchaseServiceImpl {
     for (let i = 0; i < 120; i++) { // 60 seconds max
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Refresh store to get latest product state (every few polls)
+      if (i % 5 === 0 && i > 0) {
+        try {
+          if (typeof this.store.update === 'function') {
+            await this.store.update();
+          }
+        } catch (e) {
+          // Ignore update errors
+        }
+      }
+      
       // Refresh product state from store (don't rely on cached version)
       let updatedProduct = this.rawProducts.get(productId);
       
@@ -202,10 +213,15 @@ class PurchaseServiceImpl {
             // Update cache with fresh product
             this.rawProducts.set(productId, freshProduct);
             updatedProduct = freshProduct;
+            console.log('[PurchaseService] Poll', i, '- refreshed from store, owned:', freshProduct?.owned);
           }
         } catch (e) {
           // Ignore - store.get might fail
         }
+      }
+      
+      if (!updatedProduct) {
+        updatedProduct = this.rawProducts.get(productId);
       }
       
       console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned);
