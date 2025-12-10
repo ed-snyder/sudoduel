@@ -363,7 +363,12 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                   Upgrade to see rank
                 </span>
               )}
-              <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg 
+                className="w-4 h-4 text-player animate-chevron-pulse" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>

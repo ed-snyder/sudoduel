@@ -194,7 +194,8 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
