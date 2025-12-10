@@ -277,7 +277,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [showScreenShake, setShowScreenShake] = useState(false);
   
   // Addictive scoring feedback system state
-  const [showMicroShake, setShowMicroShake] = useState(false);
   const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
   const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
   
@@ -726,7 +725,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setNotes(new Map());
         setCompletedCells(new Set());
         setLastScoredCell(null);
-        setShowMicroShake(false);
         setMyEmote(null);
         setOpponentEmote(null);
         setMyEmoteFadingOut(false);
