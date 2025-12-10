@@ -287,10 +287,9 @@ const NumberPad = memo(function NumberPad({
   const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
 
   return (
-    <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
+    <div className="grid grid-cols-9 w-full">
       {numbers.map((num) => {
         const isHighlighted = num === highlightNumber;
-        const isDepleted = false; // Tutorial doesn't track depletion
         return (
           <button
             key={num}
@@ -301,24 +300,20 @@ const NumberPad = memo(function NumberPad({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (!disabled && !isDepleted) {
+              if (!disabled) {
                 onNumberSelect(num);
               }
             }}
-            disabled={disabled || isDepleted}
-            className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+            disabled={disabled}
+            className="py-3 transition-opacity touch-manipulation font-heading font-bold flex items-center justify-center active:opacity-50"
             style={{
-              fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-              background: disabled || isDepleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
-              border: disabled || isDepleted
-                ? '2px solid rgba(139, 0, 255, 0.2)'
-                : isHighlighted
-                ? '2px solid #00FFFF'
-                : '2px solid rgba(139, 0, 255, 0.6)',
-              color: disabled || isDepleted ? 'rgba(255, 255, 255, 0.3)' : isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-              boxShadow: disabled || isDepleted ? 'none' : isHighlighted
-                ? '0 0 15px rgba(0, 255, 255, 0.5)'
-                : '0 0 10px rgba(139, 0, 255, 0.2)',
+              fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
+              color: disabled 
+                ? 'rgba(255, 255, 255, 0.2)' 
+                : isHighlighted 
+                  ? '#00FFFF' 
+                  : 'rgba(255, 255, 255, 0.95)',
+              textShadow: isHighlighted ? '0 0 15px rgba(0, 255, 255, 0.7)' : 'none',
               WebkitTapHighlightColor: 'transparent',
             }}
           >

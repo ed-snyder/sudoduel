@@ -2286,7 +2286,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       }`}
         style={{ willChange: 'transform, opacity', transitionDelay: controlsVisible ? '0.05s' : '0s' }}
       >
-        <div className="grid grid-cols-9 gap-1.5 max-w-md mx-auto">
+        <div className="grid grid-cols-9 w-full">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
             const count = digitCounts[num] || 0;
             const depleted = count >= 9;
@@ -2295,14 +2295,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 key={num}
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
+                className="py-3 transition-opacity touch-manipulation font-heading font-bold flex items-center justify-center active:opacity-50"
                 style={{
-                  fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                  background: depleted ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
-                  border: depleted ? '2px solid rgba(139, 0, 255, 0.2)' : '2px solid rgba(139, 0, 255, 0.6)',
-                  color: depleted ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.95)',
-                  boxShadow: depleted ? 'none' : '0 0 10px rgba(139, 0, 255, 0.2)',
-                  minHeight: '44px',
+                  fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
+                  color: depleted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
