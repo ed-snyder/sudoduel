@@ -12,7 +12,6 @@ export interface Product {
   price: string;
   priceAsDecimal: number;
   currency: string;
-  raw?: any;
 }
 
 export interface PurchaseResult {
@@ -31,42 +30,28 @@ class PurchaseServiceImpl {
   private initPromise: Promise<void> | null = null;
 
   async initialize(): Promise<void> {
-    // Return existing promise if already initializing
     if (this.initPromise) return this.initPromise;
     if (this.initialized) return;
-
     this.initPromise = this._doInitialize();
     return this.initPromise;
   }
 
   private async _doInitialize(): Promise<void> {
     if (!Capacitor.isNativePlatform()) {
-      console.log('[PurchaseService] Web platform - using mock products');
+      console.log('[PurchaseService] Web platform - mock mode');
       this.setupMockProducts();
       this.initialized = true;
       return;
     }
-    
-    // Check if running in simulator (StoreKit doesn't work properly in simulator)
-    const isSimulator = /Simulator/i.test(navigator.userAgent) || 
-      (Capacitor.getPlatform() === 'ios' && (window as any).device?.isVirtual === true);
-    
-    if (isSimulator) {
-      console.warn('[PurchaseService] Running in iOS Simulator - StoreKit may not work properly');
-      console.warn('[PurchaseService] Products must be configured in App Store Connect or use StoreKit Configuration');
-      console.warn('[PurchaseService] For testing, create a StoreKit Configuration file in Xcode');
-    }
 
-    // Wait for CdvPurchase to be available
     let attempts = 0;
     while (typeof (window as any).CdvPurchase === 'undefined' && attempts < 10) {
-      console.log('[PurchaseService] Waiting for CdvPurchase...', attempts);
       await new Promise(resolve => setTimeout(resolve, 200));
       attempts++;
     }
 
     if (typeof (window as any).CdvPurchase === 'undefined') {
-      console.log('[PurchaseService] CdvPurchase not available - using mock');
+      console.log('[PurchaseService] CdvPurchase not found - mock mode');
       this.setupMockProducts();
       this.initialized = true;
       return;
@@ -78,7 +63,6 @@ class PurchaseServiceImpl {
 
       console.log('[PurchaseService] Initializing...');
 
-      // Register products
       this.store.register([
         {
           id: PRODUCT_IDS.MONTHLY,
@@ -92,313 +76,46 @@ class PurchaseServiceImpl {
         },
       ]);
 
-      // Track products when they update
+      // Only track products - no purchase event handlers here
       this.store.when().productUpdated((product: any) => {
-        console.log('[PurchaseService] Product updated:', product.id, product);
-        
-        // Store the raw product object
+        console.log('[PurchaseService] Product updated:', product.id);
         this.rawProducts.set(product.id, product);
-        
-        // Store formatted product info
-        this.products.set(product.id, {
-          id: product.id,
-          title: product.title || product.id,
-          description: product.description || '',
-          price: product.pricing?.price || '$?.??',
-          priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-          currency: product.pricing?.currency || 'USD',
-          raw: product,
-        });
-      });
-      
-      // Also listen for when products are loaded/valid
-      this.store.when().loaded((products: any[]) => {
-        console.log('[PurchaseService] Products loaded:', products);
-        products.forEach((product: any) => {
-          if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
-            if (!this.rawProducts.has(product.id)) {
-              console.log('[PurchaseService] Adding product from loaded event:', product.id);
-              this.rawProducts.set(product.id, product);
-              this.products.set(product.id, {
-                id: product.id,
-                title: product.title || product.id,
-                description: product.description || '',
-                price: product.pricing?.price || '$?.??',
-                priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-                currency: product.pricing?.currency || 'USD',
-                raw: product,
-              });
-            }
-          }
-        });
-      });
-      
-      // Listen for valid products
-      this.store.when().valid((product: any) => {
-        console.log('[PurchaseService] Product valid:', product.id);
-        if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
-          if (!this.rawProducts.has(product.id)) {
-            this.rawProducts.set(product.id, product);
-            this.products.set(product.id, {
-              id: product.id,
-              title: product.title || product.id,
-              description: product.description || '',
-              price: product.pricing?.price || '$?.??',
-              priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-              currency: product.pricing?.currency || 'USD',
-              raw: product,
-            });
-          }
+        if (product.pricing) {
+          this.products.set(product.id, {
+            id: product.id,
+            title: product.title || product.id,
+            description: product.description || '',
+            price: product.pricing.price || '$?.??',
+            priceAsDecimal: (product.pricing.priceMicros || 0) / 1000000,
+            currency: product.pricing.currency || 'USD',
+          });
         }
       });
 
-      // Handle purchase flow
-      this.store.when()
-        .approved((transaction: any) => {
-          console.log('[PurchaseService] Approved');
-          return transaction.verify();
-        })
-        .verified((receipt: any) => {
-          console.log('[PurchaseService] Verified');
-          return receipt.finish();
-        })
-        .finished(() => {
-          console.log('[PurchaseService] Finished');
-        });
-
-      this.store.error((error: any) => {
-        console.error('[PurchaseService] Store error:', error);
+      // Auto-finish transactions
+      this.store.when().approved((transaction: any) => {
+        console.log('[PurchaseService] Approved');
+        transaction.verify();
       });
 
-      // Initialize
-      console.log('[PurchaseService] Initializing store...');
+      this.store.when().verified((receipt: any) => {
+        console.log('[PurchaseService] Verified');
+        receipt.finish();
+      });
+
+      this.store.when().finished(() => {
+        console.log('[PurchaseService] Finished');
+      });
+
       await this.store.initialize([this.CdvPurchase.Platform.APPLE_APPSTORE]);
-      console.log('[PurchaseService] Store initialized');
-      
-      // Wait a bit for store to be ready
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Fetch products - try both refresh() and update()
-      if (typeof this.store.refresh === 'function') {
-        console.log('[PurchaseService] Calling store.refresh()...');
-        try {
-          this.store.refresh(); // Don't await - it's async but doesn't return a promise
-        } catch (e) {
-          console.error('[PurchaseService] refresh() error:', e);
-        }
-      }
-      
-      if (typeof this.store.update === 'function') {
-        console.log('[PurchaseService] Calling store.update()...');
-        try {
-          await this.store.update();
-        } catch (e) {
-          console.error('[PurchaseService] update() error:', e);
-        }
-      }
-      
-      // Also try ready() if available
-      if (typeof this.store.ready === 'function') {
-        console.log('[PurchaseService] Waiting for store.ready()...');
-        try {
-          await this.store.ready();
-          console.log('[PurchaseService] Store is ready');
-        } catch (e) {
-          console.log('[PurchaseService] ready() not available or failed:', e);
-        }
-      }
-      
-      // Wait for products to populate - try multiple times with different access methods
-      for (let i = 0; i < 15; i++) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Method 1: Check store.products array
-        if (this.store.products && Array.isArray(this.store.products)) {
-          this.store.products.forEach((product: any) => {
-            if (product && (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY)) {
-              if (!this.rawProducts.has(product.id)) {
-                console.log('[PurchaseService] Found product from store.products array:', product.id, product);
-                this.rawProducts.set(product.id, product);
-                this.products.set(product.id, {
-                  id: product.id,
-                  title: product.title || product.id,
-                  description: product.description || '',
-                  price: product.pricing?.price || product.price || '$?.??',
-                  priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-                  currency: product.pricing?.currency || product.currency || 'USD',
-                  raw: product,
-                });
-              }
-            }
-          });
-        }
-        
-        // Method 2: Try store.get() if available
-        if (typeof this.store.get === 'function') {
-          try {
-            [PRODUCT_IDS.MONTHLY, PRODUCT_IDS.YEARLY].forEach(productId => {
-              if (!this.rawProducts.has(productId)) {
-                const product = this.store.get(productId);
-                if (product && product.id) {
-                  console.log('[PurchaseService] Found product via store.get():', product.id);
-                  this.rawProducts.set(product.id, product);
-                  this.products.set(product.id, {
-                    id: product.id,
-                    title: product.title || product.id,
-                    description: product.description || '',
-                    price: product.pricing?.price || product.price || '$?.??',
-                    priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-                    currency: product.pricing?.currency || product.currency || 'USD',
-                    raw: product,
-                  });
-                }
-              }
-            });
-          } catch (e) {
-            // store.get might not be available or might throw
-          }
-        }
-        
-        // Method 3: Check all properties of store object for products
-        try {
-          Object.keys(this.store).forEach(key => {
-            if (key.includes('product') || key.includes('Product')) {
-              const value = (this.store as any)[key];
-              if (Array.isArray(value)) {
-                value.forEach((product: any) => {
-                  if (product && product.id && (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY)) {
-                    if (!this.rawProducts.has(product.id)) {
-                      console.log('[PurchaseService] Found product from store property:', key, product.id);
-                      this.rawProducts.set(product.id, product);
-                      this.products.set(product.id, {
-                        id: product.id,
-                        title: product.title || product.id,
-                        description: product.description || '',
-                        price: product.pricing?.price || product.price || '$?.??',
-                        priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
-                        currency: product.pricing?.currency || product.currency || 'USD',
-                        raw: product,
-                      });
-                    }
-                  }
-                });
-              }
-            }
-          });
-        } catch (e) {
-          // Ignore errors when inspecting store properties
-        }
-        
-        // Check if we have both products
-        if (this.rawProducts.has(PRODUCT_IDS.MONTHLY) && this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
-          console.log('[PurchaseService] Both products found, breaking early');
-          break;
-        }
-        
-        // If we've waited a while and still no products, try refreshing
-        if (i === 5 || i === 10) {
-          console.log('[PurchaseService] Retrying store refresh...');
-          try {
-            if (typeof this.store.refresh === 'function') {
-              await this.store.refresh();
-            } else if (typeof this.store.update === 'function') {
-              await this.store.update();
-            }
-          } catch (e) {
-            console.error('[PurchaseService] Refresh failed:', e);
-          }
-        }
-        
-        // Try store.get() directly - this is the recommended way per docs
-        if (typeof this.store.get === 'function') {
-          try {
-            const monthly = this.store.get(PRODUCT_IDS.MONTHLY);
-            const yearly = this.store.get(PRODUCT_IDS.YEARLY);
-            
-            if (monthly && monthly.id && !this.rawProducts.has(PRODUCT_IDS.MONTHLY)) {
-              console.log('[PurchaseService] Found monthly via store.get() during wait:', monthly);
-              this.rawProducts.set(PRODUCT_IDS.MONTHLY, monthly);
-              this.products.set(PRODUCT_IDS.MONTHLY, {
-                id: monthly.id,
-                title: monthly.title || monthly.id,
-                description: monthly.description || '',
-                price: monthly.price || monthly.pricing?.price || '$?.??',
-                priceAsDecimal: monthly.priceAsDecimal || (monthly.pricing?.priceMicros || 0) / 1000000,
-                currency: monthly.currency || monthly.pricing?.currency || 'USD',
-                raw: monthly,
-              });
-            }
-            
-            if (yearly && yearly.id && !this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
-              console.log('[PurchaseService] Found yearly via store.get() during wait:', yearly);
-              this.rawProducts.set(PRODUCT_IDS.YEARLY, yearly);
-              this.products.set(PRODUCT_IDS.YEARLY, {
-                id: yearly.id,
-                title: yearly.title || yearly.id,
-                description: yearly.description || '',
-                price: yearly.price || yearly.pricing?.price || '$?.??',
-                priceAsDecimal: yearly.priceAsDecimal || (yearly.pricing?.priceMicros || 0) / 1000000,
-                currency: yearly.currency || yearly.pricing?.currency || 'USD',
-                raw: yearly,
-              });
-            }
-          } catch (e) {
-            // store.get might throw if products aren't ready
-          }
-        }
-      }
+      await this.store.update();
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       this.initialized = true;
       console.log('[PurchaseService] Ready. Products:', Array.from(this.products.keys()));
-      console.log('[PurchaseService] Raw products:', Array.from(this.rawProducts.keys()));
-      
-      // Log store state for debugging
-      console.log('[PurchaseService] Store object keys:', Object.keys(this.store));
-      console.log('[PurchaseService] Store object type:', typeof this.store);
-      console.log('[PurchaseService] Store.products type:', typeof this.store.products);
-      console.log('[PurchaseService] Store.products is array?', Array.isArray(this.store.products));
-      
-      if (this.store.products) {
-        if (Array.isArray(this.store.products)) {
-          console.log('[PurchaseService] Store.products array length:', this.store.products.length);
-          console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ 
-            id: p?.id, 
-            valid: !!p?.valid, 
-            state: p?.state,
-            loaded: !!p?.loaded,
-            canPurchase: !!p?.canPurchase
-          })));
-        } else {
-          console.log('[PurchaseService] Store.products is not an array:', this.store.products);
-        }
-      } else {
-        console.log('[PurchaseService] Store.products is undefined or null');
-      }
-      
-      // Check all store properties that might contain products
-      const productKeys = Object.keys(this.store).filter(k => 
-        k.toLowerCase().includes('product') || 
-        k.toLowerCase().includes('item') ||
-        k.toLowerCase().includes('subscription')
-      );
-      console.log('[PurchaseService] Store properties with "product":', productKeys);
-      productKeys.forEach(key => {
-        const value = (this.store as any)[key];
-        console.log(`[PurchaseService] Store.${key}:`, typeof value, Array.isArray(value) ? `array[${value.length}]` : value);
-      });
-      
-      // Warn if no products found
-      if (this.rawProducts.size === 0) {
-        console.warn('[PurchaseService] WARNING: No products loaded after initialization');
-        console.warn('[PurchaseService] Possible reasons:');
-        console.warn('1. Products not configured in App Store Connect');
-        console.warn('2. Products not approved/published in App Store Connect');
-        console.warn('3. Network issue preventing product fetch');
-        console.warn('4. Products still loading (will retry on purchase attempt)');
-      }
 
     } catch (error) {
-      console.error('[PurchaseService] Init failed:', error);
+      console.error('[PurchaseService] Init error:', error);
       this.setupMockProducts();
       this.initialized = true;
     }
@@ -409,8 +126,8 @@ class PurchaseServiceImpl {
       id: PRODUCT_IDS.MONTHLY,
       title: 'Sudoduel+ Monthly',
       description: 'Monthly subscription',
-      price: '$3.99',
-      priceAsDecimal: 3.99,
+      price: '$4.99',
+      priceAsDecimal: 4.99,
       currency: 'USD',
     });
     this.products.set(PRODUCT_IDS.YEARLY, {
@@ -435,77 +152,16 @@ class PurchaseServiceImpl {
     return this.initialized && this.products.size > 0;
   }
 
+  private isOwned(productId: string): boolean {
+    const product = this.rawProducts.get(productId);
+    return product?.owned === true;
+  }
+
   async purchase(productId: string): Promise<PurchaseResult> {
     console.log('[PurchaseService] Purchase:', productId);
 
     if (!this.initialized) {
       await this.initialize();
-    }
-    
-    // Ensure products are loaded - wait up to 5 seconds and try refresh
-    if (!this.rawProducts.has(productId)) {
-      console.log('[PurchaseService] Product not found, refreshing...');
-      
-      // Try refreshing first
-      try {
-        if (typeof this.store.refresh === 'function') {
-          await this.store.refresh();
-        } else if (typeof this.store.update === 'function') {
-          await this.store.update();
-        }
-      } catch (e) {
-        console.error('[PurchaseService] Refresh error:', e);
-      }
-      
-      for (let i = 0; i < 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Method 1: Try store.get() - this is the recommended way
-        if (typeof this.store.get === 'function') {
-          try {
-            const product = this.store.get(productId);
-            if (product && product.id) {
-              console.log('[PurchaseService] Found product via store.get() during purchase:', product.id);
-              this.rawProducts.set(product.id, product);
-              this.products.set(product.id, {
-                id: product.id,
-                title: product.title || product.id,
-                description: product.description || '',
-                price: product.price || product.pricing?.price || '$?.??',
-                priceAsDecimal: product.priceAsDecimal || (product.pricing?.priceMicros || 0) / 1000000,
-                currency: product.currency || product.pricing?.currency || 'USD',
-                raw: product,
-              });
-              break;
-            }
-          } catch (e) {
-            // store.get might throw
-          }
-        }
-        
-        // Method 2: Check store.products array
-        if (this.store?.products && Array.isArray(this.store.products)) {
-          const product = this.store.products.find((p: any) => p && p.id === productId);
-          if (product && !this.rawProducts.has(productId)) {
-            console.log('[PurchaseService] Found product during refresh:', product.id);
-            this.rawProducts.set(product.id, product);
-            this.products.set(product.id, {
-              id: product.id,
-              title: product.title || product.id,
-              description: product.description || '',
-              price: product.price || product.pricing?.price || '$?.??',
-              priceAsDecimal: product.priceAsDecimal || (product.pricing?.priceMicros || 0) / 1000000,
-              currency: product.currency || product.pricing?.currency || 'USD',
-              raw: product,
-            });
-            break;
-          }
-        }
-        
-        if (this.rawProducts.has(productId)) {
-          break;
-        }
-      }
     }
 
     // Mock for web
@@ -514,169 +170,47 @@ class PurchaseServiceImpl {
       return { success: true, productId, transactionId: `mock_${Date.now()}` };
     }
 
-    // Try multiple ways to get the product
-    let product = this.rawProducts.get(productId);
-    
-    // If not found, try getting from store.products array
-    if (!product && this.store.products && Array.isArray(this.store.products)) {
-      product = this.store.products.find((p: any) => p.id === productId);
-      if (product) {
-        console.log('[PurchaseService] Found product from store.products array');
-        this.rawProducts.set(productId, product);
-      }
-    }
-    
-    // If still not found, try store.get() if it exists
-    if (!product && typeof this.store.get === 'function') {
-      try {
-        product = this.store.get(productId);
-        if (product) {
-          console.log('[PurchaseService] Found product via store.get()');
-          this.rawProducts.set(productId, product);
-        }
-      } catch (e) {
-        console.log('[PurchaseService] store.get() failed:', e);
-      }
-    }
-    
-    // If still not found, try refreshing products
+    const product = this.rawProducts.get(productId);
     if (!product) {
-      console.error('[PurchaseService] Product not found, attempting refresh...');
-      console.log('[PurchaseService] Available in rawProducts:', Array.from(this.rawProducts.keys()));
-      console.log('[PurchaseService] Store.products:', this.store.products);
+      return { success: false, error: 'Product not available. Please restart the app.' };
+    }
+
+    const offer = product.getOffer?.();
+    if (!offer) {
+      return { success: false, error: 'Product not available for purchase.' };
+    }
+
+    // Start the purchase
+    console.log('[PurchaseService] Starting order...');
+    
+    try {
+      // Fire and forget - don't await, just start it
+      this.store.order(offer);
+    } catch (e) {
+      console.error('[PurchaseService] Order start error:', e);
+    }
+
+    // Poll for ownership - this is the reliable way to detect completion
+    console.log('[PurchaseService] Polling for ownership...');
+    
+    for (let i = 0; i < 120; i++) { // 60 seconds max
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Try refresh (preferred) or update
-      try {
-        if (typeof this.store.refresh === 'function') {
-          await this.store.refresh();
-        } else if (typeof this.store.update === 'function') {
-          await this.store.update();
-        }
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Try store.get() after refresh
-        if (typeof this.store.get === 'function') {
-          try {
-            product = this.store.get(productId);
-            if (product && product.id) {
-              console.log('[PurchaseService] Found product via store.get() after refresh');
-              this.rawProducts.set(productId, product);
-            }
-          } catch (e) {
-            // Ignore
-          }
-        }
-        
-        // Check again in cache and store.products
-        if (!product) {
-          product = this.rawProducts.get(productId);
-        }
-        if (!product && this.store.products) {
-          product = this.store.products.find((p: any) => p && p.id === productId);
-        }
-      } catch (e) {
-        console.error('[PurchaseService] Refresh failed:', e);
+      // Refresh product state
+      const updatedProduct = this.rawProducts.get(productId);
+      console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned);
+      
+      if (updatedProduct?.owned) {
+        console.log('[PurchaseService] Purchase successful!');
+        return { success: true, productId, transactionId: 'completed' };
       }
     }
-    
-    if (!product) {
-      console.error('[PurchaseService] Product still not found after refresh');
-      console.error('[PurchaseService] This usually means:');
-      console.error('1. Products are not configured in App Store Connect');
-      console.error('2. Products are not approved/published in App Store Connect');
-      console.error('3. App bundle ID does not match App Store Connect');
-      console.error('4. Network connectivity issue');
-      return { 
-        success: false, 
-        error: 'Product not available. Please ensure products are configured in App Store Connect and try again.' 
-      };
-    }
 
-    return new Promise((resolve) => {
-      let resolved = false;
-
-      const resolveOnce = (result: PurchaseResult) => {
-        if (!resolved) {
-          resolved = true;
-          console.log('[PurchaseService] Resolving with:', result);
-          resolve(result);
-        }
-      };
-
-      try {
-        const offer = product.getOffer?.();
-
-        if (!offer) {
-          resolveOnce({ success: false, error: 'Product not available for purchase.' });
-          return;
-        }
-
-        // Set up a one-time check using product owned status
-        const checkOwnership = () => {
-          const updatedProduct = this.rawProducts.get(productId);
-          console.log('[PurchaseService] Checking ownership:', updatedProduct?.owned);
-          if (updatedProduct?.owned) {
-            resolveOnce({ success: true, productId, transactionId: 'completed' });
-            return true;
-          }
-          return false;
-        };
-
-        // Poll for ownership change after purchase starts
-        const startPolling = () => {
-          let attempts = 0;
-          const pollInterval = setInterval(() => {
-            attempts++;
-            console.log('[PurchaseService] Polling ownership, attempt:', attempts);
-            
-            if (checkOwnership() || attempts > 30) {
-              clearInterval(pollInterval);
-              if (attempts > 30 && !resolved) {
-                // Final check
-                if (!checkOwnership()) {
-                  resolveOnce({ success: false, error: 'Purchase may have completed. Please restart the app.' });
-                }
-              }
-            }
-          }, 500);
-        };
-
-        // Timeout after 2 minutes
-        setTimeout(() => {
-          if (!resolved) {
-            // One final ownership check
-            if (!checkOwnership()) {
-              resolveOnce({ success: false, error: 'Purchase timed out.' });
-            }
-          }
-        }, 120000);
-
-        // Start purchase
-        console.log('[PurchaseService] Starting order...');
-        this.store.order(offer)
-          .then((error: any) => {
-            if (error) {
-              console.error('[PurchaseService] Order error:', error);
-              resolveOnce({ success: false, error: error.message || 'Purchase failed.' });
-            } else {
-              // Order started successfully, start polling
-              startPolling();
-            }
-          })
-          .catch((err: any) => {
-            console.error('[PurchaseService] Order exception:', err);
-            resolveOnce({ success: false, error: err.message || 'Purchase failed.' });
-          });
-
-      } catch (error: any) {
-        console.error('[PurchaseService] Purchase exception:', error);
-        resolveOnce({ success: false, error: error.message || 'An error occurred.' });
-      }
-    });
+    return { success: false, error: 'Purchase timed out. If charged, restart the app.' };
   }
 
   async restorePurchases(): Promise<PurchaseResult> {
-    console.log('[PurchaseService] Restoring purchases...');
+    console.log('[PurchaseService] Restoring...');
 
     if (!Capacitor.isNativePlatform() || !this.store) {
       return { success: false, error: 'No purchases to restore.' };
@@ -684,23 +218,17 @@ class PurchaseServiceImpl {
 
     try {
       await this.store.restorePurchases();
-      
-      // Wait a moment for products to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const monthly = this.rawProducts.get(PRODUCT_IDS.MONTHLY);
       const yearly = this.rawProducts.get(PRODUCT_IDS.YEARLY);
-
-      console.log('[PurchaseService] After restore - monthly owned:', monthly?.owned);
-      console.log('[PurchaseService] After restore - yearly owned:', yearly?.owned);
 
       if (monthly?.owned || yearly?.owned) {
         return { success: true, productId: monthly?.owned ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY };
       }
 
       return { success: false, error: 'No active subscription found.' };
-    } catch (error: any) {
-      console.error('[PurchaseService] Restore error:', error);
+    } catch (error) {
       return { success: false, error: 'Failed to restore purchases.' };
     }
   }
