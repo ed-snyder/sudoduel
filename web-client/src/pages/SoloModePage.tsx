@@ -13,7 +13,7 @@ interface SoloModePageProps {
 
 export default function SoloModePage({ onExit }: SoloModePageProps) {
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, initAudio } = useGameSounds();
-  const { error: hapticError, vibrate, impact } = useHaptics();
+  const { error: hapticError, impact } = useHaptics();
   
   // Grid state
   const [myGrid, setMyGrid] = useState<number[][]>([]);
