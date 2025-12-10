@@ -39,8 +39,18 @@ class PurchaseServiceImpl {
     }
 
     try {
-      // Import the plugin
-      const { store, ProductType, Platform } = await import('cordova-plugin-purchase');
+      // Access the plugin via global window (Cordova plugin pattern)
+      // @ts-ignore - cordova-plugin-purchase is a global plugin
+      const store = (window as any).store;
+      // @ts-ignore
+      const ProductType = (window as any).store?.ProductType;
+      // @ts-ignore
+      const Platform = (window as any).store?.Platform;
+      
+      if (!store) {
+        throw new Error('Store plugin not available');
+      }
+      
       this.store = store;
 
       // Register products
@@ -105,7 +115,7 @@ class PurchaseServiceImpl {
         });
 
       // Initialize the store
-      await store.initialize([Platform.APPLE_APPSTORE]);
+      await store.initialize([Platform?.APPLE_APPSTORE || 'apple']);
       
       this.initialized = true;
       console.log('[PurchaseService] Initialized successfully');
