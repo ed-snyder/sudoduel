@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef, memo, startTransition } from 'react';
 import { playerAPI } from '../services/api';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
 
@@ -301,11 +302,15 @@ const NumberPad = memo(function NumberPad({
               e.preventDefault();
               e.stopPropagation();
               if (!disabled) {
+                // Haptic feedback
+                try {
+                  Haptics.impact({ style: ImpactStyle.Medium });
+                } catch {}
                 onNumberSelect(num);
               }
             }}
             disabled={disabled}
-            className="py-3 transition-opacity touch-manipulation font-heading font-bold flex items-center justify-center active:opacity-50"
+            className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player"
             style={{
               fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
               color: disabled 
@@ -315,6 +320,7 @@ const NumberPad = memo(function NumberPad({
                   : 'rgba(255, 255, 255, 0.95)',
               textShadow: isHighlighted ? '0 0 15px rgba(0, 255, 255, 0.7)' : 'none',
               WebkitTapHighlightColor: 'transparent',
+              outline: 'none',
             }}
           >
             {num}

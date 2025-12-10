@@ -42,7 +42,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio } = useGameSounds();
-  const { error: hapticError, vibrate } = useHaptics();
+  const { error: hapticError, impact } = useHaptics();
   
   // Event banner system - defined early for use in triggerScoreFeedback
   interface BannerMessage {
@@ -81,32 +81,29 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const now = performance.now();
     log.feedback(`Triggered at ${now}ms for streak ${streak}`);
     
-    // 1. Haptic (fires first as it has hardware latency)
-    // Use patterns with rhythm - gaps are as important as vibrations
+    // 1. Haptic - stronger feedback for correct placements
     if (streak >= 8) {
-      vibrate([15, 25, 15, 25, 40]); // Triumphant pattern
+      impact('heavy');
+      setTimeout(() => impact('heavy'), 80); // Double tap for big streaks
     } else if (streak >= 5) {
-      vibrate([10, 20, 30]); // Building crescendo
+      impact('heavy');
     } else if (streak >= 3) {
-      vibrate([8, 40, 12]); // Quick double-tap (heartbeat)
+      impact('medium');
     } else {
-      vibrate([12, 0, 8]); // Thump with tiny echo
+      impact('medium'); // Base correct = medium impact
     }
     
     // 2. Sound (no delay)
     playCorrectSound();
     
-    // 3. Visual state updates (triggers on next render, but initiated same frame)
+    // 3. Visual state updates
     setLastMoveResult({ correct: true, row, col });
-    // Vignette removed - no score pulse
     
     // 4. Cell pop animation
     setLastScoredCell({ row, col });
     setTimeout(() => setLastScoredCell(null), 300);
     
-    // 5. Screen shake removed - sound and haptics still play
-    
-  }, [playCorrectSound, vibrate, showBanner]);
+  }, [playCorrectSound, impact, showBanner]);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -2295,11 +2292,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 key={num}
                 onClick={() => handleNumberClick(num)}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
-                className="py-3 transition-opacity touch-manipulation font-heading font-bold flex items-center justify-center active:opacity-50"
+                className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player"
                 style={{
                   fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
                   color: depleted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',
                   WebkitTapHighlightColor: 'transparent',
+                  outline: 'none',
                 }}
               >
                 {num}

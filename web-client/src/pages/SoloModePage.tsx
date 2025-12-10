@@ -13,7 +13,7 @@ interface SoloModePageProps {
 
 export default function SoloModePage({ onExit }: SoloModePageProps) {
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, initAudio } = useGameSounds();
-  const { error: hapticError, vibrate } = useHaptics();
+  const { error: hapticError, vibrate, impact } = useHaptics();
   
   // Grid state
   const [myGrid, setMyGrid] = useState<number[][]>([]);
@@ -135,15 +135,16 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
     const now = performance.now();
     log.feedback(`Triggered at ${now}ms for streak ${streak}`);
     
-    // 1. Haptic
+    // 1. Haptic - stronger feedback
     if (streak >= 8) {
-      vibrate([15, 25, 15, 25, 40]);
+      impact('heavy');
+      setTimeout(() => impact('heavy'), 80);
     } else if (streak >= 5) {
-      vibrate([10, 20, 30]);
+      impact('heavy');
     } else if (streak >= 3) {
-      vibrate([8, 40, 12]);
+      impact('medium');
     } else {
-      vibrate([12, 0, 8]);
+      impact('medium');
     }
     
     // 2. Sound
@@ -161,7 +162,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       setShowMicroShake(true);
       setTimeout(() => setShowMicroShake(false), 150);
     }
-  }, [playCorrectSound, vibrate]);
+  }, [playCorrectSound, impact]);
   
   const handleCellClick = useCallback((row: number, col: number) => {
     console.log('[SOLO] Cell clicked:', row, col);
@@ -678,11 +679,12 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                     e.stopPropagation();
                   }}
                   disabled={gameStatus !== 'playing' || isLocked || depleted}
-                  className="py-3 transition-opacity touch-manipulation font-heading font-bold flex items-center justify-center active:opacity-50"
+                  className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player"
                   style={{
                     fontSize: 'clamp(1.5rem, 7vw, 2.25rem)',
                     color: depleted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.95)',
                     WebkitTapHighlightColor: 'transparent',
+                    outline: 'none',
                     cursor: 'pointer',
                     pointerEvents: 'auto',
                   }}

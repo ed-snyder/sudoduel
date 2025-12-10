@@ -452,7 +452,8 @@ function SudokuGrid({
                           ${shouldAnimateNumber ? 'cell-number-animate cell-number-slam' : ''}
                         `}
                         style={{ 
-                          fontSize: 'clamp(1.25rem, 5.5vw, 1.875rem)',
+                          fontSize: 'clamp(1.5rem, 6vw, 2.1rem)',
+                          lineHeight: 1,
                           fontFamily: 'Industry, Orbitron, sans-serif',
                           color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
                           WebkitUserSelect: 'none',
@@ -470,7 +471,7 @@ function SudokuGrid({
                   })()
                 ) : showNotes ? (
                   <div 
-                    className="absolute inset-0 grid grid-cols-3 gap-0 p-0.5"
+                    className="absolute inset-0 grid grid-cols-3 gap-0 w-full h-full place-items-center"
                     style={{ pointerEvents: 'none' }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
@@ -480,7 +481,8 @@ function SudokuGrid({
                           cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
                         }`}
                         style={{
-                          fontSize: 'clamp(0.4rem, 1.5vw, 0.6rem)',
+                          fontSize: 'clamp(0.6rem, 2.4vw, 0.75rem)',
+                          lineHeight: 1,
                           color: 'rgba(255, 255, 255, 0.7)',
                           WebkitUserSelect: 'none',
                           userSelect: 'none',

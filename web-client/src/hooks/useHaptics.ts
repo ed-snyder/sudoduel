@@ -1,4 +1,4 @@
-// Haptic feedback hook - works on web (vibration API) and Capacitor
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export function useHaptics() {
   // Check if haptics are enabled (respect user preference)
@@ -11,24 +11,38 @@ export function useHaptics() {
   const vibrate = (pattern: number | number[] = 10) => {
     if (!isHapticsEnabled()) return;
     
-    // Check for Capacitor Haptics plugin first (when you add it later)
-    if ((window as any).Capacitor?.Plugins?.Haptics) {
-      (window as any).Capacitor.Plugins.Haptics.impact({ style: 'light' });
-      return;
-    }
-    
     // Fallback to web Vibration API
     if ('vibrate' in navigator) {
       navigator.vibrate(pattern);
     }
   };
 
-  const success = () => vibrate(10);
+  // Capacitor-specific haptics with intensity control
+  const impact = async (style: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if (!isHapticsEnabled()) return;
+    
+    try {
+      const impactStyle = style === 'heavy' 
+        ? ImpactStyle.Heavy 
+        : style === 'medium' 
+          ? ImpactStyle.Medium 
+          : ImpactStyle.Light;
+      await Haptics.impact({ style: impactStyle });
+    } catch {
+      // Fallback to vibration API
+      const duration = style === 'heavy' ? 25 : style === 'medium' ? 15 : 8;
+      if ('vibrate' in navigator) {
+        navigator.vibrate(duration);
+      }
+    }
+  };
+
+  const success = () => impact('medium');
+  const successStreak = () => impact('heavy');
   const error = () => vibrate([50, 30, 50]);
-  const tap = () => vibrate(5);
-  const victory = () => vibrate([30, 20, 30, 20, 100]); // Staccato then strong
-  const bigWin = () => vibrate([50, 50, 100]); // For +30 rating gains
+  const tap = () => impact('light');
+  const victory = () => vibrate([30, 20, 30, 20, 100]);
+  const bigWin = () => vibrate([50, 50, 100]);
 
-  return { vibrate, success, error, tap, victory, bigWin };
+  return { vibrate, impact, success, successStreak, error, tap, victory, bigWin };
 }
-
