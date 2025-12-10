@@ -156,8 +156,8 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="CPM" value={stats.cpm.toFixed(1)} sublabel="cells/min" locked={!isPremium} />
-                  <StatCard label="Avg Win" value={formatTime(stats.avgTimeAtWin)} sublabel="time left" locked={!isPremium} />
-                  <StatCard label="Fastest" value={formatTime(stats.fastestWin)} sublabel="best win" highlight locked={!isPremium} />
+                  <StatCard label="Avg Time Remaining on Win" value={formatTime(stats.avgTimeAtWin)} locked={!isPremium} />
+                  <StatCard label="Fastest Win" value={formatTime(stats.fastestWin)} highlight locked={!isPremium} />
                 </div>
               </div>
 
@@ -168,8 +168,8 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                   {!isPremium && <span className="text-xs text-muted font-body normal-case">PREMIUM</span>}
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Upset Rate" value={`${stats.upsetRate.toFixed(0)}%`} sublabel="vs higher" locked={!isPremium} />
-                  <StatCard label="Peak" value={Math.round(stats.peakRating).toString()} sublabel="all-time" highlight locked={!isPremium} />
+                  <StatCard label="Win Rate vs Higher Ranked Opp" value={`${stats.upsetRate.toFixed(0)}%`} locked={!isPremium} />
+                  <StatCard label="Peak Ranking" value={Math.round(stats.peakRating).toString()} highlight locked={!isPremium} />
                   <StatCard label="Win Rate" value={`${stats.win_rate.toFixed(0)}%`} sublabel={`${stats.total_matches} games`} locked={!isPremium} />
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="Current" value={stats.currentWinStreak.toString()} sublabel="win streak" fire={stats.currentWinStreak >= 3} locked={!isPremium} />
                   <StatCard label="Best" value={stats.bestWinStreak.toString()} sublabel="all-time" locked={!isPremium} />
-                  <StatCard label="Avg Cell" value={stats.avgCellStreak.toFixed(1)} sublabel="in-game" locked={!isPremium} />
+                  <StatCard label="Avg Cell Streak/Game" value={stats.avgCellStreak.toFixed(1)} locked={!isPremium} />
                 </div>
               </div>
 

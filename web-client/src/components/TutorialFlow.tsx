@@ -327,21 +327,18 @@ const NumberPad = memo(function NumberPad({
             className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
             style={{
               fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-              background: isHighlighted 
-                ? 'rgba(0, 255, 255, 0.3)' 
-                : 'transparent',
-              border: isHighlighted
+              background: disabled ? 'rgba(30, 20, 40, 0.3)' : 'transparent',
+              border: disabled 
+                ? '2px solid rgba(139, 0, 255, 0.2)' 
+                : isHighlighted
                 ? '2px solid #00FFFF'
                 : '2px solid rgba(139, 0, 255, 0.6)',
-              color: isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
-              boxShadow: isHighlighted
+              color: disabled ? 'rgba(255, 255, 255, 0.3)' : isHighlighted ? '#00FFFF' : 'rgba(255, 255, 255, 0.95)',
+              boxShadow: disabled ? 'none' : isHighlighted
                 ? '0 0 15px rgba(0, 255, 255, 0.5)'
                 : '0 0 10px rgba(139, 0, 255, 0.2)',
               minHeight: '44px',
-              opacity: disabled ? 0.5 : 1,
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              willChange: 'transform, opacity',
-              transform: 'scale(1)',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             {num}
@@ -549,32 +546,24 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    setSelectedCell(prev => {
-      // If no cell selected, select the target cell first
-      if (!prev) {
-        return { row: targetRow, col: targetCol };
-      }
-      
-      const { row, col } = prev;
-      
-      if (num === correctValue && row === targetRow && col === targetCol) {
-        // Correct!
-        setGrid(prevGrid => {
-          const newGrid = prevGrid.map(r => [...r]);
-          newGrid[row][col] = num;
-          return newGrid;
-        });
-        setPlaced(true);
-        onInteractionComplete?.();
-      } else {
-        // Wrong
-        setShowError(true);
-        setTimeout(() => setShowError(false), 600);
-      }
-      
-      return prev;
-    });
-  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete, onNext]);
+    // Ensure cell is selected
+    setSelectedCell({ row: targetRow, col: targetCol });
+    
+    if (num === correctValue) {
+      // Correct!
+      setGrid(prevGrid => {
+        const newGrid = prevGrid.map(r => [...r]);
+        newGrid[targetRow][targetCol] = num;
+        return newGrid;
+      });
+      setPlaced(true);
+      onInteractionComplete?.();
+    } else {
+      // Wrong
+      setShowError(true);
+      setTimeout(() => setShowError(false), 600);
+    }
+  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -657,13 +646,13 @@ function DuelTimerStep({ onNext }: StepProps) {
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
         <h2 className="font-heading font-bold text-2xl text-player">Time is Your Resource</h2>
         <p className="font-body text-secondary">
-          You start with 3:30. Correct moves add +5s. Wrong moves cost -30s. Run out of time and you're locked out!
+          You start with 3:30. Correct moves give you a time boost. Wrong moves cost you time. Run out of time and you're locked out!
         </p>
         <div className="flex justify-center items-center gap-4">
           <div className="px-4 py-2 rounded-lg border-2 border-player bg-player/20">
             <div className="text-3xl font-mono font-bold text-player">3:30</div>
           </div>
-          <div className="text-success text-xl font-bold">+5s</div>
+          <div className="text-success text-xl font-bold">+Time</div>
         </div>
         <button
           onClick={onNext}
@@ -710,31 +699,27 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    setSelectedCell(prev => {
-      if (!prev) {
-        return { row: targetRow, col: targetCol };
-      }
+    // If correct number is selected, place it immediately (cell is already auto-selected)
+    if (num === correctValue) {
+      // Correct! Batch state updates for better performance
+      setGrid(prevGrid => {
+        const newGrid = prevGrid.map(r => [...r]);
+        newGrid[targetRow][targetCol] = num;
+        return newGrid;
+      });
+      setPlaced(true);
       
-      if (num === correctValue && prev.row === targetRow && prev.col === targetCol) {
-        // Correct! Batch state updates for better performance
-        setGrid(prevGrid => {
-          const newGrid = prevGrid.map(r => [...r]);
-          newGrid[targetRow][targetCol] = num;
-          return newGrid;
-        });
-        setPlaced(true);
-        
-        // Animate time increase
-        setTimeout(() => {
-          setTime(200);
-          setShowDelta(true);
-          onInteractionComplete?.();
-        }, 300);
-      }
+      // Ensure cell is selected
+      setSelectedCell({ row: targetRow, col: targetCol });
       
-      return prev;
-    });
-  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete, onNext]);
+      // Animate time increase (generic, no specific value shown)
+      setTimeout(() => {
+        setTime(200);
+        setShowDelta(false);
+        onInteractionComplete?.();
+      }, 300);
+    }
+  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -743,15 +728,15 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
           className="font-heading font-bold text-2xl text-success"
           style={{ textShadow: '0 0 15px rgba(0, 255, 136, 0.5)' }}
         >
-          CORRECT = +5 SECONDS
+          CORRECT = TIME BOOST
         </h2>
         
         {/* Timer */}
         <div className="flex justify-center">
           <TimerDisplay 
             time={time} 
-            delta={showDelta ? 5 : undefined}
-            showDelta={showDelta}
+            delta={showDelta ? undefined : undefined}
+            showDelta={false}
             color="cyan" 
           />
         </div>
@@ -899,7 +884,7 @@ function DuelWinConditionStep({ onNext, gameMode }: StepProps) {
         <p className="font-body text-secondary">
           {gameMode === 'solo' 
             ? 'Complete the puzzle before time runs out!'
-            : 'Complete the puzzle first, or have more cells when your opponent locks out.'}
+            : 'Complete the puzzle first, or complete more cells than your opponent when they run out of time'}
         </p>
         <button
           onClick={onNext}

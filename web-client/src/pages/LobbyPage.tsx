@@ -239,7 +239,6 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
             border: '2px solid rgba(255, 0, 255, 0.6)',
           }}
         >
-          <span className="text-lg">😂</span>
           <span className="text-sm font-body font-semibold" style={{ color: '#FF00FF' }}>Emotes</span>
         </button>
 

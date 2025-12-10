@@ -312,21 +312,19 @@ export default function ResultScreen({
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 150);
 
-    // Haptic + shake IMMEDIATELY
+    // Haptic only (no screen shake on victory)
     if (didWin && !isDraw) {
       if (isBigWin) {
         hapticBigWin();
-        setScreenShake('big');
       } else {
         hapticVictory();
-        setScreenShake('normal');
       }
     } else if (!isDraw) {
       vibrate([50, 30, 50]);
+      // Only shake on loss
+      setScreenShake('normal');
+      setTimeout(() => setScreenShake('none'), 300);
     }
-
-    // Clear shake
-    setTimeout(() => setScreenShake('none'), isBigWin ? 500 : 300);
 
     // Title slam-in IMMEDIATE
     setShowTitle(true);
