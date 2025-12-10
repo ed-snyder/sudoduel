@@ -2,236 +2,253 @@ import { useState, useEffect } from 'react';
 import { useSubscription } from '../context/SubscriptionContext';
 import { purchaseService, PRODUCT_IDS } from '../services/purchaseService';
 
-const PRIVACY_POLICY_URL = 'https://sudoduel.com/privacy';
-const TERMS_OF_SERVICE_URL = 'https://sudoduel.com/terms';
-
-const FEATURES = [
-  {
-    title: 'Custom Emotes',
-    subtitle: <>Say <em>whatever</em> you want</>,
-  },
-  {
-    title: 'No Ads',
-    subtitle: 'Improve your UX AND lower our hosting costs ;)',
-  },
-  {
-    title: 'Global Ranking & Leaderboard',
-    subtitle: 'Get the recognition you deserve.',
-  },
-  {
-    title: 'Advanced Stats',
-    subtitle: 'Use them to improve, or brag',
-  },
-  {
-    title: 'Premium Name Styling',
-    subtitle: 'Stunt on em',
-  },
-];
-
 export default function UpgradeModal() {
-  const {
-    isUpgradeModalOpen,
-    closeUpgradeModal,
-    purchaseSubscription,
-    restorePurchases,
-    isProcessingPurchase,
-  } = useSubscription();
-
-  const [error, setError] = useState<string | null>(null);
+  const { isUpgradeModalOpen, closeUpgradeModal, updatePremiumStatus } = useSubscription();
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
+  const [error, setError] = useState<string | null>(null);
+  const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
   const [yearlyPrice, setYearlyPrice] = useState('$29.99');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize purchase service and load prices when modal opens
   useEffect(() => {
     if (isUpgradeModalOpen) {
       setError(null);
       setIsLoading(true);
       
-      const loadPrices = async () => {
-        await purchaseService.initialize();
-        const monthly = purchaseService.getProduct(PRODUCT_IDS.MONTHLY);
-        const yearly = purchaseService.getProduct(PRODUCT_IDS.YEARLY);
-        if (monthly?.price) setMonthlyPrice(monthly.price);
-        if (yearly?.price) setYearlyPrice(yearly.price);
-        setIsLoading(false);
+      const loadProducts = async () => {
+        try {
+          await purchaseService.initialize();
+          
+          const monthly = purchaseService.getProduct(PRODUCT_IDS.MONTHLY);
+          const yearly = purchaseService.getProduct(PRODUCT_IDS.YEARLY);
+          
+          if (monthly?.price) setMonthlyPrice(monthly.price);
+          if (yearly?.price) setYearlyPrice(yearly.price);
+        } catch (err) {
+          console.error('[UpgradeModal] Failed to load products:', err);
+        } finally {
+          setIsLoading(false);
+        }
       };
       
-      loadPrices();
+      loadProducts();
     }
   }, [isUpgradeModalOpen]);
 
   if (!isUpgradeModalOpen) return null;
 
   const handlePurchase = async (plan: 'monthly' | 'yearly') => {
+    if (isProcessing || isRestoring) return;
+    
+    setIsProcessing(true);
     setError(null);
-    console.log(`[UpgradeModal] Purchasing ${plan}...`);
-
-    const result = await purchaseSubscription(plan);
-
-    if (!result.success) {
-      setError(result.error || 'Purchase failed. Please try again.');
-    } else {
-      console.log(`[UpgradeModal] Success!`);
+    
+    try {
+      const productId = plan === 'monthly' ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY;
+      console.log(`[UpgradeModal] Purchasing ${plan}...`);
+      
+      const result = await purchaseService.purchase(productId);
+      console.log('[UpgradeModal] Purchase result:', result);
+      
+      if (result.success) {
+        // Update backend premium status
+        await updatePremiumStatus(true);
+        console.log('[UpgradeModal] Premium status updated!');
+        closeUpgradeModal();
+      } else {
+        setError(result.error || 'Purchase failed. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('[UpgradeModal] Purchase error:', err);
+      setError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleRestore = async () => {
-    setError(null);
+    if (isProcessing || isRestoring) return;
+    
     setIsRestoring(true);
-
-    const result = await restorePurchases();
-
-    if (!result.success) {
-      setError(result.error || 'No active subscription found.');
+    setError(null);
+    
+    try {
+      console.log('[UpgradeModal] Restoring purchases...');
+      const result = await purchaseService.restorePurchases();
+      console.log('[UpgradeModal] Restore result:', result);
+      
+      if (result.success) {
+        await updatePremiumStatus(true);
+        console.log('[UpgradeModal] Restored! Premium status updated.');
+        closeUpgradeModal();
+      } else {
+        setError(result.error || 'No active subscription found.');
+      }
+    } catch (err: any) {
+      console.error('[UpgradeModal] Restore error:', err);
+      setError(err.message || 'Failed to restore purchases.');
+    } finally {
+      setIsRestoring(false);
     }
-
-    setIsRestoring(false);
   };
 
-  const openURL = (url: string) => {
-    window.open(url, '_blank');
-  };
-
-  const isDisabled = isProcessingPurchase || isRestoring || isLoading;
+  const isDisabled = isProcessing || isRestoring || isLoading;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       onClick={closeUpgradeModal}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
-
+      <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" />
+      
       {/* Modal */}
-      <div
-        className="relative bg-surface rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto"
-        style={{
-          border: '2px solid rgba(255,215,0,0.5)',
-          boxShadow: '0 0 30px rgba(255,215,0,0.2)',
+      <div 
+        className="relative bg-surface border-2 rounded-xl w-full max-w-md overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto"
+        style={{ 
+          boxShadow: '0 0 30px rgba(139,0,255,0.3)',
+          borderColor: 'rgba(255, 215, 0, 0.6)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Close button */}
         <button
           onClick={closeUpgradeModal}
-          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-void/50 text-muted hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-muted hover:text-secondary transition-colors z-10"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        {/* Header - No Crown */}
+        {/* Header */}
         <div className="px-6 pt-6 pb-4 text-center">
-          <h2
-            className="text-2xl font-display font-black tracking-wide"
+          <h2 
+            className="font-heading font-black text-3xl uppercase tracking-wider"
             style={{
-              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              background: 'linear-gradient(90deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}
           >
             SUDODUEL+
           </h2>
         </div>
 
-        {/* Features with Custom Copy */}
-        <div className="px-6 pb-5">
-          <div className="space-y-4">
-            {FEATURES.map((feature, index) => (
-              <div key={index}>
-                <div className="text-white font-display font-bold text-sm">
-                  {feature.title}
-                </div>
-                <div className="text-muted text-xs font-body mt-0.5">
-                  {feature.subtitle}
-                </div>
-              </div>
-            ))}
+        {/* Content */}
+        <div className="px-6 pb-6 space-y-4">
+          {/* Benefits */}
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-heading font-bold text-base text-primary">Custom Emotes</h3>
+              <p className="font-body text-secondary text-sm italic">
+                Say <em>whatever</em> you want
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-heading font-bold text-base text-primary">No Ads</h3>
+              <p className="font-body text-secondary text-sm italic">
+                Improve your UX AND lower our hosting costs ;)
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-heading font-bold text-base text-primary">Global Ranking & Leaderboard</h3>
+              <p className="font-body text-secondary text-sm italic">
+                Get the recognition you deserve.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-heading font-bold text-base text-primary">Advanced Stats</h3>
+              <p className="font-body text-secondary text-sm italic">
+                Use them to improve, or brag
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-heading font-bold text-base text-primary">Premium Name Styling</h3>
+              <p className="font-body text-secondary text-sm italic">
+                Stunt on em
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mx-6 mb-3 p-3 bg-error/20 border border-error/50 rounded-lg">
-            <p className="text-error text-sm text-center font-body">{error}</p>
-          </div>
-        )}
+          {/* Error message */}
+          {error && (
+            <div className="p-3 rounded-lg bg-error/10 border border-error/30">
+              <p className="text-error text-sm text-center font-body">{error}</p>
+            </div>
+          )}
 
-        {/* Pricing Buttons */}
-        <div className="px-6 pb-3 space-y-2">
-          {/* Monthly */}
-          <button
-            onClick={() => handlePurchase('monthly')}
-            disabled={isDisabled}
-            className="w-full py-3 rounded-xl font-display font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,165,0,0.15) 100%)',
-              border: '2px solid rgba(255,215,0,0.5)',
-              color: '#FFD700',
-            }}
-          >
-            {isProcessingPurchase ? 'Processing...' : isLoading ? 'Loading...' : `${monthlyPrice} / month`}
-          </button>
-
-          {/* Yearly */}
-          <button
-            onClick={() => handlePurchase('yearly')}
-            disabled={isDisabled}
-            className="w-full py-3 rounded-xl font-display font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50 relative"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,215,0,0.25) 0%, rgba(255,165,0,0.25) 100%)',
-              border: '2px solid rgba(255,215,0,0.7)',
-              color: '#FFD700',
-              boxShadow: '0 0 15px rgba(255,215,0,0.15)',
-            }}
-          >
-            <span
-              className="absolute -top-2 right-3 text-xs font-bold px-2 py-0.5 rounded-full"
+          {/* Purchase Options */}
+          <div className="pt-2 space-y-3">
+            {/* Monthly button */}
+            <button
+              onClick={() => handlePurchase('monthly')}
+              disabled={isDisabled}
+              className="w-full py-4 px-6 rounded-xl font-body font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                color: '#000',
+                background: 'rgba(139, 69, 19, 0.4)',
+                border: '2px solid rgba(255, 215, 0, 0.6)',
+                color: '#FFD700',
               }}
             >
-              BEST VALUE
-            </span>
-            {isProcessingPurchase ? 'Processing...' : isLoading ? 'Loading...' : `${yearlyPrice} / year`}
-          </button>
-        </div>
-
-        {/* Restore Purchases */}
-        <div className="px-6 pb-3">
-          <button
-            onClick={handleRestore}
-            disabled={isDisabled}
-            className="w-full py-2 text-muted text-sm font-body hover:text-white transition-colors disabled:opacity-50"
-          >
-            {isRestoring ? 'Restoring...' : 'Restore Purchases'}
-          </button>
-        </div>
-
-        {/* Legal Disclosure */}
-        <div className="px-4 pb-4">
-          <p className="text-[9px] text-muted/60 font-body text-center leading-relaxed">
-            Payment will be charged to your Apple ID account at confirmation of purchase.
-            Subscription automatically renews unless canceled at least 24 hours before
-            the end of the current period. Manage subscriptions in Account Settings.
-          </p>
-          <div className="flex justify-center gap-2 mt-2">
-            <button
-              onClick={() => openURL(PRIVACY_POLICY_URL)}
-              className="text-[10px] text-muted/70 font-body underline hover:text-white"
-            >
-              Privacy Policy
+              {isProcessing ? 'Processing...' : isLoading ? 'Loading...' : `${monthlyPrice} / month`}
             </button>
-            <span className="text-muted/40 text-[10px]">•</span>
+
+            {/* Yearly button with badge */}
+            <div className="relative">
+              <button
+                onClick={() => handlePurchase('yearly')}
+                disabled={isDisabled}
+                className="w-full py-4 px-6 rounded-xl font-body font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'rgba(139, 69, 19, 0.4)',
+                  border: '2px solid rgba(255, 215, 0, 0.6)',
+                  color: '#FFD700',
+                }}
+              >
+                {isLoading ? 'Loading...' : `${yearlyPrice} / year`}
+              </button>
+              {/* Best Value badge */}
+              <span 
+                className="absolute -top-0 right-4 transform translate-y-[-50%] px-2 py-0.5 rounded text-xs font-bold uppercase"
+                style={{
+                  background: '#FFD700',
+                  color: '#000',
+                }}
+              >
+                BEST VALUE
+              </span>
+            </div>
+
+            {/* Restore purchases */}
             <button
-              onClick={() => openURL(TERMS_OF_SERVICE_URL)}
-              className="text-[10px] text-muted/70 font-body underline hover:text-white"
+              onClick={handleRestore}
+              disabled={isDisabled}
+              className="w-full py-2 text-center font-body text-sm text-secondary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Terms of Service
+              {isRestoring ? 'Restoring...' : 'Restore Purchases'}
             </button>
+          </div>
+
+          {/* Legal text */}
+          <div className="pt-2 space-y-2">
+            <p className="text-center text-muted font-body text-xs leading-relaxed">
+              Payment will be charged to your Apple ID account at confirmation of purchase. 
+              Subscription automatically renews unless canceled at least 24 hours before the end of the current period. 
+              Manage subscriptions in Account Settings.
+            </p>
+            <p className="text-center text-muted font-body text-xs">
+              <a href="https://sudoduel.com/privacy" className="underline hover:text-secondary">Privacy Policy</a>
+              {' · '}
+              <a href="https://sudoduel.com/terms" className="underline hover:text-secondary">Terms of Service</a>
+            </p>
           </div>
         </div>
       </div>
