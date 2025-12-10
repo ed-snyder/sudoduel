@@ -689,6 +689,14 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       return;
     }
     
+    // Debounce: prevent processing the same number within 300ms
+    const now = Date.now();
+    if (now - lastProcessedTimeRef.current < 300) {
+      console.log('[Tutorial] Blocked rapid duplicate tap');
+      return;
+    }
+    lastProcessedTimeRef.current = now;
+    
     // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
     console.log('[Tutorial] Processing tap for number:', num);
