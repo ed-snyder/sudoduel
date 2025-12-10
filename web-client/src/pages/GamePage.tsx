@@ -1891,14 +1891,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
             <div className="flex items-center gap-2">
-              <div className={`text-lg sm:text-xl ${isPremium ? 'premium-player-name' : 'non-premium-name'}`}>
+              <div className={`text-lg sm:text-xl ${isPremium ? 'premium-player-name' : 'non-premium-player-name'}`}>
                 {user?.display_name || 'You'}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">{Math.round(user?.rating || 1500)}</div>
             </div>
             {/* Right: Opponent */}
             <div className="flex items-center gap-2">
-              <div className={`text-lg sm:text-xl ${opponentIsPremium ? 'premium-opponent-name' : 'non-premium-name'}`}>
+              <div className={`text-lg sm:text-xl ${opponentIsPremium ? 'premium-opponent-name' : 'non-premium-opponent-name'}`}>
                 {opponentName}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">
