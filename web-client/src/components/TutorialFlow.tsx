@@ -481,20 +481,21 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    // Ensure cell is selected
+    // Ensure cell is selected immediately
     setSelectedCell({ row: targetRow, col: targetCol });
     
     if (num === correctValue) {
-      // Correct!
+      // Correct! Place the number and mark as complete immediately
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(r => [...r]);
         newGrid[targetRow][targetCol] = num;
         return newGrid;
       });
       setPlaced(true);
+      // Call interaction complete immediately - Next button will appear
       onInteractionComplete?.();
     } else {
-      // Wrong
+      // Wrong number - show error
       setShowError(true);
       setTimeout(() => setShowError(false), 600);
     }
@@ -617,12 +618,9 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const targetCol = 1;
   const correctValue = 7;
 
-  // Auto-select the target cell on mount
+  // Auto-select the target cell immediately on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSelectedCell({ row: targetRow, col: targetCol });
-    }, 800);
-    return () => clearTimeout(timer);
+    setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -634,9 +632,12 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     if (placed) return;
     
-    // If correct number is selected, place it immediately (cell is already auto-selected)
+    // Ensure cell is selected immediately
+    setSelectedCell({ row: targetRow, col: targetCol });
+    
+    // If correct number is selected, place it immediately
     if (num === correctValue) {
-      // Correct! Batch state updates for better performance
+      // Correct! Place the number and mark as complete immediately
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(r => [...r]);
         newGrid[targetRow][targetCol] = num;
@@ -644,15 +645,10 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       });
       setPlaced(true);
       
-      // Ensure cell is selected
-      setSelectedCell({ row: targetRow, col: targetCol });
-      
-      // Animate time increase (generic, no specific value shown)
-      setTimeout(() => {
-        setTime(200);
-        setShowDelta(false);
-        onInteractionComplete?.();
-      }, 300);
+      // Update time and complete interaction immediately - Next button will appear
+      setTime(200);
+      setShowDelta(false);
+      onInteractionComplete?.();
     }
   }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
 
@@ -815,11 +811,11 @@ function DuelWinConditionStep({ onNext, gameMode }: StepProps) {
   return (
     <TutorialOverlayComponent>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-player">How to Win</h2>
+        <h2 className="font-heading font-bold text-2xl text-player">Win Conditions</h2>
         <p className="font-body text-secondary">
           {gameMode === 'solo' 
             ? 'Complete the puzzle before time runs out!'
-            : 'Complete the puzzle first, or complete more cells than your opponent when they run out of time'}
+            : 'Complete the grid before your opponent, or complete more cells before time runs out'}
         </p>
         <button
           onClick={onNext}
