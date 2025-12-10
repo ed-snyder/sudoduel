@@ -76,9 +76,9 @@ class PurchaseServiceImpl {
         },
       ]);
 
-      // Only track products - no purchase event handlers here
+      // Track products and ownership changes
       this.store.when().productUpdated((product: any) => {
-        console.log('[PurchaseService] Product updated:', product.id);
+        console.log('[PurchaseService] Product updated:', product.id, 'owned:', product.owned);
         this.rawProducts.set(product.id, product);
         if (product.pricing) {
           this.products.set(product.id, {
@@ -191,8 +191,23 @@ class PurchaseServiceImpl {
     for (let i = 0; i < 120; i++) { // 60 seconds max
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Refresh product state
-      const updatedProduct = this.rawProducts.get(productId);
+      // Refresh product state from store (don't rely on cached version)
+      let updatedProduct = this.rawProducts.get(productId);
+      
+      // Try to get fresh product from store
+      if (typeof this.store.get === 'function') {
+        try {
+          const freshProduct = this.store.get(productId);
+          if (freshProduct) {
+            // Update cache with fresh product
+            this.rawProducts.set(productId, freshProduct);
+            updatedProduct = freshProduct;
+          }
+        } catch (e) {
+          // Ignore - store.get might fail
+        }
+      }
+      
       console.log('[PurchaseService] Poll', i, '- owned:', updatedProduct?.owned);
       
       if (updatedProduct?.owned) {
