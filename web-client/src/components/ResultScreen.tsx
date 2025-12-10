@@ -361,7 +361,15 @@ export default function ResultScreen({
     
     if (diff === 0) {
       console.log('🎰 No rating change, skipping animation');
-      setDisplayedRating(endRating);
+      setDisplayedRating(endRating || startRating || 1500);
+      setRatingLanded(true);
+      return;
+    }
+    
+    // Ensure we have valid ratings
+    if (!startRating || !endRating || isNaN(startRating) || isNaN(endRating)) {
+      console.log('🎰 Invalid ratings, setting to endRating or default');
+      setDisplayedRating(endRating || startRating || 1500);
       setRatingLanded(true);
       return;
     }
@@ -1007,9 +1015,10 @@ export default function ResultScreen({
                 style={{ 
                   color: '#FFFFFF',
                   textShadow: '0 0 15px rgba(255,255,255,0.3)',
+                  opacity: displayedRating && !isNaN(displayedRating) ? 1 : 0,
                 }}
               >
-                {Math.round(displayedRating)}
+                {displayedRating && !isNaN(displayedRating) ? Math.round(displayedRating) : Math.round(myResult.rating_after || myResult.rating_before || 1500)}
               </span>
               {isRanked && ratingChange !== 0 && (
                 <span 
