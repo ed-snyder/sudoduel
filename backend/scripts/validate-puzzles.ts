@@ -1,4 +1,5 @@
 // Script to validate Sudoku puzzle solutions
+/// <reference types="node" />
 
 interface Puzzle {
   initial: string;

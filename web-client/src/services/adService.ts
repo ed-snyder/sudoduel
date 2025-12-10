@@ -46,6 +46,7 @@ class AdServiceImpl implements AdService {
 
       await AdMob.initialize({
         initializeForTesting: USE_TEST_ADS,
+        testingDevices: ['2b6e21685e596d109ade04edd9efa00c'],
       });
 
       this.initialized = true;

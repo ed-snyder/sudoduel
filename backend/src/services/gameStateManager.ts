@@ -25,14 +25,14 @@ interface GameState {
   status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
   startedAt: number | null;
   timeLimit: number;
-  timeoutTimer: NodeJS.Timeout | null;
-  timerInterval: NodeJS.Timeout | null; // Interval for per-player timer countdown
+  timeoutTimer: any | null;
+  timerInterval: any | null; // Interval for per-player timer countdown
   forfeitWinnerId?: number | null; // Optional winner override for forfeits
   forfeitingPlayerId?: number | null; // Track which player forfeited (for validation)
   // Disconnect tracking
   disconnectedPlayerId: number | null;
   disconnectTime: number | null;  // timestamp when disconnect occurred
-  gracePeriodTimer: NodeJS.Timeout | null;
+  gracePeriodTimer: any | null;
   pausedPlayerId: number | null;  // player whose timer is paused
 }
 
