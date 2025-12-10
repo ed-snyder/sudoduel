@@ -574,19 +574,19 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
           />
         </div>
         
-        {/* Number pad - ALWAYS visible - matches GamePage container styling */}
-        {!placed && (
-          <div className="px-3 pt-1 pb-1">
+        {/* Reserve space for both numberpad and success message to prevent grid resize */}
+        <div className="relative min-h-[120px]">
+          {/* Number pad - ALWAYS visible - matches GamePage container styling */}
+          <div className={`px-3 pt-1 pb-1 transition-opacity duration-200 ${placed ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100'}`}>
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
               disabled={false}
             />
           </div>
-        )}
-        
-        {placed && (
-          <div className="pt-2 space-y-4">
+          
+          {/* Success message - positioned in same space */}
+          <div className={`pt-2 space-y-4 transition-opacity duration-200 ${placed ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}>
             <p 
               className="font-heading font-bold text-xl text-success"
               style={{ textShadow: '0 0 15px rgba(0, 255, 136, 0.6)' }}
@@ -606,7 +606,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
               Next
             </button>
           </div>
-        )}
+        </div>
         
         {showError && (
           <p className="font-body text-error text-sm">
@@ -767,19 +767,19 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
           />
         </div>
         
-        {/* Number pad - ALWAYS visible - matches GamePage container styling */}
-        {!placed && (
-          <div className="px-3 pt-1 pb-1">
+        {/* Reserve space for both numberpad and success message to prevent grid resize */}
+        <div className="relative min-h-[120px]">
+          {/* Number pad - ALWAYS visible - matches GamePage container styling */}
+          <div className={`px-3 pt-1 pb-1 transition-opacity duration-200 ${placed ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100'}`}>
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
               disabled={false}
             />
           </div>
-        )}
-        
-        {placed && (
-          <>
+          
+          {/* Success message - positioned in same space */}
+          <div className={`pt-2 space-y-4 transition-opacity duration-200 ${placed ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}>
             <HighlightBox color="cyan">
               <p className="font-body text-primary text-sm">
                 Keep solving correctly to <strong className="text-success">build up time</strong>!
@@ -797,8 +797,8 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
             >
               Next
             </button>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </TutorialOverlayComponent>
   );
