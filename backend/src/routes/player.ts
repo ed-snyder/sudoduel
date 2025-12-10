@@ -152,6 +152,41 @@ router.patch('/tutorial-complete', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
+// PUT /api/player/premium - Update premium status (for dev/testing)
+router.put('/premium', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { is_premium } = req.body;
+    
+    if (typeof is_premium !== 'boolean') {
+      return res.status(400).json({ error: 'is_premium must be a boolean' });
+    }
+
+    // Update the player's premium status
+    const result = await query(
+      `UPDATE player_profiles 
+       SET is_premium = $1 
+       WHERE user_id = $2
+       RETURNING id, display_name, is_premium`,
+      [is_premium, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Player profile not found' });
+    }
+
+    console.log(`[Premium] User ${req.userId} premium status updated to: ${is_premium}`);
+    
+    res.json({ 
+      success: true, 
+      is_premium: result.rows[0].is_premium,
+      display_name: result.rows[0].display_name
+    });
+  } catch (error: any) {
+    console.error('Update premium status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/player/:playerId/profile - Get another player's public profile
 router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

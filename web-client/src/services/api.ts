@@ -173,6 +173,14 @@ export const playerAPI = {
   // Mark tutorial as complete
   markTutorialComplete: () => 
     api.patch('/api/player/tutorial-complete', {}) as Promise<{ success: boolean; tutorial_completed: boolean; tutorial_completed_at: string }>,
+  
+  // Update premium status
+  updatePremiumStatus: (isPremium: boolean) =>
+    api.put('/api/player/premium', { is_premium: isPremium }) as Promise<{
+      success: boolean;
+      is_premium: boolean;
+      display_name: string;
+    }>,
 };
 
 // =====================================================

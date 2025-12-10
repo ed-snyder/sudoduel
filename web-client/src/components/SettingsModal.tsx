@@ -10,7 +10,8 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
-  const { isPremium, togglePremiumStatus } = useSubscription();
+  const { isPremium, updatePremiumStatus } = useSubscription();
+  const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [simplifyGraphics, setSimplifyGraphics] = useState(false);
   const [musicVolume, setMusicVolume] = useState(70);
@@ -312,22 +313,27 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
                 </div>
                 <button
-                  onClick={() => {
-                    console.log('Toggling premium, current:', isPremium);
-                    togglePremiumStatus();
-                    console.log('Premium status toggled, new state should be:', !isPremium);
-                    // Force a small delay to ensure state updates
-                    setTimeout(() => {
-                      console.log('After toggle - localStorage:', localStorage.getItem('sudoduel_premium'));
-                    }, 100);
+                  onClick={async () => {
+                    if (isUpdatingPremium) return;
+                    setIsUpdatingPremium(true);
+                    try {
+                      console.log('[SettingsModal] Toggling premium, current:', isPremium);
+                      await updatePremiumStatus(!isPremium);
+                      console.log('[SettingsModal] Premium status updated to:', !isPremium);
+                    } catch (error) {
+                      console.error('[SettingsModal] Failed to toggle premium:', error);
+                    } finally {
+                      setIsUpdatingPremium(false);
+                    }
                   }}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all ${
+                  disabled={isUpdatingPremium}
+                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     isPremium 
                       ? 'bg-player/20 text-player border border-player' 
                       : 'bg-surface text-muted border border-grid-line'
                   }`}
                 >
-                  {isPremium ? 'PREMIUM' : 'FREE'}
+                  {isUpdatingPremium ? 'Updating...' : isPremium ? 'PREMIUM' : 'FREE'}
                 </button>
               </div>
             </div>

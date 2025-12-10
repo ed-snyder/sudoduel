@@ -1,12 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { playerAPI } from '../services/api';
+import { useAuth } from './AuthContext';
 
 interface SubscriptionContextType {
   isPremium: boolean;
   isUpgradeModalOpen: boolean;
   openUpgradeModal: () => void;
   closeUpgradeModal: () => void;
-  // Dev only - for testing
+  updatePremiumStatus: (newStatus: boolean) => Promise<void>;
+  // Dev only - for testing (kept for backward compatibility)
   togglePremiumStatus: () => void;
 }
 

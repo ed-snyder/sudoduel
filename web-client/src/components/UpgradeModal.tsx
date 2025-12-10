@@ -1,20 +1,29 @@
+import { useState } from 'react';
 import { useSubscription } from '../context/SubscriptionContext';
 
 export default function UpgradeModal() {
-  const { isUpgradeModalOpen, closeUpgradeModal, togglePremiumStatus } = useSubscription();
+  const { isUpgradeModalOpen, closeUpgradeModal, updatePremiumStatus } = useSubscription();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isUpgradeModalOpen) return null;
 
-  const handlePurchase = () => {
-    console.log('Purchase clicked, toggling premium...');
-    // Simulate purchase by toggling premium status (for testing/dev)
-    // TODO: In production, integrate with RevenueCat IAP
-    togglePremiumStatus();
-    setTimeout(() => {
-      const newState = localStorage.getItem('sudoduel_premium') === 'true';
-      console.log('Premium status toggled, new state:', newState);
-    }, 50);
-    closeUpgradeModal();
+  const handlePurchase = async (plan: 'monthly' | 'yearly') => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      console.log(`[UpgradeModal] Purchasing ${plan} plan...`);
+      // In production, this would go through App Store / Google Play
+      // For now, directly update premium status
+      await updatePremiumStatus(true);
+      console.log(`[UpgradeModal] Purchased ${plan} plan successfully`);
+      closeUpgradeModal();
+    } catch (error) {
+      console.error('[UpgradeModal] Purchase failed:', error);
+      // TODO: Show error toast to user
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -87,8 +96,9 @@ export default function UpgradeModal() {
           {/* Purchase Options */}
           <div className="pt-4 space-y-3">
             <button
-              onClick={handlePurchase}
-              className="w-full py-4 px-6 rounded-xl font-body font-bold text-lg transition-all active:scale-[0.98]"
+              onClick={() => handlePurchase('monthly')}
+              disabled={isProcessing}
+              className="w-full py-4 px-6 rounded-xl font-body font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: 'rgba(0, 255, 255, 0.1)',
                 border: '2px solid rgba(0, 255, 255, 0.5)',
@@ -96,12 +106,13 @@ export default function UpgradeModal() {
                 boxShadow: '0 0 20px rgba(0, 255, 255, 0.3)',
               }}
             >
-              $3.99/month
+              {isProcessing ? 'Processing...' : '$3.99/month'}
             </button>
 
             <button
-              onClick={handlePurchase}
-              className="w-full text-center font-body text-sm text-secondary hover:text-player transition-colors"
+              onClick={() => handlePurchase('yearly')}
+              disabled={isProcessing}
+              className="w-full text-center font-body text-sm text-secondary hover:text-player transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               $29.99/year (save 37%)
             </button>
