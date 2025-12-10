@@ -277,7 +277,7 @@ const TutorialOverlayComponent = memo(function TutorialOverlayComponent({
   );
 });
 
-// NumberPad component for tutorial
+// NumberPad component for tutorial - matches GamePage exactly
 const NumberPad = memo(function NumberPad({ 
   onNumberSelect, 
   highlightNumber, 
@@ -466,13 +466,9 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const targetCol = 2;
   const correctValue = 4;
 
-  // Auto-select the target cell on mount so user just needs to pick the number
+  // Auto-select the target cell immediately on mount
   useEffect(() => {
-    // Small delay so user sees the highlight first
-    const timer = setTimeout(() => {
-      setSelectedCell({ row: targetRow, col: targetCol });
-    }, 800);
-    return () => clearTimeout(timer);
+    setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -535,9 +531,9 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
           />
         </div>
         
-        {/* Number pad - ALWAYS visible, not just after selection */}
+        {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="pt-2">
+          <div className="px-3 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -701,9 +697,9 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
           />
         </div>
         
-        {/* Number pad - ALWAYS visible */}
+        {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="pt-2">
+          <div className="px-3 pt-1 pb-1">
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
