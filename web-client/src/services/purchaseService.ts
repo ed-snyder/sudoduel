@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { Device } from '@capacitor/device';
 
 export const PRODUCT_IDS = {
   MONTHLY: 'sudoduel_plus_monthly',
@@ -49,14 +48,8 @@ class PurchaseServiceImpl {
     }
     
     // Check if running in simulator (StoreKit doesn't work properly in simulator)
-    let isSimulator = false;
-    try {
-      const deviceInfo = await Device.getInfo();
-      isSimulator = deviceInfo.isVirtual === true;
-    } catch {
-      // Fallback check
-      isSimulator = /Simulator/i.test(navigator.userAgent);
-    }
+    const isSimulator = /Simulator/i.test(navigator.userAgent) || 
+      (Capacitor.getPlatform() === 'ios' && (window as any).device?.isVirtual === true);
     
     if (isSimulator) {
       console.warn('[PurchaseService] Running in iOS Simulator - StoreKit may not work properly');
