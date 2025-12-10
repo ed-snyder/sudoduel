@@ -58,7 +58,7 @@ export default function UpgradeModal() {
             <div>
               <h3 className="font-heading font-bold text-lg text-primary mb-1">No Ads</h3>
               <p className="font-body text-secondary text-sm">
-                Support Sudoduel and never watch an ad <strong>again</strong>
+                Improve your UX AND cover our hosting fees
               </p>
             </div>
 
@@ -79,7 +79,7 @@ export default function UpgradeModal() {
             <div>
               <h3 className="font-heading font-bold text-lg text-primary mb-1">Advanced Stats</h3>
               <p className="font-body text-secondary text-sm">
-                See advanced analytics to improve, or brag
+                Use them to improve, or brag
               </p>
             </div>
           </div>
