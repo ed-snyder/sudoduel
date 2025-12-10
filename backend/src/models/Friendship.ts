@@ -299,52 +299,26 @@ export const FriendshipModel = {
   async getHeadToHeadStats(playerId: number, opponentId: number): Promise<HeadToHeadStats | null> {
     console.log('[H2H] Getting stats for player:', playerId, 'vs opponent:', opponentId);
     
-    // Ensure consistent ordering
-    const [lowerId, higherId] = playerId < opponentId 
-      ? [playerId, opponentId] 
-      : [opponentId, playerId];
-    
-    const isPlayer1 = playerId < opponentId;
-
     // Get opponent name
     const opponentProfile = await PlayerProfileModel.findById(opponentId);
     const opponentName = opponentProfile?.display_name || 'Opponent';
 
-    const result = await query(
-      `SELECT * FROM head_to_head_stats 
-       WHERE player1_id = $1 AND player2_id = $2`,
-      [lowerId, higherId]
-    );
-
-    console.log('[H2H] Query result:', result.rows);
-
-    if (result.rows.length === 0) {
-      // No H2H record exists yet - return zeros
-      console.log('[H2H] No record found, returning zeros');
-      return {
-        opponent_id: opponentId,
-        opponent_name: opponentName,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        total_matches: 0,
-        last_match_at: null,
-      };
-    }
-
-    const row = result.rows[0];
-    const stats = {
+    // Use HeadToHeadModel for consistent stats retrieval
+    const { HeadToHeadModel } = await import('./HeadToHead');
+    const stats = await HeadToHeadModel.getStats(playerId, opponentId);
+    
+    const result: HeadToHeadStats = {
       opponent_id: opponentId,
       opponent_name: opponentName,
-      wins: isPlayer1 ? (row.player1_wins || 0) : (row.player2_wins || 0),
-      losses: isPlayer1 ? (row.player2_wins || 0) : (row.player1_wins || 0),
-      draws: row.draws || 0,
-      total_matches: (row.player1_wins || 0) + (row.player2_wins || 0) + (row.draws || 0),
-      last_match_at: row.last_match_at,
+      wins: stats.wins,
+      losses: stats.losses,
+      draws: stats.draws,
+      total_matches: stats.total_matches,
+      last_match_at: stats.last_match_at ? new Date(stats.last_match_at) : null,
     };
     
-    console.log('[H2H] Returning stats:', stats);
-    return stats;
+    console.log('[H2H] Returning stats:', result);
+    return result;
   },
 
   // Update head-to-head stats after a match

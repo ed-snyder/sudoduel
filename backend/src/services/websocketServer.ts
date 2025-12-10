@@ -10,6 +10,7 @@ import { UserModel } from '../models/User';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
 import { cache } from './cacheService';
+import { HeadToHeadModel } from '../models/HeadToHead';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
 
 
@@ -809,9 +810,23 @@ async function endGame(matchId: number) {
     });
     console.log(`✅ [6/6b] Player 2 stats saved`);
 
+    // Update head-to-head stats
+    console.log(`💾 [7/7] Updating head-to-head stats...`);
+    try {
+      await HeadToHeadModel.updateAfterMatch(
+        results.player1.playerId,
+        results.player2.playerId,
+        results.winnerId || null
+      );
+      console.log(`✅ [7/7] Head-to-head stats updated`);
+    } catch (error: any) {
+      console.error('[endGame] Failed to update H2H stats:', error);
+      // Don't fail match completion if H2H update fails
+    }
+
     // Update win streaks and peak rating (if columns exist) - only for ranked matches
     if (isRanked) {
-      console.log(`💾 [7/7] Updating win streaks and peak ratings...`);
+      console.log(`💾 [8/8] Updating win streaks and peak ratings...`);
       try {
         const { query } = await import('../config/database');
         
@@ -850,7 +865,7 @@ async function endGame(matchId: number) {
             WHERE id = $2
           `, [newRatings.player2.rating, results.player2.playerId]);
         }
-        console.log(`✅ [7/7] Win streaks and peak ratings updated`);
+        console.log(`✅ [8/8] Win streaks and peak ratings updated`);
       } catch (error: any) {
         // If columns don't exist (migration not run), skip this step
         if (error.message && error.message.includes('column') && (error.message.includes('current_win_streak') || error.message.includes('peak_rating'))) {
@@ -861,7 +876,7 @@ async function endGame(matchId: number) {
         }
       }
     } else {
-      console.log(`💾 [7/7] Skipping win streaks (unranked match)`);
+      console.log(`💾 [8/8] Skipping win streaks (unranked match)`);
     }
 
     // Clear matchmaking cache for this match so players can join new games
@@ -872,6 +887,9 @@ async function endGame(matchId: number) {
     cache.invalidate(`stats:${player2Data.player_id}`);
     cache.invalidate(`history:`);
     cache.invalidate(`profile:`);
+    // Invalidate H2H cache for both players (they have stats against each other)
+    cache.invalidate(`h2h:${player1Data.player_id}:${player2Data.player_id}`);
+    cache.invalidate(`h2h:${player2Data.player_id}:${player1Data.player_id}`);
 
     console.log(`📤 Broadcasting GAME_END...`);
     
