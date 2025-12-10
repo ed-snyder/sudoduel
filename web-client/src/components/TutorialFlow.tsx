@@ -63,7 +63,6 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
     return steps[0];
   });
-  const [interactionComplete, setInteractionComplete] = useState(false);
 
   const handleComplete = useCallback(async () => {
     try {
@@ -90,7 +89,6 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
       // Use startTransition to mark this as non-urgent, allowing React to batch updates
       startTransition(() => {
         setStep(steps[currentIndex + 1]);
-        setInteractionComplete(false);
         requestAnimationFrame(() => {
           console.timeEnd('Step transition');
         });
@@ -113,7 +111,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   }, [onSkip]);
 
   const handleInteractionComplete = useCallback(() => {
-    setInteractionComplete(true);
+    // No-op - steps manage completion internally with refs
   }, []);
 
   const getCurrentStepIndex = useMemo(() => {
@@ -134,9 +132,8 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     onNext: handleNext,
     onSkip: handleSkip,
     onInteractionComplete: handleInteractionComplete,
-    interactionComplete,
     gameMode,
-  }), [handleNext, handleSkip, handleInteractionComplete, interactionComplete, gameMode]);
+  }), [handleNext, handleSkip, handleInteractionComplete, gameMode]);
 
   // Memoized step components for better performance
   // Memoized step components for better performance
@@ -322,7 +319,6 @@ const NumberPad = memo(function NumberPad({
               boxShadow: disabled || isDepleted ? 'none' : isHighlighted
                 ? '0 0 15px rgba(0, 255, 255, 0.5)'
                 : '0 0 10px rgba(139, 0, 255, 0.2)',
-              minHeight: '44px',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
@@ -485,14 +481,6 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
     setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
-  // Call onInteractionComplete when placed becomes true
-  useEffect(() => {
-    if (placed && !placedRef.current) {
-      placedRef.current = true;
-      onInteractionComplete?.();
-    }
-  }, [placed, onInteractionComplete]);
-
   const handleCellClick = useCallback((row: number, col: number) => {
     if (placedRef.current || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
@@ -503,21 +491,18 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
     if (isProcessingRef.current || placedRef.current) {
-      console.log('[Tutorial] Blocked duplicate tap');
       return;
     }
     
     // Debounce: prevent processing the same number within 300ms
     const now = Date.now();
     if (now - lastProcessedTimeRef.current < 300) {
-      console.log('[Tutorial] Blocked rapid duplicate tap');
       return;
     }
     lastProcessedTimeRef.current = now;
     
     // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
-    console.log('[Tutorial] Processing tap for number:', num);
     
     // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
@@ -668,14 +653,6 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
     setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
-  // Call onInteractionComplete when placed becomes true
-  useEffect(() => {
-    if (placed && !placedRef.current) {
-      placedRef.current = true;
-      onInteractionComplete?.();
-    }
-  }, [placed, onInteractionComplete]);
-
   const handleCellClick = useCallback((row: number, col: number) => {
     if (placedRef.current || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
@@ -685,21 +662,18 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const handleNumberSelect = useCallback((num: number) => {
     // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
     if (isProcessingRef.current || placedRef.current) {
-      console.log('[Tutorial] Blocked duplicate tap');
       return;
     }
     
     // Debounce: prevent processing the same number within 300ms
     const now = Date.now();
     if (now - lastProcessedTimeRef.current < 300) {
-      console.log('[Tutorial] Blocked rapid duplicate tap');
       return;
     }
     lastProcessedTimeRef.current = now;
     
     // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
-    console.log('[Tutorial] Processing tap for number:', num);
     
     // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
