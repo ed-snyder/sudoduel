@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { playerAPI } from '../services/api';
 import { useAuth } from './AuthContext';
+import { purchaseService, PRODUCT_IDS, type PurchaseResult } from '../services/purchaseService';
 
 interface SubscriptionContextType {
   isPremium: boolean;
@@ -9,6 +10,9 @@ interface SubscriptionContextType {
   openUpgradeModal: () => void;
   closeUpgradeModal: () => void;
   updatePremiumStatus: (newStatus: boolean) => Promise<void>;
+  purchaseSubscription: (plan: 'monthly' | 'yearly') => Promise<PurchaseResult>;
+  restorePurchases: () => Promise<PurchaseResult>;
+  isProcessingPurchase: boolean;
   // Dev only - for testing (kept for backward compatibility)
   togglePremiumStatus: () => void;
 }
@@ -23,6 +27,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
 
   // Load premium status from backend when user logs in
   useEffect(() => {
@@ -69,6 +74,52 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   
+  const purchaseSubscription = useCallback(async (plan: 'monthly' | 'yearly'): Promise<PurchaseResult> => {
+    setIsProcessingPurchase(true);
+    
+    try {
+      const productId = plan === 'monthly' ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY;
+      const result = await purchaseService.purchase(productId);
+      
+      if (result.success) {
+        // Update premium status in backend and local state
+        await updatePremiumStatus(true);
+        closeUpgradeModal();
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('[Subscription] Purchase failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Purchase failed',
+      };
+    } finally {
+      setIsProcessingPurchase(false);
+    }
+  }, [updatePremiumStatus, closeUpgradeModal]);
+
+  const restorePurchases = useCallback(async (): Promise<PurchaseResult> => {
+    setIsProcessingPurchase(true);
+    
+    try {
+      const result = await purchaseService.restorePurchases();
+      
+      if (result.success) {
+        await updatePremiumStatus(true);
+      }
+      
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Restore failed',
+      };
+    } finally {
+      setIsProcessingPurchase(false);
+    }
+  }, [updatePremiumStatus]);
+
   // Toggle premium status (for backward compatibility, calls updatePremiumStatus)
   const togglePremiumStatus = useCallback(async () => {
     console.log('[SubscriptionContext] Toggling premium status, current:', isPremium);
@@ -86,6 +137,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       openUpgradeModal,
       closeUpgradeModal,
       updatePremiumStatus,
+      purchaseSubscription,
+      restorePurchases,
+      isProcessingPurchase,
       togglePremiumStatus,
     }}>
       {children}
