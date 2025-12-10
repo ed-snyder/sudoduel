@@ -566,26 +566,24 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
-/* Non-Premium Player Name - Solid Cyan */
+/* Non-Premium Player Name - Solid Cyan (no animation) */
 .non-premium-player-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
   color: #00FFFF;
-  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
-  /* No animation - static text */
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
-/* Non-Premium Opponent Name - Solid Magenta (when player IS premium) */
+/* Non-Premium Opponent Name - Solid Magenta (no animation) */
 .non-premium-opponent-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
   color: #FF00FF;
-  text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
-  /* No animation - static text */
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
 }
 
 /* Non-Premium Opponent Name - Magenta with Cyan Sheen (when player is NOT premium) */
