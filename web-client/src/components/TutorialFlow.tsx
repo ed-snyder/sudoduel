@@ -19,9 +19,7 @@ const TUTORIAL_GRID: number[][] = [
 // Empty grid constant to avoid recreating on every render
 const EMPTY_GRID: number[][] = Array(9).fill(null).map(() => Array(9).fill(0));
 
-type TutorialPath = 'undecided' | 'knows-sudoku' | 'new-to-sudoku';
 type TutorialStep = 
-  | 'ask-experience'
   | 'sudoku-basics-1'
   | 'sudoku-basics-2'
   | 'sudoku-basics-3'
@@ -37,15 +35,6 @@ interface TutorialFlowProps {
   onSkip: () => void;
   gameMode?: 'duel' | 'solo';
 }
-
-const KNOWS_SUDOKU_STEPS: TutorialStep[] = [
-  'duel-timer',
-  'duel-correct',
-  'duel-wrong',
-  'duel-opponent',
-  'duel-win-condition',
-  'ready',
-];
 
 const NEW_TO_SUDOKU_STEPS: TutorialStep[] = [
   'sudoku-basics-1',
@@ -68,15 +57,13 @@ const SOLO_MODE_STEPS: TutorialStep[] = [
 ];
 
 export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: TutorialFlowProps) {
-  const [path, setPath] = useState<TutorialPath>('undecided');
-  const [step, setStep] = useState<TutorialStep>('ask-experience');
+  // Always assume new to sudoku - skip the experience question
+  const [step, setStep] = useState<TutorialStep>(() => {
+    // Start directly with the first tutorial step
+    const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
+    return steps[0];
+  });
   const [interactionComplete, setInteractionComplete] = useState(false);
-
-  const handlePathSelect = useCallback((selectedPath: 'knows-sudoku' | 'new-to-sudoku') => {
-    setPath(selectedPath);
-    const steps = selectedPath === 'knows-sudoku' ? KNOWS_SUDOKU_STEPS : NEW_TO_SUDOKU_STEPS;
-    setStep(steps[0]);
-  }, []);
 
   const handleComplete = useCallback(async () => {
     try {
@@ -92,15 +79,11 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   }, [onComplete]);
 
   const handleNext = useCallback(() => {
-    if (path === 'undecided') return;
-
     console.time('Step transition');
     
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
-      : path === 'knows-sudoku' 
-        ? KNOWS_SUDOKU_STEPS 
-        : NEW_TO_SUDOKU_STEPS;
+      : NEW_TO_SUDOKU_STEPS;
 
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
@@ -115,7 +98,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     } else {
       handleComplete();
     }
-  }, [path, step, gameMode, handleComplete]);
+  }, [step, gameMode, handleComplete]);
 
   const handleSkip = useCallback(async () => {
     try {
@@ -134,24 +117,18 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   }, []);
 
   const getCurrentStepIndex = useMemo(() => {
-    if (path === 'undecided') return 0;
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
-      : path === 'knows-sudoku' 
-        ? KNOWS_SUDOKU_STEPS 
-        : NEW_TO_SUDOKU_STEPS;
+      : NEW_TO_SUDOKU_STEPS;
     return steps.indexOf(step) + 1;
-  }, [path, step, gameMode]);
+  }, [step, gameMode]);
 
   const getTotalSteps = useMemo(() => {
-    if (path === 'undecided') return 1;
     const steps = gameMode === 'solo' 
       ? SOLO_MODE_STEPS 
-      : path === 'knows-sudoku' 
-        ? KNOWS_SUDOKU_STEPS 
-        : NEW_TO_SUDOKU_STEPS;
-    return steps.length + 1; // +1 for ask-experience step
-  }, [path, gameMode]);
+      : NEW_TO_SUDOKU_STEPS;
+    return steps.length;
+  }, [gameMode]);
 
   const stepProps = useMemo(() => ({
     onNext: handleNext,
@@ -162,6 +139,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   }), [handleNext, handleSkip, handleInteractionComplete, interactionComplete, gameMode]);
 
   // Memoized step components for better performance
+  // Memoized step components for better performance
   const MemoizedDuelCorrectStep = memo(DuelCorrectStep);
   const MemoizedSudokuBasics3Step = memo(SudokuBasics3Step);
   const MemoizedDuelTimerStep = memo(DuelTimerStep);
@@ -169,7 +147,6 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   const MemoizedDuelOpponentStep = memo(DuelOpponentStep);
   const MemoizedDuelWinConditionStep = memo(DuelWinConditionStep);
   const MemoizedReadyStep = memo(ReadyStep);
-  const MemoizedAskExperienceStep = memo(AskExperienceStep);
   const MemoizedSudokuBasics1Step = memo(SudokuBasics1Step);
   const MemoizedSudokuBasics2Step = memo(SudokuBasics2Step);
 
@@ -178,9 +155,6 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     let result;
     
     switch (step) {
-      case 'ask-experience':
-        result = <MemoizedAskExperienceStep {...stepProps} onPathSelect={handlePathSelect} />;
-        break;
       case 'sudoku-basics-1':
         result = <MemoizedSudokuBasics1Step {...stepProps} />;
         break;
@@ -217,7 +191,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     });
     
     return result;
-  }, [step, stepProps, handlePathSelect, handleComplete, gameMode]);
+  }, [step, stepProps, handleComplete, gameMode]);
 
   return (
     <div className="tutorial-flow fixed inset-0 z-[2500]">
@@ -418,41 +392,6 @@ interface StepProps {
   onInteractionComplete?: () => void;
   interactionComplete?: boolean;
   gameMode?: 'duel' | 'solo';
-}
-
-function AskExperienceStep({ onPathSelect }: StepProps & { onPathSelect: (path: 'knows-sudoku' | 'new-to-sudoku') => void }) {
-  return (
-    <TutorialOverlayComponent>
-      <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-6 text-center">
-        <h2 className="font-heading font-bold text-2xl text-player">Welcome to SudoDuel!</h2>
-        <p className="font-body text-secondary text-lg">Have you played Sudoku before?</p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => onPathSelect('knows-sudoku')}
-            className="w-full py-4 px-6 rounded-xl font-body font-semibold text-lg transition-all active:scale-[0.98]"
-            style={{
-              background: 'rgba(0, 255, 255, 0.1)',
-              border: '2px solid rgba(0, 255, 255, 0.5)',
-              color: '#00FFFF',
-            }}
-          >
-            Yes, I know Sudoku
-          </button>
-          <button
-            onClick={() => onPathSelect('new-to-sudoku')}
-            className="w-full py-4 px-6 rounded-xl font-body font-semibold text-lg transition-all active:scale-[0.98]"
-            style={{
-              background: 'rgba(139, 0, 255, 0.1)',
-              border: '2px solid rgba(139, 0, 255, 0.5)',
-              color: '#8B00FF',
-            }}
-          >
-            No / Refresh Me
-          </button>
-        </div>
-      </div>
-    </TutorialOverlayComponent>
-  );
 }
 
 function SudokuBasics1Step({ onNext }: StepProps) {
@@ -803,7 +742,7 @@ function DuelWrongStep({ onNext }: StepProps) {
   return (
     <TutorialOverlayComponent>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-error">Wrong = -30s!</h2>
+        <h2 className="font-heading font-bold text-2xl text-error">Wrong = Lose Time!</h2>
         <p className="font-body text-secondary">
           Mistakes are costly. Be careful!
         </p>
@@ -811,7 +750,7 @@ function DuelWrongStep({ onNext }: StepProps) {
           <div className="px-4 py-2 rounded-lg border-2 border-error bg-error/20">
             <div className="text-3xl font-mono font-bold text-error">2:00</div>
           </div>
-          <div className="text-error text-xl font-bold animate-pulse">-30s</div>
+          <div className="text-error text-xl font-bold animate-pulse">-Time</div>
         </div>
         <button
           onClick={onNext}
