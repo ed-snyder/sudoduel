@@ -184,6 +184,7 @@ export const setupWebSocketServer = (server: Server) => {
           your_name: profile.display_name,
           opponent_name: opponentProfile?.display_name || 'Opponent',
           opponent_rating: opponentRating?.rating || 1500,
+          opponent_is_premium: opponentProfile?.is_premium || false,
           player1: {
             score: game.player1.score,
             cells_completed: game.player1.cellsCompleted,

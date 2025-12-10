@@ -8,6 +8,7 @@ export interface PlayerProfile {
   country_code: string | null;
   tutorial_completed?: boolean;
   tutorial_completed_at?: Date | null;
+  is_premium?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -27,7 +28,9 @@ export const PlayerProfileModel = {
   // Get profile by user ID
   async findByUserId(userId: number): Promise<PlayerProfile | null> {
     const result = await query(
-      'SELECT * FROM player_profiles WHERE user_id = $1',
+      `SELECT id, user_id, display_name, avatar_url, country_code, 
+              tutorial_completed, tutorial_completed_at, is_premium, created_at, updated_at
+       FROM player_profiles WHERE user_id = $1`,
       [userId]
     );
     return result.rows[0] || null;
@@ -36,7 +39,9 @@ export const PlayerProfileModel = {
   // Get profile by player ID
   async findById(playerId: number): Promise<PlayerProfile | null> {
     const result = await query(
-      'SELECT * FROM player_profiles WHERE id = $1',
+      `SELECT id, user_id, display_name, avatar_url, country_code, 
+              tutorial_completed, tutorial_completed_at, is_premium, created_at, updated_at
+       FROM player_profiles WHERE id = $1`,
       [playerId]
     );
     return result.rows[0] || null;

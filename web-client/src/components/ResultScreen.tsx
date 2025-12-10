@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
-import { matchmakingAPI, friendsAPI } from '../services/api';
+import { matchmakingAPI, friendsAPI, playerAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReportModal from './ReportModal';
@@ -146,6 +146,13 @@ export default function ResultScreen({
   const [friendRequestSent, setFriendRequestSent] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [friendError, setFriendError] = useState('');
+  
+  // Opponent profile state (for rank display)
+  const [opponentProfile, setOpponentProfile] = useState<{
+    rank: number | null;
+    is_premium: boolean;
+  } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // For unranked matches, rating_change is always 0
   const ratingChange = isRanked ? (myResult.rating_change || 0) : 0;
@@ -157,6 +164,7 @@ export default function ResultScreen({
   useEffect(() => {
     if (showOpponentModal && opponentResult.playerId) {
       loadOpponentData();
+      loadOpponentProfile();
     }
   }, [showOpponentModal, opponentResult.playerId]);
 
@@ -186,6 +194,24 @@ export default function ResultScreen({
       console.error('Failed to load opponent data:', err);
     } finally {
       setH2hLoading(false);
+    }
+  };
+
+  const loadOpponentProfile = async () => {
+    if (!opponentResult.playerId) return;
+    
+    setProfileLoading(true);
+    try {
+      const profile = await playerAPI.getPlayerProfile(opponentResult.playerId);
+      setOpponentProfile({
+        rank: profile.rank,
+        is_premium: profile.is_premium,
+      });
+    } catch (error) {
+      console.error('Failed to load opponent profile:', error);
+      setOpponentProfile(null);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -1158,8 +1184,8 @@ export default function ResultScreen({
                 {opponentName}
               </h3>
 
-              {/* Rating */}
-              <div className="flex items-center gap-2 mb-6">
+              {/* Rating and Rank */}
+              <div className="flex items-center gap-2 mb-6 flex-wrap justify-center">
                 <span className="text-muted text-sm font-body">Rating:</span>
                 <span 
                   className="font-mono font-bold text-lg text-primary"
@@ -1167,6 +1193,22 @@ export default function ResultScreen({
                 >
                   {Math.round(opponentResult.rating_after || opponentResult.rating_before || 0) || '—'}
                 </span>
+                
+                {/* Show rank if opponent is premium and we have it */}
+                {profileLoading ? (
+                  <span className="text-muted text-sm">•  Loading...</span>
+                ) : opponentProfile?.is_premium && opponentProfile?.rank ? (
+                  <>
+                    <span className="text-muted text-sm">•</span>
+                    <span className="text-muted text-sm font-body">Rank:</span>
+                    <span 
+                      className="font-mono font-bold text-primary"
+                      style={{ textShadow: '0 0 8px rgba(139,0,255,0.3)' }}
+                    >
+                      #{opponentProfile.rank.toLocaleString()}
+                    </span>
+                  </>
+                ) : null}
               </div>
 
               {/* Head to Head Stats */}

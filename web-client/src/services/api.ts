@@ -144,12 +144,23 @@ export interface UserRank {
   rating: number;
 }
 
+export interface PlayerPublicProfile {
+  player_id: number;
+  display_name: string;
+  rating: number;
+  is_premium: boolean;
+  rank: number | null;
+  total_players: number;
+}
+
 export const playerAPI = {
   getMe: () => api.get('/api/player/me'),
   getMatchHistory: (limit = 50, offset = 0) => 
     api.get(`/api/player/match-history?limit=${limit}&offset=${offset}`),
   getStats: () => api.get('/api/player/stats'),
   getRank: () => api.get('/api/player/rank') as Promise<UserRank>,
+  getPlayerProfile: (playerId: number) =>
+    api.get(`/api/player/${playerId}/profile`) as Promise<PlayerPublicProfile>,
   
   // Update profile (display name)
   updateProfile: (displayName: string) => 

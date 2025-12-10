@@ -74,6 +74,7 @@ export const PlayerService = {
         rd: rating?.rd || 350,
         games_played: rating?.games_played || 0,
         tutorial_completed: profile.tutorial_completed || false,
+        is_premium: profile.is_premium || false,
       };
     });
   },

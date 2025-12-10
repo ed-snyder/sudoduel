@@ -121,6 +121,19 @@ export const FriendService = {
       throw new Error('Player not found');
     }
 
+    // Check if the target has blocked the sender
+    const isBlocked = await query(
+      `SELECT 1 FROM blocked_users 
+       WHERE user_id = (SELECT user_id FROM player_profiles WHERE id = $1)
+       AND blocked_user_id = $2`,
+      [toPlayerId, profile.id]
+    );
+    
+    if (isBlocked.rows.length > 0) {
+      // Don't reveal they're blocked - use generic error
+      throw new Error('Unable to send friend request');
+    }
+
     try {
       const request = await FriendshipModel.createFriendRequest(profile.id, toPlayerId);
       

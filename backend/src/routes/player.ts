@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { PlayerService } from '../services/playerService';
 import { FriendService } from '../services/friendService';
 import { PlayerProfileModel } from '../models/PlayerProfile';
+import { PlayerRatingModel } from '../models/PlayerRating';
 import { query } from '../config/database';
 import { validateUsername } from '../utils/usernameValidator';
 
@@ -147,6 +148,57 @@ router.patch('/tutorial-complete', authMiddleware, async (req: AuthRequest, res:
     });
   } catch (error: any) {
     console.error('Mark tutorial complete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/player/:playerId/profile - Get another player's public profile
+router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const targetPlayerId = parseInt(req.params.playerId, 10);
+    if (isNaN(targetPlayerId)) {
+      return res.status(400).json({ error: 'Invalid player ID' });
+    }
+
+    // Get target player's profile
+    const profile = await PlayerProfileModel.findById(targetPlayerId);
+    if (!profile) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    // Get target player's rating
+    const rating = await PlayerRatingModel.findByPlayerAndLadder(targetPlayerId, 1);
+    const playerRating = rating?.rating || 1500;
+
+    // Get rank if player is premium
+    let rank = null;
+    if (profile.is_premium) {
+      const rankResult = await query(
+        `SELECT COUNT(*) + 1 as rank
+         FROM player_ratings
+         WHERE ladder_id = 1 AND rating > $1`,
+        [playerRating]
+      );
+      rank = parseInt(rankResult.rows[0].rank, 10);
+    }
+
+    // Get total players for context
+    const totalResult = await query(
+      `SELECT COUNT(*) as total FROM player_ratings WHERE ladder_id = 1`,
+      []
+    );
+    const totalPlayers = parseInt(totalResult.rows[0].total, 10);
+
+    res.json({
+      player_id: profile.id,
+      display_name: profile.display_name,
+      rating: Math.round(playerRating),
+      is_premium: profile.is_premium || false,
+      rank: rank,
+      total_players: totalPlayers,
+    });
+  } catch (error: any) {
+    console.error('Get player profile error:', error);
     res.status(500).json({ error: error.message });
   }
 });

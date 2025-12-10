@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useGameSounds } from '../hooks/useGameSounds';
 import { useHaptics } from '../hooks/useHaptics';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -37,6 +38,7 @@ interface PlayerState {
 
 export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch }: GamePageProps) {
   const { token, user, refreshUser } = useAuth();
+  const { isPremium } = useSubscription();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
   const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio } = useGameSounds();
@@ -247,8 +249,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [graceTimeRemaining, setGraceTimeRemaining] = useState(0);
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
-  const [isPlayerPremium] = useState<boolean>(true);
-  const [isOpponentPremium] = useState<boolean>(true);
+  const [opponentIsPremium, setOpponentIsPremium] = useState<boolean>(false);
   const [erroredCells, setErroredCells] = useState<Set<string>>(new Set()); // Track cells that have received incorrect guesses
   
   // Game end overlay state
@@ -651,6 +652,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           }
         }
         setOpponentName(message.data.opponent_name || 'Opponent');
+        setOpponentIsPremium(message.data.opponent_is_premium || false);
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
@@ -1886,14 +1888,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           <div className="flex items-center justify-between" style={{ marginBottom: '3px' }}>
             {/* Left: Player */}
             <div className="flex items-center gap-2">
-              <div className={`text-lg sm:text-xl ${isPlayerPremium ? 'premium-player-name' : 'non-premium-name'}`}>
+              <div className={`text-lg sm:text-xl ${isPremium ? 'premium-player-name' : 'non-premium-name'}`}>
                 {user?.display_name || 'You'}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">{Math.round(user?.rating || 1500)}</div>
             </div>
             {/* Right: Opponent */}
             <div className="flex items-center gap-2">
-              <div className={`text-lg sm:text-xl ${isOpponentPremium ? 'premium-opponent-name' : 'non-premium-name'}`}>
+              <div className={`text-lg sm:text-xl ${opponentIsPremium ? 'premium-opponent-name' : 'non-premium-name'}`}>
                 {opponentName}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">

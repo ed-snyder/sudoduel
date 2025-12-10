@@ -552,14 +552,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
-/* Non-Premium Name Styling */
+/* Non-Premium Name Styling - Clean but less flashy */
 .non-premium-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
-  font-weight: 400;
+  font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
-  color: #F0E6FF;
-  text-shadow: 0 0 8px rgba(240, 230, 255, 0.4);
+  color: #B8A8D4;  /* Soft purple */
+  text-shadow: 0 0 6px rgba(184, 168, 212, 0.3);
+  /* No animation - static text */
 }
 
 /* Selected Number Highlighting - Static Neon Blue Glow */
