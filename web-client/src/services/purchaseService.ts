@@ -611,10 +611,6 @@ class PurchaseServiceImpl {
           return;
         }
 
-        // Simple approach: listen for ANY finished event after starting purchase
-        // Use a flag to track if we initiated a purchase
-        let purchaseInitiated = false;
-
         // Set up a one-time check using product owned status
         const checkOwnership = () => {
           const updatedProduct = this.rawProducts.get(productId);
