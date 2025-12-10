@@ -29,6 +29,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
 
+  // Initialize purchase service on mount
+  useEffect(() => {
+    purchaseService.initialize();
+  }, []);
+
   // Load premium status from backend when user logs in
   useEffect(() => {
     const fetchPremiumStatus = async () => {
@@ -84,7 +89,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (result.success) {
         // Update premium status in backend and local state
         await updatePremiumStatus(true);
-        closeUpgradeModal();
+        setIsUpgradeModalOpen(false);
       }
       
       return result;
@@ -97,7 +102,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsProcessingPurchase(false);
     }
-  }, [updatePremiumStatus, closeUpgradeModal]);
+  }, [updatePremiumStatus]);
 
   const restorePurchases = useCallback(async (): Promise<PurchaseResult> => {
     setIsProcessingPurchase(true);
