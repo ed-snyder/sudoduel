@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useEffect, useRef, memo, startTransition } from 'react';
-import { flushSync } from 'react-dom';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -291,7 +290,7 @@ const NumberPad = memo(function NumberPad({
   const numbers = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9], []);
 
   return (
-    <div className="grid grid-cols-9 gap-1.5 w-full">
+    <div className="grid grid-cols-9 gap-1.5" style={{ width: '100%' }}>
       {numbers.map((num) => {
         const isHighlighted = num === highlightNumber;
         return (
@@ -469,6 +468,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const [placed, setPlaced] = useState(false);
   const [showError, setShowError] = useState(false);
   const isProcessingRef = useRef(false);
+  const placedRef = useRef(false);
   
   const targetRow = 0;
   const targetCol = 2;
@@ -479,21 +479,25 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
     setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
+  // Call onInteractionComplete when placed becomes true
+  useEffect(() => {
+    if (placed && !placedRef.current) {
+      placedRef.current = true;
+      onInteractionComplete?.();
+    }
+  }, [placed, onInteractionComplete]);
+
   const handleCellClick = useCallback((row: number, col: number) => {
-    if (placed || isProcessingRef.current) return;
+    if (placedRef.current || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
     setShowError(false);
-  }, [placed]);
+  }, []);
 
   const handleNumberSelect = useCallback((num: number) => {
     // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
-    if (isProcessingRef.current) {
+    if (isProcessingRef.current || placedRef.current) {
       console.log('[Tutorial] Blocked duplicate tap');
-      return;
-    }
-    if (placed) {
-      console.log('[Tutorial] Already placed');
       return;
     }
     
@@ -513,22 +517,15 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state and call interaction complete in a single flush
-      // This ensures both state updates complete before any re-renders
-      flushSync(() => {
-        setPlaced(true);
-      });
-      
-      // Call interaction complete after state is flushed
-      // Don't reset ref here - keep it true to prevent double-taps
-      onInteractionComplete?.();
+      // Set placed state - useEffect will call onInteractionComplete
+      setPlaced(true);
     } else {
       // Wrong number - show error and allow retry by resetting ref
       isProcessingRef.current = false;
       setShowError(true);
       setTimeout(() => setShowError(false), 600);
     }
-  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
+  }, [correctValue, targetRow, targetCol]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -563,7 +560,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="w-full px-4 pt-1 pb-1">
+          <div className="w-full -mx-6 px-4 pt-1 pb-1" style={{ width: 'calc(100% + 3rem)', maxWidth: 'calc(100vw - 2rem)' }}>
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -642,6 +639,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [time, setTime] = useState(195);
   const [showDelta, setShowDelta] = useState(false);
   const isProcessingRef = useRef(false);
+  const placedRef = useRef(false);
   
   // Target: row 1, col 1 - answer is 7
   const targetRow = 1;
@@ -653,20 +651,24 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
     setSelectedCell({ row: targetRow, col: targetCol });
   }, []);
 
+  // Call onInteractionComplete when placed becomes true
+  useEffect(() => {
+    if (placed && !placedRef.current) {
+      placedRef.current = true;
+      onInteractionComplete?.();
+    }
+  }, [placed, onInteractionComplete]);
+
   const handleCellClick = useCallback((row: number, col: number) => {
-    if (placed || isProcessingRef.current) return;
+    if (placedRef.current || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
-  }, [placed]);
+  }, []);
 
   const handleNumberSelect = useCallback((num: number) => {
     // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
-    if (isProcessingRef.current) {
+    if (isProcessingRef.current || placedRef.current) {
       console.log('[Tutorial] Blocked duplicate tap');
-      return;
-    }
-    if (placed) {
-      console.log('[Tutorial] Already placed');
       return;
     }
     
@@ -687,22 +689,15 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state and call interaction complete in a single flush
-      // This ensures both state updates complete before any re-renders
-      flushSync(() => {
-        setPlaced(true);
-        setTime(200);
-        setShowDelta(false);
-      });
-      
-      // Call interaction complete after state is flushed
-      // Don't reset ref here - keep it true to prevent double-taps
-      onInteractionComplete?.();
+      // Set placed state - useEffect will call onInteractionComplete
+      setPlaced(true);
+      setTime(200);
+      setShowDelta(false);
     } else {
       // Wrong number - allow retry by resetting ref
       isProcessingRef.current = false;
     }
-  }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
+  }, [correctValue, targetRow, targetCol]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -747,7 +742,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         
         {/* Number pad - ALWAYS visible - matches GamePage container styling */}
         {!placed && (
-          <div className="w-full px-4 pt-1 pb-1">
+          <div className="w-full -mx-6 px-4 pt-1 pb-1" style={{ width: 'calc(100% + 3rem)', maxWidth: 'calc(100vw - 2rem)' }}>
             <NumberPad 
               onNumberSelect={handleNumberSelect}
               highlightNumber={correctValue}
@@ -827,9 +822,9 @@ function DuelOpponentStep({ onNext }: StepProps) {
   return (
     <TutorialOverlayComponent>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-opponent">Your Opponent</h2>
+        <h2 className="font-heading font-bold text-2xl text-opponent">The Fog of War</h2>
         <p className="font-body text-secondary">
-          Magenta cells show where your opponent has already scored. You can still score here!
+          Magenta cells show where your opponent has already scored. You can still score here and might help you catch up!
         </p>
         <div className="flex justify-center">
           <SudokuGrid
@@ -867,7 +862,7 @@ function DuelWinConditionStep({ onNext, gameMode }: StepProps) {
         <p className="font-body text-secondary">
           {gameMode === 'solo' 
             ? 'Complete the puzzle before time runs out!'
-            : 'Complete the grid before your opponent, or complete more cells before time runs out'}
+            : 'Complete the grid before your opponent, or have a higher score when time runs out'}
         </p>
         <button
           onClick={onNext}
