@@ -3,7 +3,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { purchaseService, PRODUCT_IDS } from '../services/purchaseService';
 
 export default function UpgradeModal() {
-  const { isUpgradeModalOpen, closeUpgradeModal, updatePremiumStatus, purchaseSubscription, restorePurchases: contextRestorePurchases } = useSubscription();
+  const { isUpgradeModalOpen, closeUpgradeModal, purchaseSubscription, restorePurchases: contextRestorePurchases } = useSubscription();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
