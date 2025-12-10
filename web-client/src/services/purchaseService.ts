@@ -625,66 +625,48 @@ class PurchaseServiceImpl {
           return;
         }
 
-        // Listen for completion
-        const listener = this.store.when().finished((transaction: any) => {
-          if (transaction.products?.some((p: any) => p.id === productId)) {
-            listener.unsubscribe();
-            resolve({ success: true, productId, transactionId: transaction.transactionId });
-          }
-        });
+        let resolved = false;
 
-        // Timeout
+        const resolveOnce = (result: PurchaseResult) => {
+          if (!resolved) {
+            resolved = true;
+            resolve(result);
+          }
+        };
+
+        // Listen for the finished event on this specific product
+        const checkFinished = (transaction: any) => {
+          console.log('[PurchaseService] Transaction finished callback:', transaction);
+          if (transaction.products?.some((p: any) => p.id === productId)) {
+            resolveOnce({ 
+              success: true, 
+              productId, 
+              transactionId: transaction.transactionId 
+            });
+          }
+        };
+
+        // Register the listener (don't try to unsubscribe - just let it be)
+        this.store.when().finished(checkFinished);
+
+        // Timeout after 2 minutes
         setTimeout(() => {
-          listener.unsubscribe();
-          resolve({ success: false, error: 'Purchase timed out.' });
+          resolveOnce({ success: false, error: 'Purchase timed out.' });
         }, 120000);
 
-        // Start purchase - try multiple methods
-        try {
-          // Method 1: store.order(offer)
-          if (typeof this.store.order === 'function') {
-            this.store.order(offer).then((error: any) => {
-              if (error) {
-                listener.unsubscribe();
-                resolve({ success: false, error: error.message || 'Purchase failed.' });
-              }
-            }).catch((error: any) => {
-              listener.unsubscribe();
-              resolve({ success: false, error: error.message || 'Purchase failed.' });
-            });
-          } 
-          // Method 2: product.order() if available
-          else if (typeof product.order === 'function') {
-            product.order().then((error: any) => {
-              if (error) {
-                listener.unsubscribe();
-                resolve({ success: false, error: error.message || 'Purchase failed.' });
-              }
-            }).catch((error: any) => {
-              listener.unsubscribe();
-              resolve({ success: false, error: error.message || 'Purchase failed.' });
-            });
-          }
-          // Method 3: product.purchase() if available
-          else if (typeof product.purchase === 'function') {
-            product.purchase().then((error: any) => {
-              if (error) {
-                listener.unsubscribe();
-                resolve({ success: false, error: error.message || 'Purchase failed.' });
-              }
-            }).catch((error: any) => {
-              listener.unsubscribe();
-              resolve({ success: false, error: error.message || 'Purchase failed.' });
-            });
-          }
-          else {
-            listener.unsubscribe();
-            resolve({ success: false, error: 'Unable to initiate purchase. Store.order() method not available.' });
-          }
-        } catch (error: any) {
-          listener.unsubscribe();
-          resolve({ success: false, error: error.message || 'Failed to start purchase.' });
-        }
+        // Start purchase
+        console.log('[PurchaseService] Starting order...');
+        this.store.order(offer)
+          .then((error: any) => {
+            if (error) {
+              console.error('[PurchaseService] Order error:', error);
+              resolveOnce({ success: false, error: error.message || 'Purchase failed.' });
+            }
+          })
+          .catch((err: any) => {
+            console.error('[PurchaseService] Order exception:', err);
+            resolveOnce({ success: false, error: err.message || 'Purchase failed.' });
+          });
 
       } catch (error: any) {
         resolve({ success: false, error: error.message || 'An error occurred.' });
