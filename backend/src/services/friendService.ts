@@ -273,12 +273,18 @@ export const FriendService = {
   },
 
   // Get head-to-head stats
+  // opponentId is a player ID (not user ID)
   async getHeadToHeadStats(userId: number, opponentId: number): Promise<HeadToHeadStats | null> {
     const profile = await PlayerProfileModel.findByUserId(userId);
     if (!profile) {
       throw new Error('Player profile not found');
     }
-    return FriendshipModel.getHeadToHeadStats(profile.id, opponentId);
+    
+    // opponentId is already a player ID, so use it directly
+    const cacheKey = CacheKeys.headToHead(profile.id, opponentId);
+    return cache.getOrSet(cacheKey, CacheTTL.HEAD_TO_HEAD, async () => {
+      return FriendshipModel.getHeadToHeadStats(profile.id, opponentId);
+    });
   },
 
   // Send a match request to a friend

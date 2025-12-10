@@ -9,7 +9,7 @@ import { PlayerRatingModel } from '../models/PlayerRating';
 import { UserModel } from '../models/User';
 import { RatingService } from './ratingService';
 import { MatchmakingService } from './matchmakingService';
-import { cache } from './cacheService';
+import { cache, CacheKeys } from './cacheService';
 import { HeadToHeadModel } from '../models/HeadToHead';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
 
@@ -888,8 +888,7 @@ async function endGame(matchId: number) {
     cache.invalidate(`history:`);
     cache.invalidate(`profile:`);
     // Invalidate H2H cache for both players (they have stats against each other)
-    cache.invalidate(`h2h:${player1Data.player_id}:${player2Data.player_id}`);
-    cache.invalidate(`h2h:${player2Data.player_id}:${player1Data.player_id}`);
+    cache.invalidate(CacheKeys.headToHead(player1Data.player_id, player2Data.player_id));
 
     console.log(`📤 Broadcasting GAME_END...`);
     
