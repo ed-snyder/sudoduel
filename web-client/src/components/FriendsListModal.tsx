@@ -136,40 +136,6 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     }
   };
 
-  const checkMatchRequestStatus = async () => {
-    try {
-      const response = await friendsAPI.getCurrentOutgoingMatchRequest();
-      if (response.request) {
-        if (response.request.status === 'ACCEPTED' && response.request.match_id) {
-          // Match created! Navigate to game
-          setMatchRequestPolling(false);
-          setOutgoingMatchRequest(null);
-          vibrate();
-          if (onMatchFound) {
-            onMatchFound(response.request.match_id);
-            onClose();
-          }
-          return;
-        } else if (response.request.status === 'PENDING') {
-          setOutgoingMatchRequest(response.request);
-        } else {
-          // Rejected, cancelled, or expired
-          setMatchRequestPolling(false);
-          setOutgoingMatchRequest(null);
-        }
-      } else {
-        setMatchRequestPolling(false);
-        setOutgoingMatchRequest(null);
-      }
-
-      // Also check for incoming requests
-      const incoming = await friendsAPI.getPendingMatchRequests();
-      setIncomingMatchRequests(incoming.requests || []);
-    } catch (err: any) {
-      console.error('Failed to check match request status:', err);
-    }
-  };
-
   const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
     if (query.length < 2) {
