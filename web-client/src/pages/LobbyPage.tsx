@@ -11,7 +11,6 @@ import PlayerInfoModal from '../components/PlayerInfoModal';
 import EmoteCustomizerModal from '../components/EmoteCustomizerModal';
 import FriendsListModal from '../components/FriendsListModal';
 import LeaderboardScreen from '../components/LeaderboardScreen';
-import PremiumBadge from '../components/PremiumBadge';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
 
@@ -409,10 +408,22 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         ) : (
           <>
             <div className="w-full max-w-sm mb-6">
-              <div className="flex gap-3">
-                {isPremium ? (
-                  <PremiumBadge />
-                ) : (
+              {isPremium ? (
+                /* Premium users: Solo Mode centered, no upgrade button */
+                <button
+                  onClick={() => onStartSoloMode?.()}
+                  className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
+                  style={{
+                    background: 'rgba(10, 5, 20, 0.95)',
+                    border: '2px solid rgba(0, 255, 255, 0.5)',
+                    color: '#00FFFF',
+                  }}
+                >
+                  Solo Mode
+                </button>
+              ) : (
+                /* Free users: Upgrade + Solo Mode side by side */
+                <div className="flex gap-3">
                   <button
                     onClick={openUpgradeModal}
                     className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98] upgrade-button-bob upgrade-button-sheen"
@@ -427,19 +438,19 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                   >
                     Upgrade to Sudoduel+
                   </button>
-                )}
-                <button
-                  onClick={() => onStartSoloMode?.()}
-                  className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
-                  style={{
-                    background: 'rgba(10, 5, 20, 0.95)',
-                    border: '2px solid rgba(0, 255, 255, 0.5)',
-                    color: '#00FFFF',
-                  }}
-                >
-                  Solo Mode
-                </button>
-              </div>
+                  <button
+                    onClick={() => onStartSoloMode?.()}
+                    className="flex-1 py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
+                    style={{
+                      background: 'rgba(10, 5, 20, 0.95)',
+                      border: '2px solid rgba(0, 255, 255, 0.5)',
+                      color: '#00FFFF',
+                    }}
+                  >
+                    Solo Mode
+                  </button>
+                </div>
+              )}
             </div>
 
             <button
