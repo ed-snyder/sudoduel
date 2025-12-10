@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, memo, startTransition } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, memo, startTransition } from 'react';
 import { playerAPI } from '../services/api';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -277,7 +277,7 @@ const TutorialOverlayComponent = memo(function TutorialOverlayComponent({
   );
 });
 
-// NumberPad component for tutorial - matches GamePage exactly
+// NumberPad component for tutorial - EXACTLY matches GamePage styling
 const NumberPad = memo(function NumberPad({ 
   onNumberSelect, 
   highlightNumber, 
@@ -296,7 +296,11 @@ const NumberPad = memo(function NumberPad({
         return (
           <button
             key={num}
-            onClick={() => onNumberSelect(num)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onNumberSelect(num);
+            }}
             disabled={disabled}
             className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
             style={{
@@ -461,6 +465,7 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [placed, setPlaced] = useState(false);
   const [showError, setShowError] = useState(false);
+  const isProcessingRef = useRef(false);
   
   const targetRow = 0;
   const targetCol = 2;
@@ -472,16 +477,20 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
-    if (placed) return;
+    if (placed || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
     setShowError(false);
   }, [placed]);
 
   const handleNumberSelect = useCallback((num: number) => {
-    if (placed) return;
+    // Prevent double-tap - use ref to block immediately
+    if (placed || isProcessingRef.current) return;
     
-    // Ensure cell is selected immediately
+    // Block immediately to prevent any race conditions
+    isProcessingRef.current = true;
+    
+    // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
     
     if (num === correctValue) {
@@ -495,7 +504,8 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
       // Call interaction complete immediately - Next button will appear
       onInteractionComplete?.();
     } else {
-      // Wrong number - show error
+      // Wrong number - show error and allow retry
+      isProcessingRef.current = false;
       setShowError(true);
       setTimeout(() => setShowError(false), 600);
     }
@@ -612,6 +622,7 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   const [placed, setPlaced] = useState(false);
   const [time, setTime] = useState(195);
   const [showDelta, setShowDelta] = useState(false);
+  const isProcessingRef = useRef(false);
   
   // Target: row 1, col 1 - answer is 7
   const targetRow = 1;
@@ -624,15 +635,19 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   }, []);
 
   const handleCellClick = useCallback((row: number, col: number) => {
-    if (placed) return;
+    if (placed || isProcessingRef.current) return;
     if (TUTORIAL_GRID[row][col] !== 0) return;
     setSelectedCell({ row, col });
   }, [placed]);
 
   const handleNumberSelect = useCallback((num: number) => {
-    if (placed) return;
+    // Prevent double-tap - use ref to block immediately
+    if (placed || isProcessingRef.current) return;
     
-    // Ensure cell is selected immediately
+    // Block immediately to prevent any race conditions
+    isProcessingRef.current = true;
+    
+    // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
     
     // If correct number is selected, place it immediately
@@ -649,6 +664,9 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
       setTime(200);
       setShowDelta(false);
       onInteractionComplete?.();
+    } else {
+      // Wrong number - allow retry
+      isProcessingRef.current = false;
     }
   }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
 
