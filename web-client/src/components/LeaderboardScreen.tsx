@@ -67,15 +67,27 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
   console.log('[LeaderboardScreen] Rendering leaderboard screen');
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex flex-col bg-void"
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)', 
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        border: '2px solid rgba(255, 0, 255, 0.6)',
-        boxShadow: '0 0 30px rgba(255, 0, 255, 0.3), inset 0 0 30px rgba(255, 0, 255, 0.1)',
-      }}
-    >
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-40 bg-void/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div 
+        className="fixed z-50 flex flex-col bg-void rounded-xl overflow-hidden"
+        style={{ 
+          top: '2.5%',
+          left: '2.5%',
+          right: '2.5%',
+          bottom: '2.5%',
+          paddingTop: 'env(safe-area-inset-top)', 
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          border: '2px solid rgba(255, 0, 255, 0.6)',
+          boxShadow: '0 0 30px rgba(255, 0, 255, 0.3), inset 0 0 30px rgba(255, 0, 255, 0.1)',
+        }}
+      >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line bg-surface">
         <button
