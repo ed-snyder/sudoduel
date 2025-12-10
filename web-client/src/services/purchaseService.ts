@@ -171,17 +171,41 @@ class PurchaseServiceImpl {
       });
 
       // Initialize
+      console.log('[PurchaseService] Initializing store...');
       await this.store.initialize([this.CdvPurchase.Platform.APPLE_APPSTORE]);
+      console.log('[PurchaseService] Store initialized');
       
-      // Fetch products - use refresh() instead of update()
+      // Wait a bit for store to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fetch products - try both refresh() and update()
       if (typeof this.store.refresh === 'function') {
-        console.log('[PurchaseService] Using store.refresh()');
-        await this.store.refresh();
-      } else if (typeof this.store.update === 'function') {
-        console.log('[PurchaseService] Using store.update()');
-        await this.store.update();
-      } else {
-        console.warn('[PurchaseService] No refresh or update method found');
+        console.log('[PurchaseService] Calling store.refresh()...');
+        try {
+          this.store.refresh(); // Don't await - it's async but doesn't return a promise
+        } catch (e) {
+          console.error('[PurchaseService] refresh() error:', e);
+        }
+      }
+      
+      if (typeof this.store.update === 'function') {
+        console.log('[PurchaseService] Calling store.update()...');
+        try {
+          await this.store.update();
+        } catch (e) {
+          console.error('[PurchaseService] update() error:', e);
+        }
+      }
+      
+      // Also try ready() if available
+      if (typeof this.store.ready === 'function') {
+        console.log('[PurchaseService] Waiting for store.ready()...');
+        try {
+          await this.store.ready();
+          console.log('[PurchaseService] Store is ready');
+        } catch (e) {
+          console.log('[PurchaseService] ready() not available or failed:', e);
+        }
       }
       
       // Wait for products to populate - try multiple times with different access methods
@@ -570,11 +594,34 @@ class PurchaseServiceImpl {
 
     return new Promise((resolve) => {
       try {
-        const offer = product.getOffer?.();
+        // Try multiple ways to get the offer/orderable product
+        let offer = null;
+        
+        // Method 1: product.getOffer()
+        if (typeof product.getOffer === 'function') {
+          try {
+            offer = product.getOffer();
+          } catch (e) {
+            console.log('[PurchaseService] product.getOffer() failed:', e);
+          }
+        }
+        
+        // Method 2: product itself might be orderable
+        if (!offer && product) {
+          offer = product;
+        }
+        
+        // Method 3: Try store.order() with product directly
+        if (!offer && typeof this.store.order === 'function') {
+          // Some versions of the plugin accept the product directly
+          offer = product;
+        }
         
         if (!offer) {
-          console.error('[PurchaseService] No offer for product');
-          resolve({ success: false, error: 'Product not available for purchase.' });
+          console.error('[PurchaseService] No offer/orderable product found');
+          console.error('[PurchaseService] Product object:', product);
+          console.error('[PurchaseService] Product methods:', Object.keys(product));
+          resolve({ success: false, error: 'Product not available for purchase. Please check StoreKit Configuration.' });
           return;
         }
 
@@ -592,13 +639,52 @@ class PurchaseServiceImpl {
           resolve({ success: false, error: 'Purchase timed out.' });
         }, 120000);
 
-        // Start purchase
-        this.store.order(offer).then((error: any) => {
-          if (error) {
-            listener.unsubscribe();
-            resolve({ success: false, error: error.message || 'Purchase failed.' });
+        // Start purchase - try multiple methods
+        try {
+          // Method 1: store.order(offer)
+          if (typeof this.store.order === 'function') {
+            this.store.order(offer).then((error: any) => {
+              if (error) {
+                listener.unsubscribe();
+                resolve({ success: false, error: error.message || 'Purchase failed.' });
+              }
+            }).catch((error: any) => {
+              listener.unsubscribe();
+              resolve({ success: false, error: error.message || 'Purchase failed.' });
+            });
+          } 
+          // Method 2: product.order() if available
+          else if (typeof product.order === 'function') {
+            product.order().then((error: any) => {
+              if (error) {
+                listener.unsubscribe();
+                resolve({ success: false, error: error.message || 'Purchase failed.' });
+              }
+            }).catch((error: any) => {
+              listener.unsubscribe();
+              resolve({ success: false, error: error.message || 'Purchase failed.' });
+            });
           }
-        });
+          // Method 3: product.purchase() if available
+          else if (typeof product.purchase === 'function') {
+            product.purchase().then((error: any) => {
+              if (error) {
+                listener.unsubscribe();
+                resolve({ success: false, error: error.message || 'Purchase failed.' });
+              }
+            }).catch((error: any) => {
+              listener.unsubscribe();
+              resolve({ success: false, error: error.message || 'Purchase failed.' });
+            });
+          }
+          else {
+            listener.unsubscribe();
+            resolve({ success: false, error: 'Unable to initiate purchase. Store.order() method not available.' });
+          }
+        } catch (error: any) {
+          listener.unsubscribe();
+          resolve({ success: false, error: error.message || 'Failed to start purchase.' });
+        }
 
       } catch (error: any) {
         resolve({ success: false, error: error.message || 'An error occurred.' });
