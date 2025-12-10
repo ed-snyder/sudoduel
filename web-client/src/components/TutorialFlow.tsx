@@ -277,7 +277,7 @@ const TutorialOverlayComponent = memo(function TutorialOverlayComponent({
   );
 });
 
-// NumberPad component for tutorial - EXACTLY matches GamePage styling
+// NumberPad component for tutorial - EXACTLY matches GamePage inline number pad
 const NumberPad = memo(function NumberPad({ 
   onNumberSelect, 
   highlightNumber, 
@@ -299,7 +299,9 @@ const NumberPad = memo(function NumberPad({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onNumberSelect(num);
+              if (!disabled) {
+                onNumberSelect(num);
+              }
             }}
             disabled={disabled}
             className="aspect-square rounded-lg transition-all touch-manipulation font-heading font-bold flex items-center justify-center"
@@ -484,27 +486,42 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
   }, [placed]);
 
   const handleNumberSelect = useCallback((num: number) => {
-    // Prevent double-tap - use ref to block immediately
-    if (placed || isProcessingRef.current) return;
+    // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
+    if (isProcessingRef.current) {
+      console.log('[Tutorial] Blocked duplicate tap');
+      return;
+    }
+    if (placed) {
+      console.log('[Tutorial] Already placed');
+      return;
+    }
     
-    // Block immediately to prevent any race conditions
+    // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
+    console.log('[Tutorial] Processing tap for number:', num);
     
     // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
     
     if (num === correctValue) {
       // Correct! Place the number and mark as complete immediately
+      // Use functional updates to ensure we're working with latest state
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(r => [...r]);
         newGrid[targetRow][targetCol] = num;
         return newGrid;
       });
+      
+      // Set placed state - this will trigger re-render and show Next button
       setPlaced(true);
+      
       // Call interaction complete immediately - Next button will appear
-      onInteractionComplete?.();
+      // Use setTimeout(0) to ensure state updates are flushed first
+      setTimeout(() => {
+        onInteractionComplete?.();
+      }, 0);
     } else {
-      // Wrong number - show error and allow retry
+      // Wrong number - show error and allow retry by resetting ref
       isProcessingRef.current = false;
       setShowError(true);
       setTimeout(() => setShowError(false), 600);
@@ -590,9 +607,9 @@ function DuelTimerStep({ onNext }: StepProps) {
   return (
     <TutorialOverlayComponent>
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
-        <h2 className="font-heading font-bold text-2xl text-player">Time is Your Resource</h2>
+        <h2 className="font-heading font-bold text-2xl text-player">Time Management is key</h2>
         <p className="font-body text-secondary">
-          You start with 3:30. Correct moves give you a time boost. Wrong moves cost you time. Run out of time and you're locked out!
+          You will start with a few minutes to complete the board. You get a time boost for every correct cell you complete.
         </p>
         <div className="flex justify-center items-center gap-4">
           <div className="px-4 py-2 rounded-lg border-2 border-player bg-player/20">
@@ -641,11 +658,19 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
   }, [placed]);
 
   const handleNumberSelect = useCallback((num: number) => {
-    // Prevent double-tap - use ref to block immediately
-    if (placed || isProcessingRef.current) return;
+    // CRITICAL: Prevent double-tap - check ref FIRST before any other logic
+    if (isProcessingRef.current) {
+      console.log('[Tutorial] Blocked duplicate tap');
+      return;
+    }
+    if (placed) {
+      console.log('[Tutorial] Already placed');
+      return;
+    }
     
-    // Block immediately to prevent any race conditions
+    // Block IMMEDIATELY - this must happen synchronously before any async operations
     isProcessingRef.current = true;
+    console.log('[Tutorial] Processing tap for number:', num);
     
     // Ensure cell is selected
     setSelectedCell({ row: targetRow, col: targetCol });
@@ -653,19 +678,27 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
     // If correct number is selected, place it immediately
     if (num === correctValue) {
       // Correct! Place the number and mark as complete immediately
+      // Use functional updates to ensure we're working with latest state
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(r => [...r]);
         newGrid[targetRow][targetCol] = num;
         return newGrid;
       });
+      
+      // Set placed state - this will trigger re-render and show Next button
       setPlaced(true);
       
-      // Update time and complete interaction immediately - Next button will appear
+      // Update time
       setTime(200);
       setShowDelta(false);
-      onInteractionComplete?.();
+      
+      // Call interaction complete immediately - Next button will appear
+      // Use setTimeout(0) to ensure state updates are flushed first
+      setTimeout(() => {
+        onInteractionComplete?.();
+      }, 0);
     } else {
-      // Wrong number - allow retry
+      // Wrong number - allow retry by resetting ref
       isProcessingRef.current = false;
     }
   }, [placed, correctValue, targetRow, targetCol, onInteractionComplete]);
