@@ -210,6 +210,37 @@ class PurchaseServiceImpl {
     if (!this.initialized) {
       await this.initialize();
     }
+    
+    // Ensure products are loaded - wait up to 3 seconds
+    if (!this.rawProducts.has(productId)) {
+      console.log('[PurchaseService] Product not found, refreshing...');
+      for (let i = 0; i < 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check store.products array
+        if (this.store?.products && Array.isArray(this.store.products)) {
+          this.store.products.forEach((p: any) => {
+            if (p.id === productId && !this.rawProducts.has(productId)) {
+              console.log('[PurchaseService] Found product during refresh:', p.id);
+              this.rawProducts.set(p.id, p);
+              this.products.set(p.id, {
+                id: p.id,
+                title: p.title || p.id,
+                description: p.description || '',
+                price: p.pricing?.price || '$?.??',
+                priceAsDecimal: (p.pricing?.priceMicros || 0) / 1000000,
+                currency: p.pricing?.currency || 'USD',
+                raw: p,
+              });
+            }
+          });
+        }
+        
+        if (this.rawProducts.has(productId)) {
+          break;
+        }
+      }
+    }
 
     // Mock for web
     if (!Capacitor.isNativePlatform() || !this.store) {
