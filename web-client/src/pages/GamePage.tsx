@@ -104,11 +104,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     setLastScoredCell({ row, col });
     setTimeout(() => setLastScoredCell(null), 300);
     
-    // 5. Screen shake only after 5 correct guesses
-    if (streak >= 5) {
-      setShowMicroShake(true);
-      setTimeout(() => setShowMicroShake(false), 150);
-    }
+    // 5. Screen shake removed - sound and haptics still play
     
   }, [playCorrectSound, vibrate, showBanner]);
   
@@ -1794,7 +1790,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
   // Main game UI - Compact layout with header above grid
   return (
-    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''} ${showMicroShake ? 'micro-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1 }}>
+    <div className={`min-h-screen bg-void flex flex-col relative ${showScreenShake ? 'screen-shake' : ''}`} style={{ paddingTop: '0px', paddingBottom: '0px', zIndex: 1 }}>
       {/* Battlefield Background */}
       <GameBackgroundEffects 
         timeRemaining={myTimeRemaining}
