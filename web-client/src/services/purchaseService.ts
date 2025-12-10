@@ -27,11 +27,11 @@ class PurchaseServiceImpl {
   private store: any = null;
   private initialized = false;
   private products: Map<string, Product> = new Map();
+  private registeredProducts: any[] = [];
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Check if running on native platform
     if (!Capacitor.isNativePlatform()) {
       console.log('[PurchaseService] Web platform - using mock products');
       this.setupMockProducts();
@@ -39,7 +39,6 @@ class PurchaseServiceImpl {
       return;
     }
 
-    // Check if CdvPurchase is available (from cordova-plugin-purchase)
     if (typeof (window as any).CdvPurchase === 'undefined') {
       console.log('[PurchaseService] CdvPurchase not available - using mock');
       this.setupMockProducts();
@@ -52,9 +51,7 @@ class PurchaseServiceImpl {
       this.store = this.CdvPurchase.store;
 
       console.log('[PurchaseService] Initializing with CdvPurchase...');
-
-      // Set log level for debugging
-      this.store.verbosity = this.CdvPurchase.LogLevel.DEBUG;
+      console.log('[PurchaseService] Store object:', this.store);
 
       // Register products
       this.store.register([
@@ -73,7 +70,8 @@ class PurchaseServiceImpl {
       // Set up event handlers
       this.store.when()
         .productUpdated((product: any) => {
-          console.log('[PurchaseService] Product updated:', product.id, product);
+          console.log('[PurchaseService] Product updated:', product.id);
+          this.registeredProducts.push(product);
           if (product.pricing) {
             this.products.set(product.id, {
               id: product.id,
@@ -86,31 +84,26 @@ class PurchaseServiceImpl {
           }
         })
         .approved((transaction: any) => {
-          console.log('[PurchaseService] Transaction approved:', transaction);
+          console.log('[PurchaseService] Transaction approved');
           return transaction.verify();
         })
         .verified((receipt: any) => {
-          console.log('[PurchaseService] Receipt verified:', receipt);
+          console.log('[PurchaseService] Receipt verified');
           return receipt.finish();
         })
         .finished((transaction: any) => {
-          console.log('[PurchaseService] Transaction finished:', transaction);
+          console.log('[PurchaseService] Transaction finished');
         });
 
-      // Handle errors
       this.store.error((error: any) => {
         console.error('[PurchaseService] Store error:', error);
       });
 
-      // Initialize the store
       await this.store.initialize([this.CdvPurchase.Platform.APPLE_APPSTORE]);
-      
-      // Update products
       await this.store.update();
 
       this.initialized = true;
       console.log('[PurchaseService] Initialized successfully');
-      console.log('[PurchaseService] Products:', Array.from(this.products.entries()));
 
     } catch (error) {
       console.error('[PurchaseService] Failed to initialize:', error);
@@ -138,6 +131,11 @@ class PurchaseServiceImpl {
     });
   }
 
+  // Find a product from the registered products array
+  private findProduct(productId: string): any {
+    return this.registeredProducts.find(p => p.id === productId);
+  }
+
   getProduct(productId: string): Product | undefined {
     return this.products.get(productId);
   }
@@ -153,7 +151,7 @@ class PurchaseServiceImpl {
       await this.initialize();
     }
 
-    // Mock purchase for web/development or if store not available
+    // Mock purchase for web/development
     if (!Capacitor.isNativePlatform() || !this.store) {
       console.log('[PurchaseService] Using mock purchase');
       return {
@@ -165,10 +163,12 @@ class PurchaseServiceImpl {
 
     return new Promise((resolve) => {
       try {
-        const product = this.store.get(productId, this.CdvPurchase.Platform.APPLE_APPSTORE);
-        
+        // Find product from our tracked array
+        const product = this.findProduct(productId);
+
         if (!product) {
           console.error('[PurchaseService] Product not found:', productId);
+          console.log('[PurchaseService] Available products:', this.registeredProducts.map(p => p.id));
           resolve({
             success: false,
             error: 'Product not found. Please try again later.',
@@ -176,12 +176,12 @@ class PurchaseServiceImpl {
           return;
         }
 
-        console.log('[PurchaseService] Found product:', product);
+        console.log('[PurchaseService] Found product:', product.id);
 
-        // Get the offer to purchase
-        const offer = product.getOffer();
+        // Get the offer
+        const offer = product.getOffer ? product.getOffer() : null;
         if (!offer) {
-          console.error('[PurchaseService] No offer available for product');
+          console.error('[PurchaseService] No offer available');
           resolve({
             success: false,
             error: 'Product not available for purchase.',
@@ -189,10 +189,11 @@ class PurchaseServiceImpl {
           return;
         }
 
-        // Set up one-time listener for this purchase
+        // Listen for completion
         const finishedListener = this.store.when().finished((transaction: any) => {
-          if (transaction.products.some((p: any) => p.id === productId)) {
-            console.log('[PurchaseService] Purchase completed:', transaction);
+          const hasProduct = transaction.products?.some((p: any) => p.id === productId);
+          if (hasProduct) {
+            console.log('[PurchaseService] Purchase completed');
             finishedListener.unsubscribe();
             resolve({
               success: true,
@@ -202,7 +203,7 @@ class PurchaseServiceImpl {
           }
         });
 
-        // Set timeout
+        // Timeout
         setTimeout(() => {
           finishedListener.unsubscribe();
           resolve({
@@ -211,15 +212,15 @@ class PurchaseServiceImpl {
           });
         }, 120000);
 
-        // Start the purchase
-        console.log('[PurchaseService] Ordering offer:', offer);
+        // Order
+        console.log('[PurchaseService] Ordering...');
         this.store.order(offer).then((error: any) => {
           if (error) {
             console.error('[PurchaseService] Order error:', error);
             finishedListener.unsubscribe();
             resolve({
               success: false,
-              error: error.message || 'Purchase failed. Please try again.',
+              error: error.message || 'Purchase failed.',
             });
           }
         });
@@ -228,7 +229,7 @@ class PurchaseServiceImpl {
         console.error('[PurchaseService] Purchase error:', error);
         resolve({
           success: false,
-          error: error.message || 'An error occurred. Please try again.',
+          error: error.message || 'An error occurred.',
         });
       }
     });
@@ -238,18 +239,15 @@ class PurchaseServiceImpl {
     console.log('[PurchaseService] Restoring purchases...');
 
     if (!Capacitor.isNativePlatform() || !this.store) {
-      console.log('[PurchaseService] Mock restore - no purchases');
       return { success: false, error: 'No purchases to restore.' };
     }
 
     return new Promise((resolve) => {
       try {
         this.store.restorePurchases().then(() => {
-          // Check if any subscriptions are now owned
-          const monthly = this.store.get(PRODUCT_IDS.MONTHLY, this.CdvPurchase.Platform.APPLE_APPSTORE);
-          const yearly = this.store.get(PRODUCT_IDS.YEARLY, this.CdvPurchase.Platform.APPLE_APPSTORE);
-
-          console.log('[PurchaseService] Restore check - monthly:', monthly?.owned, 'yearly:', yearly?.owned);
+          // Check ownership
+          const monthly = this.findProduct(PRODUCT_IDS.MONTHLY);
+          const yearly = this.findProduct(PRODUCT_IDS.YEARLY);
 
           if (monthly?.owned || yearly?.owned) {
             resolve({
@@ -263,14 +261,12 @@ class PurchaseServiceImpl {
             });
           }
         }).catch((error: any) => {
-          console.error('[PurchaseService] Restore error:', error);
           resolve({
             success: false,
             error: error.message || 'Failed to restore purchases.',
           });
         });
       } catch (error: any) {
-        console.error('[PurchaseService] Restore exception:', error);
         resolve({
           success: false,
           error: 'Failed to restore purchases.',
@@ -283,10 +279,8 @@ class PurchaseServiceImpl {
     if (!Capacitor.isNativePlatform() || !this.store) {
       return false;
     }
-
-    const monthly = this.store.get(PRODUCT_IDS.MONTHLY, this.CdvPurchase.Platform.APPLE_APPSTORE);
-    const yearly = this.store.get(PRODUCT_IDS.YEARLY, this.CdvPurchase.Platform.APPLE_APPSTORE);
-
+    const monthly = this.findProduct(PRODUCT_IDS.MONTHLY);
+    const yearly = this.findProduct(PRODUCT_IDS.YEARLY);
     return monthly?.owned || yearly?.owned;
   }
 }
