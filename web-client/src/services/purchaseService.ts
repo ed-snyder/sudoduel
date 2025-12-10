@@ -660,7 +660,6 @@ class PurchaseServiceImpl {
               resolveOnce({ success: false, error: error.message || 'Purchase failed.' });
             } else {
               // Order started successfully, start polling
-              purchaseInitiated = true;
               startPolling();
             }
           })
