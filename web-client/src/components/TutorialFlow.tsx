@@ -847,7 +847,7 @@ function ReadyStep({ onComplete }: StepProps & { onComplete: () => void }) {
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-6 text-center">
         <h2 className="font-heading font-bold text-3xl text-player">You're Ready!</h2>
         <p className="font-body text-secondary text-lg">
-          Time to race. Good luck!
+          Time to play. Good luck!
         </p>
         <button
           onClick={onComplete}
