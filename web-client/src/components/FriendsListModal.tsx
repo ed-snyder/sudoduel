@@ -55,6 +55,21 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     return () => clearInterval(interval);
   }, [isOpen]);
 
+  const checkMatchRequestStatus = useCallback(async () => {
+    try {
+      const response = await friendsAPI.getCurrentOutgoingMatchRequest();
+      if (response.request) {
+        setOutgoingMatchRequest(response.request);
+        setMatchRequestPolling(true);
+      } else {
+        setOutgoingMatchRequest(null);
+        setMatchRequestPolling(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to check match request status:', err);
+    }
+  }, []);
+
   // Separate polling for outgoing request status (when waiting for response)
   useEffect(() => {
     if (!isOpen || !matchRequestPolling) return;
