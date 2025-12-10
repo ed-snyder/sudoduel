@@ -693,6 +693,8 @@ class PurchaseServiceImpl {
   }
 
   async restorePurchases(): Promise<PurchaseResult> {
+    console.log('[PurchaseService] Restoring purchases...');
+
     if (!Capacitor.isNativePlatform() || !this.store) {
       return { success: false, error: 'No purchases to restore.' };
     }
@@ -700,15 +702,22 @@ class PurchaseServiceImpl {
     try {
       await this.store.restorePurchases();
       
+      // Wait a moment for products to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const monthly = this.rawProducts.get(PRODUCT_IDS.MONTHLY);
       const yearly = this.rawProducts.get(PRODUCT_IDS.YEARLY);
+
+      console.log('[PurchaseService] After restore - monthly owned:', monthly?.owned);
+      console.log('[PurchaseService] After restore - yearly owned:', yearly?.owned);
 
       if (monthly?.owned || yearly?.owned) {
         return { success: true, productId: monthly?.owned ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY };
       }
-      
+
       return { success: false, error: 'No active subscription found.' };
     } catch (error: any) {
+      console.error('[PurchaseService] Restore error:', error);
       return { success: false, error: 'Failed to restore purchases.' };
     }
   }
