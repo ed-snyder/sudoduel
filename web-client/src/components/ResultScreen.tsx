@@ -1359,7 +1359,7 @@ export default function ResultScreen({
               </button>
 
               {/* Block and Report Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-2" style={{ marginTop: '5px' }}>
                 {/* Block Button */}
                 <button
                   onClick={handleBlock}
