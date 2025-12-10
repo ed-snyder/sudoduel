@@ -593,65 +593,66 @@ class PurchaseServiceImpl {
     }
 
     return new Promise((resolve) => {
+      let resolved = false;
+
+      const resolveOnce = (result: PurchaseResult) => {
+        if (!resolved) {
+          resolved = true;
+          console.log('[PurchaseService] Resolving with:', result);
+          resolve(result);
+        }
+      };
+
       try {
-        // Try multiple ways to get the offer/orderable product
-        let offer = null;
-        
-        // Method 1: product.getOffer()
-        if (typeof product.getOffer === 'function') {
-          try {
-            offer = product.getOffer();
-          } catch (e) {
-            console.log('[PurchaseService] product.getOffer() failed:', e);
-          }
-        }
-        
-        // Method 2: product itself might be orderable
-        if (!offer && product) {
-          offer = product;
-        }
-        
-        // Method 3: Try store.order() with product directly
-        if (!offer && typeof this.store.order === 'function') {
-          // Some versions of the plugin accept the product directly
-          offer = product;
-        }
-        
+        const offer = product.getOffer?.();
+
         if (!offer) {
-          console.error('[PurchaseService] No offer/orderable product found');
-          console.error('[PurchaseService] Product object:', product);
-          console.error('[PurchaseService] Product methods:', Object.keys(product));
-          resolve({ success: false, error: 'Product not available for purchase. Please check StoreKit Configuration.' });
+          resolveOnce({ success: false, error: 'Product not available for purchase.' });
           return;
         }
 
-        let resolved = false;
+        // Simple approach: listen for ANY finished event after starting purchase
+        // Use a flag to track if we initiated a purchase
+        let purchaseInitiated = false;
 
-        const resolveOnce = (result: PurchaseResult) => {
-          if (!resolved) {
-            resolved = true;
-            resolve(result);
+        // Set up a one-time check using product owned status
+        const checkOwnership = () => {
+          const updatedProduct = this.rawProducts.get(productId);
+          console.log('[PurchaseService] Checking ownership:', updatedProduct?.owned);
+          if (updatedProduct?.owned) {
+            resolveOnce({ success: true, productId, transactionId: 'completed' });
+            return true;
           }
+          return false;
         };
 
-        // Listen for the finished event on this specific product
-        const checkFinished = (transaction: any) => {
-          console.log('[PurchaseService] Transaction finished callback:', transaction);
-          if (transaction.products?.some((p: any) => p.id === productId)) {
-            resolveOnce({ 
-              success: true, 
-              productId, 
-              transactionId: transaction.transactionId 
-            });
-          }
+        // Poll for ownership change after purchase starts
+        const startPolling = () => {
+          let attempts = 0;
+          const pollInterval = setInterval(() => {
+            attempts++;
+            console.log('[PurchaseService] Polling ownership, attempt:', attempts);
+            
+            if (checkOwnership() || attempts > 30) {
+              clearInterval(pollInterval);
+              if (attempts > 30 && !resolved) {
+                // Final check
+                if (!checkOwnership()) {
+                  resolveOnce({ success: false, error: 'Purchase may have completed. Please restart the app.' });
+                }
+              }
+            }
+          }, 500);
         };
-
-        // Register the listener (don't try to unsubscribe - just let it be)
-        this.store.when().finished(checkFinished);
 
         // Timeout after 2 minutes
         setTimeout(() => {
-          resolveOnce({ success: false, error: 'Purchase timed out.' });
+          if (!resolved) {
+            // One final ownership check
+            if (!checkOwnership()) {
+              resolveOnce({ success: false, error: 'Purchase timed out.' });
+            }
+          }
         }, 120000);
 
         // Start purchase
@@ -661,6 +662,10 @@ class PurchaseServiceImpl {
             if (error) {
               console.error('[PurchaseService] Order error:', error);
               resolveOnce({ success: false, error: error.message || 'Purchase failed.' });
+            } else {
+              // Order started successfully, start polling
+              purchaseInitiated = true;
+              startPolling();
             }
           })
           .catch((err: any) => {
@@ -669,7 +674,8 @@ class PurchaseServiceImpl {
           });
 
       } catch (error: any) {
-        resolve({ success: false, error: error.message || 'An error occurred.' });
+        console.error('[PurchaseService] Purchase exception:', error);
+        resolveOnce({ success: false, error: error.message || 'An error occurred.' });
       }
     });
   }
