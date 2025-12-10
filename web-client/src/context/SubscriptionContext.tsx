@@ -18,10 +18,31 @@ const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 const STORAGE_KEY = 'sudoduel_premium';
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
+  const { token, user } = useAuth();
   const [isPremium, setIsPremium] = useState<boolean>(() => {
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  // Load premium status from backend when user logs in
+  useEffect(() => {
+    const fetchPremiumStatus = async () => {
+      if (token && user) {
+        try {
+          const playerInfo = await playerAPI.getMe() as { is_premium?: boolean };
+          const backendPremium = playerInfo.is_premium || false;
+          setIsPremium(backendPremium);
+          localStorage.setItem(STORAGE_KEY, String(backendPremium));
+          console.log('[Subscription] Loaded premium status from backend:', backendPremium);
+        } catch (error) {
+          console.error('[Subscription] Failed to fetch premium status:', error);
+          // Keep localStorage value if API call fails
+        }
+      }
+    };
+
+    fetchPremiumStatus();
+  }, [token, user?.id]); // Re-fetch when user changes
 
   // Sync to localStorage when premium status changes
   useEffect(() => {
@@ -30,16 +51,33 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const openUpgradeModal = useCallback(() => setIsUpgradeModalOpen(true), []);
   const closeUpgradeModal = useCallback(() => setIsUpgradeModalOpen(false), []);
+
+  // Update premium status (syncs to backend)
+  const updatePremiumStatus = useCallback(async (newStatus: boolean) => {
+    try {
+      // Update backend first
+      await playerAPI.updatePremiumStatus(newStatus);
+      
+      // Then update local state and localStorage
+      setIsPremium(newStatus);
+      localStorage.setItem(STORAGE_KEY, String(newStatus));
+      
+      console.log(`[Subscription] Premium status updated to: ${newStatus}`);
+    } catch (error) {
+      console.error('[Subscription] Failed to update premium status:', error);
+      throw error;
+    }
+  }, []);
   
-  const togglePremiumStatus = useCallback(() => {
+  // Toggle premium status (for backward compatibility, calls updatePremiumStatus)
+  const togglePremiumStatus = useCallback(async () => {
     console.log('[SubscriptionContext] Toggling premium status, current:', isPremium);
-    setIsPremium(prev => {
-      const newValue = !prev;
-      console.log('[SubscriptionContext] New premium value:', newValue);
-      localStorage.setItem(STORAGE_KEY, String(newValue));
-      return newValue;
-    });
-  }, [isPremium]);
+    try {
+      await updatePremiumStatus(!isPremium);
+    } catch (error) {
+      console.error('[SubscriptionContext] Failed to toggle premium status:', error);
+    }
+  }, [isPremium, updatePremiumStatus]);
 
   return (
     <SubscriptionContext.Provider value={{
@@ -47,6 +85,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isUpgradeModalOpen,
       openUpgradeModal,
       closeUpgradeModal,
+      updatePremiumStatus,
       togglePremiumStatus,
     }}>
       {children}
