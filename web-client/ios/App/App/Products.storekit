@@ -1,0 +1,107 @@
+{
+  "identifier" : "Products",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "6731234567890",
+      "localizations" : [
+        {
+          "description" : "Monthly subscription to Sudoduel+",
+          "displayName" : "Sudoduel+ Monthly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "sudoduel_plus_monthly",
+      "referenceName" : "Sudoduel+ Monthly",
+      "subscriptionGroupID" : "21474836",
+      "type" : "SUBSCRIPTION"
+    },
+    {
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "6731234567891",
+      "localizations" : [
+        {
+          "description" : "Annual subscription to Sudoduel+",
+          "displayName" : "Sudoduel+ Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "sudoduel_plus_yearly",
+      "referenceName" : "Sudoduel+ Yearly",
+      "subscriptionGroupID" : "21474836",
+      "type" : "SUBSCRIPTION"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ],
+    "_storeKitErrorsEnabled" : false
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21474836",
+      "localizations" : [
+        {
+          "name" : "Sudoduel Plus",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Sudoduel Plus"
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
