@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
+import { useAds } from '../hooks/useAds';
 import { matchmakingAPI, friendsAPI, playerAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import ReportModal from './ReportModal';
 import { reportUser, blockUser } from '../services/socialService';
 
@@ -115,7 +117,15 @@ export default function ResultScreen({
   rematchCountdown = 0,
 }: ResultScreenProps) {
   const { user, token } = useAuth();
+  const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
+  const { showAdIfNeeded, recordGamePlayed, isInGracePeriod } = useAds();
+
+  // Determine result type for ad logic
+  const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
+
+  // Show upgrade CTA to free users after grace period on loss/draw
+  const showUpgradeCTA = !isPremium && !isInGracePeriod && resultType !== 'win';
   
   const [displayedRating, setDisplayedRating] = useState(myResult.rating_before);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -159,6 +169,12 @@ export default function ResultScreen({
   const opponentName = opponentResult.displayName || 'Opponent';
   const myName = myResult.displayName || user?.display_name || 'Player';
   const isBigWin = didWin && isRanked && ratingChange >= 25;
+
+  // Record game completion for grace period tracking
+  useEffect(() => {
+    recordGamePlayed(didWin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   // Load head-to-head stats and friend status when modal opens
   useEffect(() => {
@@ -484,8 +500,15 @@ export default function ResultScreen({
     }, 1000);
   }, [onFindNewMatch, stopPolling]);
 
+  const handleBackToLobby = async () => {
+    handleButtonPress();
+    await showAdIfNeeded(resultType);
+    onBackToLobby();
+  };
+
   const handleFindNewMatch = async () => {
     handleButtonPress();
+    await showAdIfNeeded(resultType);
     setIsFindingMatch(true);
     setSearchTime(0);
     
@@ -750,7 +773,7 @@ export default function ResultScreen({
       {/* Back Button */}
       <div className="relative z-50 pt-14 pl-4 safe-top">
         <button
-          onClick={() => { handleButtonPress(); onBackToLobby(); }}
+          onClick={handleBackToLobby}
           className="flex items-center gap-2 text-secondary hover:text-player transition-colors group"
         >
           <svg 
@@ -1124,6 +1147,33 @@ export default function ResultScreen({
               >
                 Find New Match
               </button>
+
+              {/* Upgrade CTA - Show to free users after grace period on loss/draw */}
+              {showUpgradeCTA && (
+                <div className="mt-6 pt-6 border-t border-grid-line/30">
+                  <button
+                    onClick={() => {
+                      handleButtonPress();
+                      openUpgradeModal();
+                    }}
+                    className="w-full py-4 px-6 rounded-xl font-display font-bold text-base uppercase tracking-wider transition-all active:scale-95"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(255,165,0,0.2) 100%)',
+                      border: '2px solid rgba(255,215,0,0.6)',
+                      color: '#FFD700',
+                      boxShadow: '0 0 20px rgba(255,215,0,0.2)',
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-xl">👑</span>
+                      <span>Remove Ads with Sudoduel+</span>
+                    </div>
+                  </button>
+                  <p className="text-center text-muted text-xs mt-2 font-body">
+                    Plus unlock premium stats, custom emotes & more
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

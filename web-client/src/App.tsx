@@ -8,11 +8,17 @@ import SoloModePage from './pages/SoloModePage';
 import TutorialFlow from './components/TutorialFlow';
 import UpgradeModal from './components/UpgradeModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { adService } from './services/adService';
 
 function AppContent() {
   const { user, loading, justSignedUp, clearJustSignedUp } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
   const [soloMode, setSoloMode] = useState(false);
+
+  // Initialize ads early for faster loading
+  useEffect(() => {
+    adService.initialize();
+  }, []);
 
   // Pre-warm haptics engine on app start (earliest possible)
   useEffect(() => {
