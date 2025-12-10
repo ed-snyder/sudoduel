@@ -7,9 +7,9 @@ interface EmoteCustomizerModalProps {
   isPremium?: boolean; // Keep for future use
 }
 
-const DEFAULT_EMOTES = ['😂', '😢', '😍', '💩'];
+const DEFAULT_EMOTES = ['👋', '👍', '😭', '🫵😂'];
 
-export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomizerModalProps) {
+export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = false }: EmoteCustomizerModalProps) {
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -93,10 +93,11 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
             {emotes.map((emote, index) => (
               <button
                 key={index}
-                onClick={() => handleEmoteClick(index)}
-                className={`aspect-square rounded-xl flex items-center justify-center text-3xl transition-all hover:scale-110 active:scale-95 cursor-pointer ${
-                  editingIndex === index ? 'ring-2 ring-player' : ''
-                }`}
+                onClick={() => isPremium && handleEmoteClick(index)}
+                disabled={!isPremium}
+                className={`aspect-square rounded-xl flex items-center justify-center text-3xl transition-all ${
+                  isPremium ? 'hover:scale-110 active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                } ${editingIndex === index ? 'ring-2 ring-player' : ''}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
                   border: '2px solid rgba(139,0,255,0.3)',
@@ -110,8 +111,8 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
             ))}
           </div>
 
-          {/* Edit input - shows when editing */}
-          {editingIndex !== null && (
+          {/* Edit input - shows when editing (premium only) */}
+          {editingIndex !== null && isPremium && (
             <div className="space-y-2 animate-fade-in">
               <p className="text-[10px] text-muted font-body text-center">
                 Select 1-2 emojis for slot {editingIndex + 1}
@@ -150,15 +151,24 @@ export default function EmoteCustomizerModal({ isOpen, onClose }: EmoteCustomize
             </div>
           )}
 
-          {/* Instruction text when not editing */}
+          {/* Instruction text / Premium lock */}
           {editingIndex === null && (
-            <p className="text-xs text-muted font-body text-center pt-2">
-              Tap an emote to customize it
-            </p>
+            isPremium ? (
+              <p className="text-xs text-muted font-body text-center pt-2">
+                Tap an emote to customize it
+              </p>
+            ) : (
+              <div className="text-center pt-4 pb-2">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-elevated border border-grid-line">
+                  <span className="text-lg">🔒</span>
+                  <span className="text-sm text-muted font-body">Upgrade to customize emotes</span>
+                </div>
+              </div>
+            )
           )}
 
-          {/* Reset button */}
-          {editingIndex === null && (
+          {/* Reset button - premium only */}
+          {editingIndex === null && isPremium && (
             <button
               onClick={handleResetToDefault}
               className="w-full py-2 text-muted text-sm font-body hover:text-error transition-colors"

@@ -18,7 +18,7 @@ import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { log } from '../utils/logger';
 
-const DEFAULT_EMOTES = ['😂', '😢', '😍', '💩'];
+const DEFAULT_EMOTES = ['👋', '👍', '😭', '🫵😂'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
 
 interface GamePageProps {
@@ -127,20 +127,26 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const warmUpDoneRef = useRef(false);
   const lastCellPlacementRef = useRef(0);
   
-  // Load custom emotes from localStorage
+  // Load emotes - premium users get their custom emotes, free users get defaults
   useEffect(() => {
-    try {
+    if (isPremium) {
       const saved = localStorage.getItem('customEmotes');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 4) {
-          setEmotes(parsed);
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === 4) {
+            setEmotes(parsed);
+          }
+        } catch (e) {
+          // Use defaults if parsing fails
+          setEmotes(DEFAULT_EMOTES);
         }
       }
-    } catch (e) {
-      console.error('Failed to load custom emotes');
+    } else {
+      // Free users always use defaults
+      setEmotes(DEFAULT_EMOTES);
     }
-  }, []);
+  }, [isPremium]);
 
   // Warm-up function to force browser to pre-compute expensive operations
   const warmUpRenderer = useCallback(() => {
