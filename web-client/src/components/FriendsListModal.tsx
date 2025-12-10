@@ -14,7 +14,7 @@ type Tab = 'friends' | 'requests' | 'search';
 const vibrate = async () => {
   try {
     await Haptics.impact({ style: ImpactStyle.Light });
-  } catch (e) {
+  } catch {
     // Haptics not available
   }
 };
@@ -64,7 +64,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, matchRequestPolling]);
+  }, [isOpen, matchRequestPolling, checkMatchRequestStatus]);
 
   const loadFriends = async () => {
     setLoading(true);

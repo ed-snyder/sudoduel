@@ -65,7 +65,7 @@ function AppContent() {
               if (div.parentNode) {
                 document.body.removeChild(div);
               }
-            } catch (e) {
+            } catch {
               // Ignore cleanup errors
             }
           });
