@@ -1,4 +1,5 @@
 import { query } from '../config/database';
+import { PlayerProfileModel } from './PlayerProfile';
 
 export interface Friendship {
   id: number;
