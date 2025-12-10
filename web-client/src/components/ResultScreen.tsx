@@ -1219,7 +1219,7 @@ export default function ResultScreen({
                 {/* Show rank if opponent is premium and we have it */}
                 {profileLoading ? (
                   <span className="text-muted text-sm">•  Loading...</span>
-                ) : opponentProfile?.is_premium && opponentProfile?.rank !== null && opponentProfile?.rank !== undefined ? (
+                ) : opponentProfile?.is_premium && opponentProfile?.rank ? (
                   <>
                     <span className="text-muted text-sm">•</span>
                     <span className="text-muted text-sm font-body">Rank:</span>
@@ -1230,8 +1230,6 @@ export default function ResultScreen({
                       #{opponentProfile.rank.toLocaleString()}
                     </span>
                   </>
-                ) : opponentProfile && !profileLoading ? (
-                  <span className="text-muted text-xs">• Not ranked</span>
                 ) : null}
               </div>
 
