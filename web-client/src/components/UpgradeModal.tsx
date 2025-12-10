@@ -58,7 +58,7 @@ export default function UpgradeModal() {
             <div>
               <h3 className="font-heading font-bold text-lg text-primary mb-1">No Ads</h3>
               <p className="font-body text-secondary text-sm">
-                Improve your UX AND cover our hosting fees
+                Help us with hosting fees AND improve your UX
               </p>
             </div>
 
