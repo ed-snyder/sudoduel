@@ -176,16 +176,16 @@ class PurchaseServiceImpl {
       // Fetch products
       await this.store.update();
       
-      // Wait for products to populate - try multiple times
-      for (let i = 0; i < 10; i++) {
+      // Wait for products to populate - try multiple times with different access methods
+      for (let i = 0; i < 15; i++) {
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Try to get products from store directly
+        // Method 1: Check store.products array
         if (this.store.products && Array.isArray(this.store.products)) {
           this.store.products.forEach((product: any) => {
-            if (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY) {
+            if (product && (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY)) {
               if (!this.rawProducts.has(product.id)) {
-                console.log('[PurchaseService] Found product from store.products:', product.id, product);
+                console.log('[PurchaseService] Found product from store.products array:', product.id, product);
                 this.rawProducts.set(product.id, product);
                 this.products.set(product.id, {
                   id: product.id,
@@ -201,28 +201,76 @@ class PurchaseServiceImpl {
           });
         }
         
-        // Also check if store has a get method
+        // Method 2: Try store.get() if available
         if (typeof this.store.get === 'function') {
           try {
-            const monthly = this.store.get(PRODUCT_IDS.MONTHLY);
-            const yearly = this.store.get(PRODUCT_IDS.YEARLY);
-            if (monthly && !this.rawProducts.has(PRODUCT_IDS.MONTHLY)) {
-              console.log('[PurchaseService] Found monthly via store.get()');
-              this.rawProducts.set(PRODUCT_IDS.MONTHLY, monthly);
-            }
-            if (yearly && !this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
-              console.log('[PurchaseService] Found yearly via store.get()');
-              this.rawProducts.set(PRODUCT_IDS.YEARLY, yearly);
-            }
+            [PRODUCT_IDS.MONTHLY, PRODUCT_IDS.YEARLY].forEach(productId => {
+              if (!this.rawProducts.has(productId)) {
+                const product = this.store.get(productId);
+                if (product && product.id) {
+                  console.log('[PurchaseService] Found product via store.get():', product.id);
+                  this.rawProducts.set(product.id, product);
+                  this.products.set(product.id, {
+                    id: product.id,
+                    title: product.title || product.id,
+                    description: product.description || '',
+                    price: product.pricing?.price || product.price || '$?.??',
+                    priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
+                    currency: product.pricing?.currency || product.currency || 'USD',
+                    raw: product,
+                  });
+                }
+              }
+            });
           } catch (e) {
-            // store.get might not be available
+            // store.get might not be available or might throw
           }
+        }
+        
+        // Method 3: Check all properties of store object for products
+        try {
+          Object.keys(this.store).forEach(key => {
+            if (key.includes('product') || key.includes('Product')) {
+              const value = (this.store as any)[key];
+              if (Array.isArray(value)) {
+                value.forEach((product: any) => {
+                  if (product && product.id && (product.id === PRODUCT_IDS.MONTHLY || product.id === PRODUCT_IDS.YEARLY)) {
+                    if (!this.rawProducts.has(product.id)) {
+                      console.log('[PurchaseService] Found product from store property:', key, product.id);
+                      this.rawProducts.set(product.id, product);
+                      this.products.set(product.id, {
+                        id: product.id,
+                        title: product.title || product.id,
+                        description: product.description || '',
+                        price: product.pricing?.price || product.price || '$?.??',
+                        priceAsDecimal: (product.pricing?.priceMicros || 0) / 1000000,
+                        currency: product.pricing?.currency || product.currency || 'USD',
+                        raw: product,
+                      });
+                    }
+                  }
+                });
+              }
+            }
+          });
+        } catch (e) {
+          // Ignore errors when inspecting store properties
         }
         
         // Check if we have both products
         if (this.rawProducts.has(PRODUCT_IDS.MONTHLY) && this.rawProducts.has(PRODUCT_IDS.YEARLY)) {
           console.log('[PurchaseService] Both products found, breaking early');
           break;
+        }
+        
+        // If we've waited a while and still no products, try refreshing
+        if (i === 5 || i === 10) {
+          console.log('[PurchaseService] Retrying store.update()...');
+          try {
+            await this.store.update();
+          } catch (e) {
+            console.error('[PurchaseService] Update failed:', e);
+          }
         }
       }
 
@@ -232,23 +280,47 @@ class PurchaseServiceImpl {
       
       // Log store state for debugging
       console.log('[PurchaseService] Store object keys:', Object.keys(this.store));
+      console.log('[PurchaseService] Store object type:', typeof this.store);
+      console.log('[PurchaseService] Store.products type:', typeof this.store.products);
+      console.log('[PurchaseService] Store.products is array?', Array.isArray(this.store.products));
+      
       if (this.store.products) {
-        console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ id: p.id, valid: !!p.valid, state: p.state })));
+        if (Array.isArray(this.store.products)) {
+          console.log('[PurchaseService] Store.products array length:', this.store.products.length);
+          console.log('[PurchaseService] Store.products:', this.store.products.map((p: any) => ({ 
+            id: p?.id, 
+            valid: !!p?.valid, 
+            state: p?.state,
+            loaded: !!p?.loaded,
+            canPurchase: !!p?.canPurchase
+          })));
+        } else {
+          console.log('[PurchaseService] Store.products is not an array:', this.store.products);
+        }
       } else {
-        console.log('[PurchaseService] Store.products is not an array or undefined');
+        console.log('[PurchaseService] Store.products is undefined or null');
       }
       
-      // Check if products are registered
-      if (this.store.registeredProducts) {
-        console.log('[PurchaseService] Registered products:', this.store.registeredProducts);
-      }
+      // Check all store properties that might contain products
+      const productKeys = Object.keys(this.store).filter(k => 
+        k.toLowerCase().includes('product') || 
+        k.toLowerCase().includes('item') ||
+        k.toLowerCase().includes('subscription')
+      );
+      console.log('[PurchaseService] Store properties with "product":', productKeys);
+      productKeys.forEach(key => {
+        const value = (this.store as any)[key];
+        console.log(`[PurchaseService] Store.${key}:`, typeof value, Array.isArray(value) ? `array[${value.length}]` : value);
+      });
       
-      // Warn if no products found (might be simulator or products not configured)
+      // Warn if no products found
       if (this.rawProducts.size === 0) {
-        console.warn('[PurchaseService] WARNING: No products loaded. This might be because:');
-        console.warn('1. Products are not configured in App Store Connect');
-        console.warn('2. Running in iOS Simulator (StoreKit may not work)');
-        console.warn('3. Products are still loading (check console for productUpdated events)');
+        console.warn('[PurchaseService] WARNING: No products loaded after initialization');
+        console.warn('[PurchaseService] Possible reasons:');
+        console.warn('1. Products not configured in App Store Connect');
+        console.warn('2. Products not approved/published in App Store Connect');
+        console.warn('3. Network issue preventing product fetch');
+        console.warn('4. Products still loading (will retry on purchase attempt)');
       }
 
     } catch (error) {
