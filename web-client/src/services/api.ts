@@ -176,7 +176,7 @@ export const playerAPI = {
   
   // Update premium status
   updatePremiumStatus: (isPremium: boolean) =>
-    api.put('/api/player/premium', { is_premium: isPremium }) as Promise<{
+    api.patch('/api/player/premium', { is_premium: isPremium }) as Promise<{
       success: boolean;
       is_premium: boolean;
       display_name: string;

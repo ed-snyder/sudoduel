@@ -152,8 +152,8 @@ router.patch('/tutorial-complete', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
-// PUT /api/player/premium - Update premium status (for dev/testing)
-router.put('/premium', authMiddleware, async (req: AuthRequest, res: Response) => {
+// PATCH /api/player/premium - Update premium status (for dev/testing)
+router.patch('/premium', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { is_premium } = req.body;
     
