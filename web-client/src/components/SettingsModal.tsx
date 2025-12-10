@@ -270,9 +270,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Danger Zone */}
           <div className="mt-8 pt-6 border-t border-error/20 px-4 pb-4">
-            <h3 className="text-error font-display font-bold text-sm mb-4 uppercase tracking-wider">
-              Danger Zone
-            </h3>
+           
             
             <button
               onClick={() => setShowDeleteConfirm(true)}
