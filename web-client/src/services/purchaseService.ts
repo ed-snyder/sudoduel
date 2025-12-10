@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
 
 export const PRODUCT_IDS = {
   MONTHLY: 'sudoduel_plus_monthly',
@@ -45,6 +46,22 @@ class PurchaseServiceImpl {
       this.setupMockProducts();
       this.initialized = true;
       return;
+    }
+    
+    // Check if running in simulator (StoreKit doesn't work properly in simulator)
+    let isSimulator = false;
+    try {
+      const deviceInfo = await Device.getInfo();
+      isSimulator = deviceInfo.isVirtual === true;
+    } catch {
+      // Fallback check
+      isSimulator = /Simulator/i.test(navigator.userAgent);
+    }
+    
+    if (isSimulator) {
+      console.warn('[PurchaseService] Running in iOS Simulator - StoreKit may not work properly');
+      console.warn('[PurchaseService] Products must be configured in App Store Connect or use StoreKit Configuration');
+      console.warn('[PurchaseService] For testing, create a StoreKit Configuration file in Xcode');
     }
 
     // Wait for CdvPurchase to be available
