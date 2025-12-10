@@ -152,11 +152,6 @@ class PurchaseServiceImpl {
     return this.initialized && this.products.size > 0;
   }
 
-  private isOwned(productId: string): boolean {
-    const product = this.rawProducts.get(productId);
-    return product?.owned === true;
-  }
-
   async purchase(productId: string): Promise<PurchaseResult> {
     console.log('[PurchaseService] Purchase:', productId);
 
