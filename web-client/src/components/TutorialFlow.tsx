@@ -317,7 +317,9 @@ const NumberPad = memo(function NumberPad({
               boxShadow: disabled ? 'none' : isHighlighted
                 ? '0 0 15px rgba(0, 255, 255, 0.5)'
                 : '0 0 10px rgba(139, 0, 255, 0.2)',
-              minHeight: '44px',
+              width: '100%',
+              maxWidth: '100%',
+              aspectRatio: '1',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
@@ -517,15 +519,17 @@ function SudokuBasics3Step({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state - useEffect will call onInteractionComplete
+      // Set placed state and call completion immediately
+      placedRef.current = true;
       setPlaced(true);
+      onInteractionComplete?.();
     } else {
       // Wrong number - show error and allow retry by resetting ref
       isProcessingRef.current = false;
       setShowError(true);
       setTimeout(() => setShowError(false), 600);
     }
-  }, [correctValue, targetRow, targetCol]);
+  }, [correctValue, targetRow, targetCol, onInteractionComplete]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
@@ -689,15 +693,17 @@ function DuelCorrectStep({ onNext, onInteractionComplete }: StepProps) {
         return newGrid;
       });
       
-      // Set placed state - useEffect will call onInteractionComplete
+      // Set placed state and call completion immediately
+      placedRef.current = true;
       setPlaced(true);
       setTime(200);
       setShowDelta(false);
+      onInteractionComplete?.();
     } else {
       // Wrong number - allow retry by resetting ref
       isProcessingRef.current = false;
     }
-  }, [correctValue, targetRow, targetCol]);
+  }, [correctValue, targetRow, targetCol, onInteractionComplete]);
 
   return (
     <TutorialOverlayComponent showTapPrompt={false}>
