@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { playerAPI } from '../services/api';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface PlayerStats {
   current_rating: number;
@@ -29,25 +30,27 @@ interface StatsModalProps {
   onClose: () => void;
 }
 
-function StatCard({ label, value, sublabel, highlight, fire, color }: { 
+function StatCard({ label, value, sublabel, highlight, fire, color, locked }: { 
   label: string; 
   value: string; 
   sublabel?: string;
   highlight?: boolean;
   fire?: boolean;
   color?: 'cyan' | 'magenta' | 'gray';
+  locked?: boolean;
 }) {
-  const textColorClass = color === 'cyan' ? 'text-player' 
+  const textColorClass = locked ? 'text-muted/50'
+    : color === 'cyan' ? 'text-player' 
     : color === 'magenta' ? 'text-opponent'
     : color === 'gray' ? 'text-muted'
     : highlight ? 'text-player' 
     : 'text-primary';
 
   return (
-    <div className={`bg-elevated/50 rounded-lg p-3 border ${highlight ? 'border-player/50' : 'border-grid-line/50'}`}>
+    <div className={`bg-elevated/50 rounded-lg p-3 border ${locked ? 'border-grid-line/30 opacity-50' : highlight ? 'border-player/50' : 'border-grid-line/50'}`}>
       <div className={`text-xl font-mono font-bold ${textColorClass}`}>
-        {fire && <span className="mr-1">🔥</span>}
-        {value}
+        {fire && !locked && <span className="mr-1">🔥</span>}
+        {locked ? '🔒' : value}
       </div>
       <div className="text-xs text-muted font-body mt-1">{label}</div>
       {sublabel && <div className="text-xs text-muted/60 font-body">{sublabel}</div>}
@@ -56,6 +59,7 @@ function StatCard({ label, value, sublabel, highlight, fire, color }: {
 }
 
 export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
+  const { isPremium } = useSubscription();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
