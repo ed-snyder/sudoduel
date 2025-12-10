@@ -521,15 +521,34 @@ class PurchaseServiceImpl {
       console.log('[PurchaseService] Available in rawProducts:', Array.from(this.rawProducts.keys()));
       console.log('[PurchaseService] Store.products:', this.store.products);
       
-      // Try one more update
+      // Try refresh (preferred) or update
       try {
-        await this.store.update();
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (typeof this.store.refresh === 'function') {
+          await this.store.refresh();
+        } else if (typeof this.store.update === 'function') {
+          await this.store.update();
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Check again
-        product = this.rawProducts.get(productId);
+        // Try store.get() after refresh
+        if (typeof this.store.get === 'function') {
+          try {
+            product = this.store.get(productId);
+            if (product && product.id) {
+              console.log('[PurchaseService] Found product via store.get() after refresh');
+              this.rawProducts.set(productId, product);
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
+        
+        // Check again in cache and store.products
+        if (!product) {
+          product = this.rawProducts.get(productId);
+        }
         if (!product && this.store.products) {
-          product = this.store.products.find((p: any) => p.id === productId);
+          product = this.store.products.find((p: any) => p && p.id === productId);
         }
       } catch (e) {
         console.error('[PurchaseService] Refresh failed:', e);
@@ -537,9 +556,15 @@ class PurchaseServiceImpl {
     }
     
     if (!product) {
+      console.error('[PurchaseService] Product still not found after refresh');
+      console.error('[PurchaseService] This usually means:');
+      console.error('1. Products are not configured in App Store Connect');
+      console.error('2. Products are not approved/published in App Store Connect');
+      console.error('3. App bundle ID does not match App Store Connect');
+      console.error('4. Network connectivity issue');
       return { 
         success: false, 
-        error: 'Product not available. Please ensure you have internet connection and try again.' 
+        error: 'Product not available. Please ensure products are configured in App Store Connect and try again.' 
       };
     }
 
