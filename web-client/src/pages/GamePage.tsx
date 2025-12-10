@@ -1959,23 +1959,28 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {/* Player emote - absolutely positioned to the right of timer, closer to center */}
               {myEmote && (
                 <div 
-                  className={`absolute pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={myEmote}
                   style={{ 
                     zIndex: 10,
                     left: '100%',
                     marginLeft: '25px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    maxWidth: '150px',
-                    wordBreak: 'break-word',
+                    top: '0',
+                    transform: 'translateY(0)',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    letterSpacing: '-0.1em',
+                    background: 'rgba(139,0,255,0.1)',
+                    border: '2px solid rgba(139,0,255,0.3)',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   }}
                 >
-                  <div className="px-3 py-2 rounded-xl bg-player/20 border border-player/50">
-                    <span className="text-player font-display text-sm sm:text-base">
-                      {myEmote}
-                    </span>
-                  </div>
+                  {myEmote}
                 </div>
               )}
             </div>
@@ -1984,23 +1989,28 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {/* Opponent emote - absolutely positioned to the left of timer, closer to center */}
               {opponentEmote && (
                 <div 
-                  className={`absolute pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                  className={`absolute text-4xl sm:text-5xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                   key={opponentEmote}
                   style={{ 
                     zIndex: 10,
                     right: '100%',
                     marginRight: '25px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    maxWidth: '150px',
-                    wordBreak: 'break-word',
+                    top: '0',
+                    transform: 'translateY(0)',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    letterSpacing: '-0.1em',
+                    background: 'rgba(139,0,255,0.1)',
+                    border: '2px solid rgba(139,0,255,0.3)',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   }}
                 >
-                  <div className="px-3 py-2 rounded-xl bg-opponent/20 border border-opponent/50">
-                    <span className="text-opponent font-display text-sm sm:text-base">
-                      {opponentEmote}
-                    </span>
-                  </div>
+                  {opponentEmote}
                 </div>
               )}
               <div className={`px-2 py-1 rounded-lg border-2 ${
@@ -2356,86 +2366,46 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         ) : (
           <>
             {/* Emoji Picker - replaces toolbar */}
-            <div className="flex flex-col gap-2 max-w-md mx-auto">
-              {/* Default emotes - always shown */}
-              <div className="flex justify-center gap-3">
-                {emotes.map((emote, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      handleSelectEmote(emote);
-                      setShowEmotePicker(false);
-                    }}
-                    className="flex-1 py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center"
-                    style={{
-                      background: 'rgba(139, 0, 255, 0.2)',
-                      border: '2px solid rgba(139, 0, 255, 0.5)',
-                      WebkitTapHighlightColor: 'transparent',
-                    }}
-                  >
-                    <span style={{ 
-                      fontSize: '1.75rem', 
-                      lineHeight: 1,
-                      display: 'inline-flex',
-                      flexDirection: 'row',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {emote}
-                    </span>
-                  </button>
-                ))}
-                {/* Close button */}
-                <button
-                  onClick={() => setShowEmotePicker(false)}
-                  className="py-3 px-4 rounded-xl transition-all touch-manipulation flex items-center justify-center"
-                  style={{
-                    background: 'rgba(255, 51, 102, 0.2)',
-                    border: '2px solid rgba(255, 51, 102, 0.5)',
-                    color: '#FF3366',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Custom emote input - premium only */}
-              {isPremium && (
-                <div className="border-t border-grid-line pt-2">
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const input = e.currentTarget.querySelector('input') as HTMLInputElement;
-                      if (input?.value.trim()) {
-                        handleSelectEmote(input.value.trim());
-                        input.value = '';
-                        setShowEmotePicker(false);
-                      }
-                    }}
-                    className="flex gap-2"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Type anything..."
-                      maxLength={20}
-                      className="flex-1 px-3 py-2 bg-elevated border border-grid-line rounded-lg text-primary text-sm focus:outline-none focus:border-player"
-                      style={{
-                        WebkitTapHighlightColor: 'transparent',
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      className="px-3 py-2 bg-player/20 border border-player rounded-lg text-player text-sm font-bold hover:bg-player/30 transition-colors"
-                      style={{
-                        WebkitTapHighlightColor: 'transparent',
-                      }}
-                    >
-                      Send
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
+            <div className="flex justify-center gap-3 max-w-md mx-auto">
+            {emotes.map((emote, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  handleSelectEmote(emote);
+                  setShowEmotePicker(false);
+                }}
+                className="flex-1 py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+                style={{
+                  background: 'rgba(139, 0, 255, 0.2)',
+                  border: '2px solid rgba(139, 0, 255, 0.5)',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <span style={{ 
+                  fontSize: '1.75rem', 
+                  lineHeight: 1,
+                  display: 'inline-flex',
+                  flexDirection: 'row',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {emote}
+                </span>
+              </button>
+            ))}
+            {/* Close button */}
+            <button
+              onClick={() => setShowEmotePicker(false)}
+              className="py-3 px-4 rounded-xl transition-all touch-manipulation flex items-center justify-center"
+              style={{
+                background: 'rgba(255, 51, 102, 0.2)',
+                border: '2px solid rgba(255, 51, 102, 0.5)',
+                color: '#FF3366',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              ✕
+            </button>
+          </div>
           </>
         )}
       </div>

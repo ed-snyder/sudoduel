@@ -148,33 +148,42 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
                 </div>
               </div>
 
-              {/* Speed Stats */}
+              {/* Speed Stats - PREMIUM */}
               <div>
-                <h3 className="text-sm font-display font-black text-player uppercase tracking-wider mb-3">Speed</h3>
+                <h3 className="text-sm font-display font-black text-player uppercase tracking-wider mb-3 flex items-center gap-2">
+                  Speed
+                  {!isPremium && <span className="text-xs text-muted font-body normal-case">PREMIUM</span>}
+                </h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="CPM" value={stats.cpm.toFixed(1)} sublabel="cells/min" />
-                  <StatCard label="Avg Win" value={formatTime(stats.avgTimeAtWin)} sublabel="time left" />
-                  <StatCard label="Fastest" value={formatTime(stats.fastestWin)} sublabel="best win" highlight />
+                  <StatCard label="CPM" value={stats.cpm.toFixed(1)} sublabel="cells/min" locked={!isPremium} />
+                  <StatCard label="Avg Win" value={formatTime(stats.avgTimeAtWin)} sublabel="time left" locked={!isPremium} />
+                  <StatCard label="Fastest" value={formatTime(stats.fastestWin)} sublabel="best win" highlight locked={!isPremium} />
                 </div>
               </div>
 
-              {/* Competition Stats */}
+              {/* Competition Stats - PREMIUM */}
               <div>
-                <h3 className="text-sm font-display font-black text-opponent uppercase tracking-wider mb-3">Competition</h3>
+                <h3 className="text-sm font-display font-black text-opponent uppercase tracking-wider mb-3 flex items-center gap-2">
+                  Competition
+                  {!isPremium && <span className="text-xs text-muted font-body normal-case">PREMIUM</span>}
+                </h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Upset Rate" value={`${stats.upsetRate.toFixed(0)}%`} sublabel="vs higher" />
-                  <StatCard label="Peak" value={Math.round(stats.peakRating).toString()} sublabel="all-time" highlight />
-                  <StatCard label="Win Rate" value={`${stats.win_rate.toFixed(0)}%`} sublabel={`${stats.total_matches} games`} />
+                  <StatCard label="Upset Rate" value={`${stats.upsetRate.toFixed(0)}%`} sublabel="vs higher" locked={!isPremium} />
+                  <StatCard label="Peak" value={Math.round(stats.peakRating).toString()} sublabel="all-time" highlight locked={!isPremium} />
+                  <StatCard label="Win Rate" value={`${stats.win_rate.toFixed(0)}%`} sublabel={`${stats.total_matches} games`} locked={!isPremium} />
                 </div>
               </div>
 
-              {/* Streak Stats */}
+              {/* Streak Stats - PREMIUM */}
               <div>
-                <h3 className="text-sm font-display font-black text-warning uppercase tracking-wider mb-3">Streaks</h3>
+                <h3 className="text-sm font-display font-black text-warning uppercase tracking-wider mb-3 flex items-center gap-2">
+                  Streaks
+                  {!isPremium && <span className="text-xs text-muted font-body normal-case">PREMIUM</span>}
+                </h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Current" value={stats.currentWinStreak.toString()} sublabel="win streak" fire={stats.currentWinStreak >= 3} />
-                  <StatCard label="Best" value={stats.bestWinStreak.toString()} sublabel="all-time" />
-                  <StatCard label="Avg Cell" value={stats.avgCellStreak.toFixed(1)} sublabel="in-game" />
+                  <StatCard label="Current" value={stats.currentWinStreak.toString()} sublabel="win streak" fire={stats.currentWinStreak >= 3} locked={!isPremium} />
+                  <StatCard label="Best" value={stats.bestWinStreak.toString()} sublabel="all-time" locked={!isPremium} />
+                  <StatCard label="Avg Cell" value={stats.avgCellStreak.toFixed(1)} sublabel="in-game" locked={!isPremium} />
                 </div>
               </div>
 
