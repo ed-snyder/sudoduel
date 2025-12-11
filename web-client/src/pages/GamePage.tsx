@@ -612,13 +612,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   useEffect(() => {
     if (gameStatus !== 'playing') return;
     
-    if (myTimeRemaining < 15 && myTimeRemaining > 0 && !shownLowTimeWarning) {
+    if (myTimeRemaining < 30 && myTimeRemaining > 0 && !shownLowTimeWarning) {
       setShownLowTimeWarning(true);
       showBanner("Running out of time!", "banner-message-magenta", 10, 3000, 'negative');
     }
     
-    // Reset warning if time goes back above 15 (shouldn't happen, but handle edge case)
-    if (myTimeRemaining >= 15) {
+    // Reset warning if time goes back above 30 (shouldn't happen, but handle edge case)
+    if (myTimeRemaining >= 30) {
       setShownLowTimeWarning(false);
     }
   }, [myTimeRemaining, gameStatus, shownLowTimeWarning, showBanner]);
@@ -630,7 +630,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     const myCellsRemaining = 81 - myState.cells_completed;
     const oppCellsRemaining = 81 - opponentState.cells_completed;
     const bothUnder9 = myCellsRemaining <= 9 && oppCellsRemaining <= 9;
-    const lowTime = myTimeRemaining < 15 && myTimeRemaining > 0;
+    const lowTime = myTimeRemaining < 30 && myTimeRemaining > 0;
     
     return bothUnder9 || lowTime;
   }, [myState.cells_completed, opponentState.cells_completed, myTimeRemaining, gameStatus]);
