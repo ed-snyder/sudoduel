@@ -182,7 +182,7 @@ router.post('/set-initial-rating', authMiddleware, async (req: AuthRequest, res:
     // Update rating for default ladder (ladder_id = 1)
     await query(
       `UPDATE player_ratings 
-       SET rating = $1, rating_deviation = 350 
+       SET rating = $1, rd = 350 
        WHERE player_id = $2 AND ladder_id = 1`,
       [rating, profile.id]
     );
