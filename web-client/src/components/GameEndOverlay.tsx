@@ -102,16 +102,16 @@ export default function GameEndOverlay({
     triggerHeavyHaptic();
     playGameEndSound();
 
-    // 2300ms: Start exit animation
+    // 4700ms: Start exit animation (5 seconds total - 300ms for exit)
     addTimeout(() => {
       setPhase('exiting');
-    }, 2300);
+    }, 4700);
 
-    // 2500ms: Complete, trigger callback
+    // 5000ms: Complete, trigger callback
     addTimeout(() => {
       setPhase('hidden');
       onComplete();
-    }, 2500);
+    }, 5000);
 
   }, [isActive, onComplete]);
 

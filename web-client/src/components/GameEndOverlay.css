@@ -3,12 +3,12 @@
 .game-end-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 50; /* Below player info elements that need to stay visible */
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(13, 2, 33, 0);
-  pointer-events: all; /* Block interactions */
+  pointer-events: none; /* Allow clicks to pass through to elements above */
   animation: game-end-overlay-fade-in 0.2s ease-out forwards;
 }
 

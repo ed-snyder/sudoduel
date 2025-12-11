@@ -2024,7 +2024,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       )}
 
       {/* Header Section - Push down significantly more */}
-      <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
+      {/* z-index 60 ensures player names, timers, and emotes stay ABOVE the game end overlay (z-50) */}
+      <div className="flex-shrink-0 relative" style={{ marginTop: '48px', paddingBottom: '0px', zIndex: 60 }}>
         {/* Settings button - top right, below safe area */}
         <div className="flex justify-end px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           <button
@@ -2467,16 +2468,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       </div>
 
       {/* Toolbar OR Emoji Picker - they swap, same position */}
-      <div className={`px-3 py-1 pb-safe transition-all duration-300 ${
-        !controlsVisible ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+      {/* z-index 60 ensures toolbar stays ABOVE the game end overlay (z-50) */}
+      <div className={`px-3 py-1 pb-safe transition-all duration-300 relative ${
+        !controlsVisible && !showGameEndOverlay ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}
-        style={{ willChange: 'transform, opacity', transitionDelay: controlsVisible ? '0.1s' : '0s' }}
+        style={{ willChange: 'transform, opacity', transitionDelay: controlsVisible ? '0.1s' : '0s', zIndex: 60 }}
       >
         {!showEmotePicker ? (
           <>
-            {/* Normal Toolbar */}
+            {/* Normal Toolbar - during game end overlay, only show emote button */}
             <div className="flex justify-center gap-3 max-w-md mx-auto">
-            {/* Erase Button */}
+            {/* Erase Button - hidden during game end overlay */}
+            {!showGameEndOverlay && (
             <button
               onClick={handleErase}
               disabled={!selectedCell || gameStatus !== 'playing' || myState.is_locked}
@@ -2490,8 +2493,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               Erase
             </button>
+            )}
 
-            {/* Notes Button */}
+            {/* Notes Button - hidden during game end overlay */}
+            {!showGameEndOverlay && (
             <button
               onClick={handleToggleNotes}
               className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
@@ -2505,12 +2510,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               {notesMode ? 'Notes ON' : 'Notes'}
             </button>
+            )}
 
-            {/* Emote Button */}
+            {/* Emote Button - ALWAYS visible (including during game end overlay) */}
             <button
               onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
               disabled={countdownPhase !== 'complete'}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
+              className={`${showGameEndOverlay ? 'w-48' : 'flex-1'} py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40`}
               style={{
                 background: 'rgba(20, 12, 30, 0.8)',
                 border: '2px solid rgba(139, 0, 255, 0.5)',
