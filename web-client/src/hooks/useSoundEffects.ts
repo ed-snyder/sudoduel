@@ -250,7 +250,8 @@ export function useSoundEffects(volumeMultiplier: number = 1.0) {
   }, [playSound]);
   
   const playDownToWire = useCallback(() => {
-    playSound('downToWire');
+    // Louder than other sounds so it's noticeable
+    playSound('downToWire', { volume: 1.4 });
   }, [playSound]);
   
   const playTimesUp = useCallback(() => {

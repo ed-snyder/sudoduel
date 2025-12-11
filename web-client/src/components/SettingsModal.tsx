@@ -90,8 +90,18 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleMusicVolume = (value: number) => {
     setMusicVolume(value);
     localStorage.setItem('sudoduel_music_volume', String(value));
+    
+    // Direct update: find and update any audio elements playing music
+    // This is a fallback in case the event doesn't work
+    const audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(audio => {
+      if (audio.src.includes('/music/')) {
+        audio.volume = value / 100;
+      }
+    });
+    
     // Dispatch custom event so MusicContext updates immediately
-    window.dispatchEvent(new CustomEvent('musicVolumeChange'));
+    window.dispatchEvent(new Event('musicVolumeChange'));
   };
 
   // Debounce for SFX test sound

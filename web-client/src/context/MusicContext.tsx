@@ -108,18 +108,27 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   // Listen for volume changes
   useEffect(() => {
     const handleVolumeChange = () => {
+      const newVolume = getMusicVolume() / 100;
+      console.log('[Music] Volume change event received, setting to:', newVolume);
       if (audioRef.current) {
-        audioRef.current.volume = getMusicVolume() / 100;
+        audioRef.current.volume = newVolume;
       }
     };
 
-    window.addEventListener('storage', handleVolumeChange);
+    // Listen for cross-tab changes (storage event)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sudoduel_music_volume') {
+        handleVolumeChange();
+      }
+    };
     
-    // Also listen for custom event for same-tab updates
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Listen for same-tab changes (custom event)
     window.addEventListener('musicVolumeChange', handleVolumeChange);
 
     return () => {
-      window.removeEventListener('storage', handleVolumeChange);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('musicVolumeChange', handleVolumeChange);
     };
   }, []);
