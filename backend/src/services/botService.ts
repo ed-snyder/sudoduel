@@ -2,18 +2,17 @@
  * Bot Service - Manages bot behavior for first-time player matches
  * 
  * Bot Behavior:
- * - Answers one cell correctly every 8-12 seconds (randomized)
+ * - Answers one cell correctly every 20 seconds (fixed)
  * - Makes 1 intentional mistake around the 2-minute mark
- * - Maximum ~25-30 cells completed in a 5-minute game
- * - Any average player should win comfortably
+ * - Maximum ~15 cells completed in a 5-minute game
+ * - Any new player should win very comfortably
  */
 
 // Bot configuration
 const BOT_CONFIG = {
   name: 'SudoBot',
   displayRating: 800,
-  minMoveInterval: 8000,   // 8 seconds minimum between moves
-  maxMoveInterval: 12000,  // 12 seconds maximum
+  moveInterval: 20000,     // Fixed 20 seconds between moves
   mistakeTimeMin: 110000,  // Make mistake between 110-130 seconds into game
   mistakeTimeMax: 130000,
 };
@@ -127,11 +126,10 @@ export function calculateNextBotMove(
 }
 
 /**
- * Get randomized delay for next bot move
+ * Get delay for next bot move (fixed 20 seconds)
  */
 export function getBotMoveDelay(): number {
-  return BOT_CONFIG.minMoveInterval +
-    Math.random() * (BOT_CONFIG.maxMoveInterval - BOT_CONFIG.minMoveInterval);
+  return BOT_CONFIG.moveInterval;
 }
 
 /**

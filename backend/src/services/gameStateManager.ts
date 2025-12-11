@@ -126,11 +126,19 @@ export const GameStateManager = {
 
       // Decrement each non-locked, non-solved player's timer
       // Only tick timers for non-paused players
+      // Bot matches: player2.playerId is -1 (null from DB becomes -1)
+      const isBotMatch = Number(game.player2.playerId) === -1;
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0 && game.player1.playerId !== game.pausedPlayerId) {
         game.player1.timeRemaining--;
         if (game.player1.timeRemaining <= 0) {
-          // Player 1 timed out – lock them out
-          game.player1.isLocked = true;
+          // Bot matches: player 1 can continue playing after timer hits 0
+          // Normal matches: lock them out
+          if (isBotMatch) {
+            console.log(`🤖 Bot match ${game.matchId}: Player 1 timer hit 0, NOT locking (bot match)`);
+          } else {
+            game.player1.isLocked = true;
+          }
+          // Timer stays at 0, doesn't go negative
         }
       }
       if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0 && game.player2.playerId !== game.pausedPlayerId) {
@@ -268,22 +276,29 @@ export const GameStateManager = {
       
       // Check for lockout (timer hit 0)
       if (player.timeRemaining <= 0) {
-        player.isLocked = true;
+        // Bot matches: player 1 (human) can continue playing after timer hits 0
+        const isBotMatch = Number(game.player2.playerId) === -1;
+        const isHumanInBotMatch = isBotMatch && player.slot === 1;
         
-        // If both players locked, game ends
-        if (opponent.isLocked) {
-          // Don't set status here - let endGame handle it
-          const winner = player.score > opponent.score ? player.slot :
-                         opponent.score > player.score ? opponent.slot : null;
-          return { success: true, correct: false, player, gameEnded: true, winner };
+        if (!isHumanInBotMatch) {
+          player.isLocked = true;
+          
+          // If both players locked, game ends
+          if (opponent.isLocked) {
+            // Don't set status here - let endGame handle it
+            const winner = player.score > opponent.score ? player.slot :
+                           opponent.score > player.score ? opponent.slot : null;
+            return { success: true, correct: false, player, gameEnded: true, winner };
+          }
+          
+          // Otherwise, opponent can continue playing
+          // Check if opponent has already surpassed our score
+          if (opponent.score > player.score) {
+            // Don't set status here - let endGame handle it
+            return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
+          }
         }
-        
-        // Otherwise, opponent can continue playing
-        // Check if opponent has already surpassed our score
-        if (opponent.score > player.score) {
-          // Don't set status here - let endGame handle it
-          return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
-        }
+        // Human in bot match: timer stays at 0, they can keep playing
       }
     }
 
@@ -749,7 +764,11 @@ export const GameStateManager = {
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
 
-    if (player.isLocked || player.timeRemaining <= 0) {
+    // Bot matches: player 1 (human) can continue erasing after timer hits 0
+    const isBotMatch = Number(game.player2.playerId) === -1;
+    const isHumanInBotMatch = isBotMatch && player.slot === 1;
+    
+    if (player.isLocked || (player.timeRemaining <= 0 && !isHumanInBotMatch)) {
       return { success: false, player };
     }
 

@@ -318,6 +318,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     adShownRef.current = false;
     setShowGameEndOverlay(false);
     setPendingGameResult(null);
+    setOverlayAnimationDone(false);
     
     const ws = createGameSocket(matchId, token);
     wsRef.current = ws;
@@ -432,9 +433,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [gameStatus, gameResult, user?.id, mySlot]); // Removed displayedRating from dependencies to prevent infinite loop
 
-  // Handle ad on game end - show ad BEFORE showing GameEndOverlay
+  // Show GameEndOverlay IMMEDIATELY when game ends
   useEffect(() => {
-    if (gameStatus !== 'ended' || !pendingGameResult || adShownRef.current) return;
+    if (gameStatus === 'ended' && pendingGameResult && !showGameEndOverlay) {
+      setShowGameEndOverlay(true);
+    }
+  }, [gameStatus, pendingGameResult, showGameEndOverlay]);
+
+  // Show ad AFTER "Game Over" text appears (1.5 second delay)
+  useEffect(() => {
+    if (!showGameEndOverlay || adShownRef.current || !pendingGameResult) return;
     
     const winnerSlot = pendingGameResult.winner_slot;
     const isDraw = winnerSlot === null;
@@ -446,28 +454,25 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Record the game
     recordGamePlayed(didWin);
     
-    // If should show ad, show it and wait for completion
+    // If should show ad, wait for "Game Over" text to appear, then show ad
     if (shouldShowAd(resultType)) {
       adShownRef.current = true;
-      showAdIfNeeded(resultType).then(() => {
-        setAdComplete(true);
-      }).catch((error) => {
-        console.error('[GamePage] Error showing ad:', error);
-        // If ad fails, proceed anyway
-        setAdComplete(true);
-      });
+      // Wait 1.5 seconds for "Game Over" text to be visible, then show ad
+      const adTimer = setTimeout(() => {
+        showAdIfNeeded(resultType).then(() => {
+          setAdComplete(true);
+        }).catch((error) => {
+          console.error('[GamePage] Error showing ad:', error);
+          // If ad fails, proceed anyway
+          setAdComplete(true);
+        });
+      }, 1500);
+      return () => clearTimeout(adTimer);
     } else {
       // No ad needed, proceed immediately
       setAdComplete(true);
     }
-  }, [gameStatus, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded, recordGamePlayed]);
-
-  // Show GameEndOverlay after ad is complete
-  useEffect(() => {
-    if (gameStatus === 'ended' && adComplete && pendingGameResult && !showGameEndOverlay) {
-      setShowGameEndOverlay(true);
-    }
-  }, [gameStatus, adComplete, pendingGameResult, showGameEndOverlay]);
+  }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded, recordGamePlayed]);
 
   // Victory/Defeat haptic feedback on game end
   useEffect(() => {
@@ -639,15 +644,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     setCountdownPhase('complete');
   }, []);
 
+  // Track when overlay animation is done
+  const [overlayAnimationDone, setOverlayAnimationDone] = useState(false);
+  
   // Handler for game end overlay completion
   const handleGameEndOverlayComplete = useCallback(() => {
-    setShowGameEndOverlay(false);
-    // Now show the results screen with the pending result
-    if (pendingGameResult) {
+    setOverlayAnimationDone(true);
+  }, []);
+  
+  // Show results when BOTH overlay animation is done AND ad is complete
+  useEffect(() => {
+    if (overlayAnimationDone && adComplete && pendingGameResult) {
+      setShowGameEndOverlay(false);
       setGameResult(pendingGameResult);
       setPendingGameResult(null);
+      setOverlayAnimationDone(false); // Reset for next game
     }
-  }, [pendingGameResult]);
+  }, [overlayAnimationDone, adComplete, pendingGameResult]);
 
   // Rematch handlers - defined early to avoid hook ordering issues
   const handleRematchRequest = useCallback(() => {
@@ -1163,9 +1176,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Reset ad state for new game end
         setAdComplete(false);
         adShownRef.current = false;
+        setOverlayAnimationDone(false);
         
-        // Ad will be shown by useEffect before overlay appears
-        // Don't show overlay immediately - wait for ad to complete
+        // Overlay shows immediately, ad appears after "Game Over" text (1.5s delay)
         
         // Refresh user data for updated rating
         refreshUser?.();
@@ -1873,8 +1886,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         isActive={showGameCountdown}
       />
 
-      {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! - Only after ad is complete */}
-      {showGameEndOverlay && adComplete && (
+      {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! - Shows immediately, ad appears after text */}
+      {showGameEndOverlay && (
       <GameEndOverlay
         isActive={showGameEndOverlay}
         reason={gameEndReason}

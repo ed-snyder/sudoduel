@@ -1,5 +1,10 @@
-// Script to validate Sudoku puzzle solutions
+// Script to validate Sudoku puzzle solutions from the database seeds
 /// <reference types="node" />
+
+import * as fs from 'fs';
+import * as path from 'path';
+
+export {}; // Make this a module to avoid global scope conflicts
 
 interface Puzzle {
   initial: string;
@@ -7,33 +12,25 @@ interface Puzzle {
   difficulty: string;
 }
 
-const puzzles: Puzzle[] = [
-  {
-    initial: '530070000600195000098000060800060003400803001700020006060000280000419005000080079',
-    solution: '534678912672195348198342567859761423426853791713924856961537284287419635345286179',
-    difficulty: 'EASY'
-  },
-  {
-    initial: '000260701680070090190004500820100040004602900050003028009300074040050036703018000',
-    solution: '435269781682571493197834562826195347374682915951743628519326874248957136763418259',
-    difficulty: 'EASY'
-  },
-  {
-    initial: '800000070006010053040603000010000026080000040350000010000506090160020400020000007',
-    solution: '831295674796418253245673981914837526687152349352964718473586192168729435529341867',
-    difficulty: 'EASY'
-  },
-  {
-    initial: '090300001000080046000000800405060000003000100000020508008000000640050000200007090',
-    solution: '894376251157982346362415879485163927723598164916724538578639412649251783231847695',
-    difficulty: 'EASY'
-  },
-  {
-    initial: '003020600900305001001806400008102900700000008006708200002609500800203009005010300',
-    solution: '483921657967345821251876493548132976729564138136798245372689514814253769695417382',
-    difficulty: 'EASY'
+// Parse puzzles from SQL file
+function parsePuzzlesFromSQL(sqlFilePath: string): Puzzle[] {
+  const content = fs.readFileSync(sqlFilePath, 'utf-8');
+  const puzzles: Puzzle[] = [];
+  
+  // Match INSERT VALUES pattern: (1, 'initial', 'solution', 'DIFFICULTY')
+  const regex = /\(1,\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\)/g;
+  let match;
+  
+  while ((match = regex.exec(content)) !== null) {
+    puzzles.push({
+      initial: match[1],
+      solution: match[2],
+      difficulty: match[3]
+    });
   }
-];
+  
+  return puzzles;
+}
 
 // Convert string to 9x9 grid
 function stringToGrid(s: string): number[][] {
@@ -142,41 +139,48 @@ function validateInitialMatchesSolution(initial: string, solution: string): { va
 }
 
 // Main validation
-console.log('🔍 Validating Sudoku puzzle solutions...\n');
+const sqlFilePath = path.join(__dirname, '../../database/seeds/puzzles-500-easy.sql');
+
+console.log(`🔍 Reading puzzles from: ${sqlFilePath}\n`);
+
+const puzzles = parsePuzzlesFromSQL(sqlFilePath);
+console.log(`📊 Found ${puzzles.length} puzzles to validate\n`);
 
 let allValid = true;
+let validCount = 0;
+let invalidCount = 0;
 
 puzzles.forEach((puzzle, index) => {
-  console.log(`\n📋 Puzzle ${index + 1} (${puzzle.difficulty}):`);
-  
   try {
     const solutionGrid = stringToGrid(puzzle.solution);
     const solutionCheck = validateSolution(solutionGrid);
-    
-    if (!solutionCheck.valid) {
-      console.log('  ❌ Solution is INVALID:');
-      solutionCheck.errors.forEach(err => console.log(`     - ${err}`));
-      allValid = false;
-    } else {
-      console.log('  ✅ Solution is valid');
-    }
-
     const initialCheck = validateInitialMatchesSolution(puzzle.initial, puzzle.solution);
-    if (!initialCheck.valid) {
-      console.log('  ❌ Initial grid does not match solution:');
-      initialCheck.errors.forEach(err => console.log(`     - ${err}`));
+    
+    if (!solutionCheck.valid || !initialCheck.valid) {
+      console.log(`\n❌ Puzzle ${index + 1} (${puzzle.difficulty}):`);
+      if (!solutionCheck.valid) {
+        console.log('  Solution errors:');
+        solutionCheck.errors.forEach(err => console.log(`     - ${err}`));
+      }
+      if (!initialCheck.valid) {
+        console.log('  Initial/Solution mismatch:');
+        initialCheck.errors.forEach(err => console.log(`     - ${err}`));
+      }
       allValid = false;
+      invalidCount++;
     } else {
-      console.log('  ✅ Initial grid matches solution');
+      validCount++;
     }
-
   } catch (error: any) {
-    console.log(`  ❌ Error: ${error.message}`);
+    console.log(`\n❌ Puzzle ${index + 1}: Error - ${error.message}`);
     allValid = false;
+    invalidCount++;
   }
 });
 
 console.log('\n' + '='.repeat(50));
+console.log(`📊 Results: ${validCount} valid, ${invalidCount} invalid out of ${puzzles.length} puzzles`);
+
 if (allValid) {
   console.log('✨ All puzzles are valid!');
   process.exit(0);
@@ -184,4 +188,3 @@ if (allValid) {
   console.log('❌ Some puzzles have errors. Please fix them.');
   process.exit(1);
 }
-
