@@ -12,7 +12,7 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
   const { isPremium, updatePremiumStatus } = useSubscription();
-  const { playModalOpen, playModalClose } = useSoundEffects();
+  const { playModalOpen, playModalClose, playButtonTap } = useSoundEffects(0.8);
   const hasPlayedOpenSound = useRef(false);
   const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -90,11 +90,24 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleMusicVolume = (value: number) => {
     setMusicVolume(value);
     localStorage.setItem('sudoduel_music_volume', String(value));
+    // Dispatch custom event so MusicContext updates immediately
+    window.dispatchEvent(new CustomEvent('musicVolumeChange'));
   };
 
+  // Debounce for SFX test sound
+  const sfxDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   const handleSfxVolume = (value: number) => {
     setSfxVolume(value);
     localStorage.setItem('sudoduel_sfx_volume', String(value));
+    
+    // Play a test sound so user can hear the new volume (debounced)
+    if (sfxDebounceRef.current) {
+      clearTimeout(sfxDebounceRef.current);
+    }
+    sfxDebounceRef.current = setTimeout(() => {
+      playButtonTap();
+    }, 100);
   };
 
   const handleLogoutClick = () => {

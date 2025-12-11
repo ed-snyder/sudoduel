@@ -61,12 +61,16 @@ const getSfxVolume = (): number => {
   return stored ? parseInt(stored, 10) : 100;
 };
 
-export function useSoundEffects() {
+export function useSoundEffects(volumeMultiplier: number = 1.0) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const buffersRef = useRef<Map<SoundName, AudioBuffer>>(new Map());
   const searchingSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const searchingGainRef = useRef<GainNode | null>(null);
   const streakRef = useRef(0);
+  const volumeMultiplierRef = useRef(volumeMultiplier);
+  
+  // Update ref when multiplier changes
+  volumeMultiplierRef.current = volumeMultiplier;
 
   // Initialize AudioContext
   const initAudio = useCallback(() => {
@@ -141,9 +145,10 @@ export function useSoundEffects() {
     source.buffer = buffer;
     source.playbackRate.value = options?.pitch ?? 1.0;
     
-    // Apply SFX volume setting + any per-sound adjustment
+    // Apply SFX volume setting + per-sound adjustment + screen multiplier
     const baseVolume = getSfxVolume() / 100;
-    gainNode.gain.value = baseVolume * (options?.volume ?? 1.0);
+    const soundVolume = options?.volume ?? 1.0;
+    gainNode.gain.value = baseVolume * soundVolume * volumeMultiplierRef.current;
     
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
@@ -179,7 +184,7 @@ export function useSoundEffects() {
     
     source.buffer = buffer;
     source.loop = true;
-    gainNode.gain.value = getSfxVolume() / 100;
+    gainNode.gain.value = (getSfxVolume() / 100) * volumeMultiplierRef.current;
     
     source.connect(gainNode);
     gainNode.connect(ctx.destination);

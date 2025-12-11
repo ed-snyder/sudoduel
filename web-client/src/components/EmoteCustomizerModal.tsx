@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { extractEmojis } from '../utils/emoji';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 
 interface EmoteCustomizerModalProps {
   isOpen: boolean;
@@ -10,9 +11,28 @@ interface EmoteCustomizerModalProps {
 const DEFAULT_EMOTES = ['👋', '👍', '😭', '🫵😂'];
 
 export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = false }: EmoteCustomizerModalProps) {
+  const { playModalOpen, playModalClose } = useSoundEffects(0.8);
+  const hasPlayedOpenSound = useRef(false);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
+
+  // Play modal open sound
+  useEffect(() => {
+    if (isOpen && !hasPlayedOpenSound.current) {
+      playModalOpen();
+      hasPlayedOpenSound.current = true;
+    }
+    if (!isOpen) {
+      hasPlayedOpenSound.current = false;
+    }
+  }, [isOpen, playModalOpen]);
+
+  // Handle close with sound
+  const handleClose = useCallback(() => {
+    playModalClose();
+    onClose();
+  }, [playModalClose, onClose]);
 
   // Load saved emotes from localStorage
   useEffect(() => {
@@ -63,7 +83,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
@@ -78,7 +98,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
         <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line">
           <h2 className="font-heading font-bold text-lg text-primary">Emotes</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-muted hover:text-player transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

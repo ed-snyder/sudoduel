@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { playerAPI } from '../services/api';
 import PlayerActionModal from './PlayerActionModal';
 import ReportModal from './ReportModal';
 import { sendFriendRequest, reportUser, blockUser } from '../services/socialService';
 import { useAuth } from '../context/AuthContext';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 
 interface MatchHistoryEntry {
   match_id: number;
@@ -28,12 +29,31 @@ interface MatchHistoryModalProps {
 
 export default function MatchHistoryModal({ isOpen, onClose, playerName, currentRating }: MatchHistoryModalProps) {
   const { token, user } = useAuth();
+  const { playModalOpen, playModalClose } = useSoundEffects(0.8);
+  const hasPlayedOpenSound = useRef(false);
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // Play modal open sound
+  useEffect(() => {
+    if (isOpen && !hasPlayedOpenSound.current) {
+      playModalOpen();
+      hasPlayedOpenSound.current = true;
+    }
+    if (!isOpen) {
+      hasPlayedOpenSound.current = false;
+    }
+  }, [isOpen, playModalOpen]);
+
+  // Handle close with sound
+  const handleClose = useCallback(() => {
+    playModalClose();
+    onClose();
+  }, [playModalClose, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -121,7 +141,7 @@ export default function MatchHistoryModal({ isOpen, onClose, playerName, current
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-muted hover:text-player transition-colors p-1"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

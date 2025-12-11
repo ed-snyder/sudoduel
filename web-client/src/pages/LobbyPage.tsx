@@ -37,7 +37,7 @@ function ModalLoader() {
 export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
-  const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects();
+  const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects(0.8);
   const { playMenuMusic } = useMusic();
   
   const [searching, setSearching] = useState(false);

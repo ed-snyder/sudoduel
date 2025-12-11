@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { playerAPI } from '../services/api';
 import { validateUsername } from '../utils/usernameValidator';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 
 interface PlayerInfoModalProps {
   isOpen: boolean;
@@ -12,12 +13,31 @@ interface PlayerInfoModalProps {
 
 export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHistory }: PlayerInfoModalProps) {
   const { user, refreshUser } = useAuth();
+  const { playModalOpen, playModalClose } = useSoundEffects(0.8);
+  const hasPlayedOpenSound = useRef(false);
   const [displayName, setDisplayName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [nameError, setNameError] = useState('');
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
+
+  // Play modal open sound
+  useEffect(() => {
+    if (isOpen && !hasPlayedOpenSound.current) {
+      playModalOpen();
+      hasPlayedOpenSound.current = true;
+    }
+    if (!isOpen) {
+      hasPlayedOpenSound.current = false;
+    }
+  }, [isOpen, playModalOpen]);
+
+  // Handle close with sound
+  const handleClose = useCallback(() => {
+    playModalClose();
+    onClose();
+  }, [playModalClose, onClose]);
 
   // Load current display name when modal opens
   useEffect(() => {
@@ -163,7 +183,7 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
@@ -178,7 +198,7 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
         <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line">
           <h2 className="font-heading font-bold text-lg text-primary">Player Info</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-muted hover:text-player transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
