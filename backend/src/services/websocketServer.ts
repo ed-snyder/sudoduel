@@ -275,6 +275,8 @@ export const setupWebSocketServer = (server: Server) => {
         if (clients.get(matchId)?.size === 0) {
           clients.delete(matchId);
           console.log(`[WS] No clients remaining for match ${matchId}, cleaned up`);
+          // Clear matchmaking cache so players can join new games
+          MatchmakingService.clearMatch(matchId);
         } else if (wasInProgress) {
           // Start disconnect handling
           GameStateManager.handleDisconnect(matchId, profile.id, async (matchId) => {
