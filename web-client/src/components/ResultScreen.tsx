@@ -125,12 +125,9 @@ export default function ResultScreen({
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound, playVictory, playDefeat } = useSoundEffects();
-  const { playMenuMusic, stopMusic } = useMusic();
+  const { stopMusic } = useMusic();
 
-  // Restart menu music when results screen appears
-  useEffect(() => {
-    playMenuMusic();
-  }, [playMenuMusic]);
+  // NO music on results screen - music starts when player navigates back to lobby
 
   // Play victory/defeat sound on mount
   const hasPlayedResultSound = useRef(false);
