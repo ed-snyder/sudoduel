@@ -32,11 +32,10 @@ type TutorialStep =
   | 'skill-selection'
   | 'ready';
 
-type SkillLevel = 'beginner' | 'experienced' | null;
-
 interface TutorialFlowProps {
-  onComplete: (skillLevel: SkillLevel) => void;
+  onComplete: () => void;
   onSkip: () => void;
+  onSkillSelect?: (level: 'beginner' | 'experienced') => Promise<void>;
   gameMode?: 'duel' | 'solo';
 }
 
@@ -62,32 +61,38 @@ const SOLO_MODE_STEPS: TutorialStep[] = [
   'ready',
 ];
 
-export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: TutorialFlowProps) {
+export default function TutorialFlow({ onComplete, onSkip, onSkillSelect: onSkillSelectProp, gameMode = 'duel' }: TutorialFlowProps) {
   // Always assume new to sudoku - skip the experience question
   const [step, setStep] = useState<TutorialStep>(() => {
     // Start directly with the first tutorial step
     const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
     return steps[0];
   });
-  
-  // Track skill level selection
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>(null);
 
   const handleComplete = useCallback(async () => {
     try {
       await playerAPI.markTutorialComplete();
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete(skillLevel);
+      onComplete();
     } catch (error) {
       console.error('Failed to mark tutorial complete:', error);
       // Still complete locally
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete(skillLevel);
+      onComplete();
     }
-  }, [onComplete, skillLevel]);
+  }, [onComplete]);
   
-  const handleSkillSelect = useCallback((level: 'beginner' | 'experienced') => {
-    setSkillLevel(level);
+  const handleSkillSelect = useCallback(async (level: 'beginner' | 'experienced') => {
+    // Call the API immediately when user selects skill level
+    if (onSkillSelectProp) {
+      try {
+        await onSkillSelectProp(level);
+      } catch (error) {
+        console.error('Failed to set skill level:', error);
+        // Continue anyway
+      }
+    }
+    
     // Advance to next step
     const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
     const currentIndex = steps.indexOf('skill-selection');
@@ -96,7 +101,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
         setStep(steps[currentIndex + 1]);
       });
     }
-  }, [gameMode]);
+  }, [gameMode, onSkillSelectProp]);
 
   const handleNext = useCallback(() => {
     console.time('Step transition');

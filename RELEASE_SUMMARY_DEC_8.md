@@ -1,272 +1,60 @@
 # Release Summary: December 8, 2024 - Present
 
-## Overview
-**582 commits** shipped since December 8th, 2024, delivering major features, infrastructure improvements, and extensive bug fixes.
+**582 commits** shipped since December 8th, 2024.
 
----
+## 🎯 Major Features
 
-## 🎯 Major Features Shipped
+### Sudoduel+ Premium (4 Phases)
+- **Phase 1**: SubscriptionContext, upgrade modal, premium badge, dev toggle, lobby gates
+- **Phase 2**: Leaderboard API, LeaderboardScreen, rank calculation, chevron animations, magenta glow
+- **Phase 3**: Premium name styling, opponent profiles, premium status sync, `is_premium` column, rating display fixes
+- **Phase 4**: W-L-D stats, custom emotes, premium gating, H2H stats with caching fixes
+- **IAP**: StoreKit/CdvPurchase integration, polling-based purchase detection, product discovery, simulator detection, StoreKit config, global resolver pattern, store refresh logic
+- **AdMob**: Integration with grace period, upgrade CTA, test device config
 
-### 1. **Sudoduel+ Premium Subscription System** (Phase 1-4)
-Complete monetization infrastructure with Apple In-App Purchase integration:
+### Tutorial System
+- Foundation, interactive steps, number pad, auto-select cell, Time Management/Win Conditions copy, single tap placement, double-tap prevention (useRef guards), debounce logic, number pad styling match, grid resize prevention, auto-advance fixes (Next buttons), signup integration
 
-- **Phase 1: Foundation** (Dec 8)
-  - SubscriptionContext implementation
-  - Upgrade modal with premium branding
-  - Premium badge in lobby
-  - Dev toggle for testing
-  - Lobby gates for premium features
+### Solo Mode
+- Implementation, number pad positioning/touch handling, grid sizing fixes, performance optimizations, background effects
 
-- **Phase 2: Leaderboard** (Dec 8)
-  - Global ranking system backend API
-  - LeaderboardScreen component with styling
-  - Season/League/Time period filters
-  - Rank calculation and display
-  - Chevron pulse animations
-  - Magenta edges/glow effects
+### Social Features
+- Friend requests (block when target blocked sender), user blocking (table, matchmaking check), user reporting (backend endpoint, modal integration, match history integration)
 
-- **Phase 3: Premium Name Styling** (Dec 8)
-  - Premium name styling connected to subscription status
-  - Opponent profile enhancement
-  - Premium status sync to database
-  - Auto-creation of `is_premium` column
-  - Rating display fixes for premium users
+### Global Ranking
+- Implementation, rank refresh on rating change, calculation improvements, debug logging
 
-- **Phase 4: Advanced Stats & Custom Emotes** (Dec 8)
-  - Win-Loss-Draw record in Stats Modal
-  - Custom emotes feature for premium users
-  - Premium gating to Stats Modal sections
-  - Head-to-head (H2H) stats tracking
-  - H2H stats caching and double lookup fixes
+### Game UI/UX
+- **Number Pad**: Minimal style, larger fonts, full width, instant feedback, stronger haptics, cyan outline, grid fonts +20%
+- **Countdown**: 3...2...1...GO implementation, Game Over color effect, animation fixes, grid draw improvements
+- **Game Over Modal**: Dramatic transition, DEFEAT styling match, emote background changes
+- **Visual Effects**: Premium names, cell feedback/highlighting, shimmer/glows, magenta opponent glow, grid breathing, CSS glows, animated overlay, blob effects, grid opacity (0.06-0.12)
+- **Performance**: Pre-warm iOS Haptics (eliminated 2.6s delay), TIME_SYNC optimization, requestIdleCallback fixes, renderer warm-up, CSS breathing (eliminated 20 re-renders/sec), useDeferredValue, remove verbose logs/filters, memoize tutorial steps, startTransition, remove BackgroundEffects during gameplay
+- **Haptics**: Victory/defeat feedback, stronger number pad haptics, removed screen shake on victory
 
-- **Apple In-App Purchase Integration** (Dec 8)
-  - Complete StoreKit integration with CdvPurchase
-  - Purchase service with polling-based detection
-  - Product discovery with multiple access methods
-  - Simulator detection for testing
-  - StoreKit Configuration file for local testing
-  - Global resolver pattern for purchase completion
-  - Purchase polling with store refresh logic
+### Account Management
+- Delete account with confirmation, reports deletion fixes, error handling
 
-- **AdMob Integration** (Dec 8)
-  - AdMob integration with grace period
-  - Upgrade CTA for non-premium users
-  - Test device configuration
+### Legal & Compliance
+- Privacy Policy/Terms, Notion links, username profanity filter, validator improvements, blocked words
 
-### 2. **Tutorial System** (Dec 8)
-Complete onboarding experience for new users:
+## 🔧 Infrastructure
 
-- Tutorial system foundation
-- Interactive tutorial steps with number pad
-- Auto-select cell functionality
-- Time Management and Win Conditions copy
-- Single tap number placement
-- Double-tap prevention with useRef guards
-- Debounce logic for tutorial steps
-- Number pad styling to match game screen
-- Grid resize prevention
-- Auto-advance fixes (removed auto-advance, added Next buttons)
-- Tutorial integration with signup flow
+- Railway deployment fixes, package-lock.json regeneration, TypeScript version fixes, build script updates, dependency fixes, CORS FRONTEND_URL config
+- TypeScript/linting fixes, unused import/variable removal, duplicate function fixes, code cleanup
+- Performance fixes (console.log removal, floating feedback cleanup), grid animation optimizations, banner logic improvements, matchmaking query fixes (ambiguous user_id), H2H stats caching
 
-### 3. **Solo Mode** (Dec 8)
-Casual single-player Sudoku gameplay:
+## 🐛 Bug Fixes
 
-- Solo Mode implementation without matchmaking
-- Number pad positioning and touch handling
-- Grid sizing fixes
-- Performance optimizations
-- Background effects integration
+**Tutorial**: Single-entry completion, number pad sizing/overlap, double-entry (flushSync), double-tap prevention, grid resize prevention, auto-advance timing
 
-### 4. **Social Features** (Dec 8)
-Community and safety features:
+**Gameplay**: Grid highlighting during countdown, banner re-triggering, cell border z-index, emote sizing, premium name styling, rating display
 
-- **Friend Requests**
-  - Friend request functionality
-  - Block friend requests when target has blocked sender
-  - Fix friend request issues
+**Purchase Flow**: Promise resolution, unsubscribe error removal, ownership detection, product loading detection, polling improvements
 
-- **User Blocking**
-  - Block user functionality
-  - Blocked users table
-  - Block check in matchmaking
+**UI/UX**: Settings modal scrollability, Dev Options visibility, premium badge styling, upgrade modal copy, stats copy, remove emoji from Emotes button, spinner size reduction, cancel button positioning
 
-- **User Reporting**
-  - Reports endpoint in backend
-  - Report user functionality
-  - Report modal integration
-  - Match history modal integration
-
-### 5. **Global Ranking System** (Dec 8)
-Competitive ranking infrastructure:
-
-- Global ranking system implementation
-- Rank refresh when user rating changes
-- Rank calculation improvements
-- Debug logging for rank display
-
-### 6. **Game UI/UX Enhancements** (Dec 8)
-Major visual and interaction improvements:
-
-- **Number Pad Redesign**
-  - Minimal style: removed borders/backgrounds
-  - Increased font size
-  - Full width layout
-  - Instant tap feedback
-  - Stronger haptics
-  - Cyan outline
-  - Grid font sizes increased by 20%
-
-- **Game Countdown System**
-  - Countdown implementation (3...2...1...GO)
-  - Game Over color effect applied to countdown
-  - Countdown animation fixes
-  - Grid draw animation improvements
-
-- **Game Over / Time's Up Modal**
-  - Dramatic transition modal
-  - Game Over text matching DEFEAT styling
-  - Emote background color changes
-
-- **Visual Effects**
-  - Premium names styling
-  - Cell feedback animations
-  - Cell highlighting enhancements
-  - Shimmer effects and glows
-  - Magenta glow for opponent cells
-  - Grid breathing animations
-  - CSS glow effects for borders and prefilled numbers
-  - Animated grid overlay with breathing animation
-  - Background blob effects
-  - Grid opacity improvements (0.06-0.12 range)
-
-- **Performance Optimizations**
-  - Pre-warm iOS Haptics engine (eliminated 2.6s cold start delay)
-  - TIME_SYNC optimization with equality checks and throttling
-  - requestIdleCallback compatibility fixes
-  - Renderer warm-up to eliminate first cell placement delay
-  - Convert breathing animation to pure CSS (eliminated 20 re-renders/second)
-  - Defer expensive calculations using useDeferredValue
-  - Remove verbose logs and expensive CSS filters
-  - Memoize tutorial steps
-  - Use startTransition for step changes
-  - Remove BackgroundEffects from GamePage during gameplay
-
-- **Haptic Feedback**
-  - Victory and defeat haptic feedback
-  - Stronger haptics on number pad
-  - Screen shake removed on victory (kept sound and haptics)
-
-### 7. **Account Management** (Dec 8)
-User account features:
-
-- Delete account feature with confirmation modal
-- Reports deletion fixes
-- Error handling improvements
-
-### 8. **Legal & Compliance** (Dec 8)
-App Store compliance:
-
-- Privacy Policy and Terms of Service
-- Privacy Policy and Terms links to Notion URLs
-- Username profanity filter for Apple App Store compliance
-- Improved username validator robustness
-- Blocked words list updates
-
----
-
-## 🔧 Infrastructure & Technical Improvements
-
-### Deployment & Build System
-- Railway deployment fixes
-- Complete package-lock.json regeneration for backend and web-client
-- TypeScript version resolution fixes
-- Build script updates to use npx tsc
-- Multiple dependency fixes for Railway deployment
-- CORS configuration to use FRONTEND_URL environment variable
-
-### Code Quality
-- TypeScript error fixes throughout codebase
-- Linting error fixes (unused variables, React hooks warnings)
-- Remove unused imports and variables
-- Fix duplicate function definitions
-- Code cleanup and whitespace fixes
-
-### Performance & Optimization
-- Critical performance issue fixes (console.log removal, floating feedback cleanup)
-- Grid animation optimizations
-- Banner message logic improvements
-- Matchmaking query fixes (ambiguous user_id column)
-- H2H stats caching
-
----
-
-## 🐛 Bug Fixes & Polish
-
-### Tutorial Fixes
-- Single-entry completion fixes
-- Number pad sizing and overlap prevention
-- Double-entry bug fixes with flushSync
-- Double-tap prevention improvements
-- Grid resize prevention
-- Auto-advance timing fixes
-
-### Gameplay Fixes
-- Grid highlighting during countdown
-- Banner re-triggering fixes
-- Cell border z-index fixes
-- Emote sizing adjustments
-- Premium name styling fixes
-- Rating display fixes
-
-### Purchase Flow Fixes
-- Purchase Promise resolution fixes
-- Unsubscribe error removal
-- Ownership detection improvements
-- Product loading detection
-- Purchase polling improvements
-
-### UI/UX Fixes
-- Settings modal scrollability
-- Dev Options visibility improvements
-- Premium badge styling updates
-- Upgrade modal copy updates
-- Stats copy updates
-- Remove emoji from Emotes button
-- Spinner size reduction in searching UI
-- Cancel button positioning in lobby
-
----
-
-## 📊 Statistics
-
-- **Total Commits**: 582
-- **Time Period**: December 8, 2024 - Present (approximately 1-2 days)
-- **Major Features**: 8 major feature areas
-- **Infrastructure Improvements**: Extensive deployment and build system work
-- **Bug Fixes**: Hundreds of fixes across all areas
-
----
-
-## 🎨 Design & Branding
-
-- Premium badge styling matching DRAW text effect
-- Silver gradient and shimmer animations
-- Industry/Orbitron font usage
-- Cyan glow effects
-- Magenta edges/glow for leaderboard
-- Gold/yellow upgrade button with animations
-- Consistent branding across premium features
-
----
-
-## 🚀 What's Next
-
-Based on the commit history, the following areas show active development:
-- Continued tutorial polish and bug fixes
-- Premium feature enhancements
-- Performance optimizations
-- UI/UX refinements
-
----
+## 📊 Stats
+- 582 commits, 8 major features, extensive infrastructure work, hundreds of bug fixes
 
 *Generated from git commit history since December 8, 2024*

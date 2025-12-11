@@ -88,19 +88,20 @@ function AppContent() {
     }
   }, []);
 
-  // Handle tutorial completion with skill level
-  const handleTutorialComplete = async (skillLevel: 'beginner' | 'experienced' | null) => {
-    // If beginner was selected, set their rating to 500
-    if (skillLevel === 'beginner') {
-      try {
-        await playerAPI.setInitialRating(500);
-        console.log('[Tutorial] Set beginner rating to 500');
-      } catch (error) {
-        console.error('[Tutorial] Failed to set beginner rating:', error);
-        // Continue anyway - they'll just start at 1500
-      }
+  // Handle skill level selection - called immediately when user picks
+  const handleSkillSelect = async (level: 'beginner' | 'experienced') => {
+    const rating = level === 'beginner' ? 500 : 1500;
+    try {
+      await playerAPI.setInitialRating(rating);
+      console.log(`[Tutorial] Set ${level} rating to ${rating}`);
+    } catch (error) {
+      console.error(`[Tutorial] Failed to set ${level} rating:`, error);
+      // Continue anyway
     }
-    
+  };
+
+  // Handle tutorial completion
+  const handleTutorialComplete = async () => {
     clearJustSignedUp();
     // Also mark in localStorage as backup
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
@@ -131,6 +132,7 @@ function AppContent() {
       <TutorialFlow 
         onComplete={handleTutorialComplete}
         onSkip={handleTutorialSkip}
+        onSkillSelect={handleSkillSelect}
         gameMode="duel"
       />
     );
