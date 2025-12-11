@@ -38,7 +38,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects(0.8);
-  const { playMenuMusic } = useMusic();
+  const { playMenuMusic, stopMusic } = useMusic();
   
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -89,6 +89,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
       const response = await matchmakingAPI.join() as { status: string; match_id?: number };
       
       if (response.status === 'matched') {
+        stopMusic();        // Stop lobby music first
         playMatchFound();
         stopPolling();
         onMatchFound(response.match_id!);
@@ -122,6 +123,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         const response = await matchmakingAPI.status() as { status: string; match_id?: number };
         
         if (response.status === 'matched') {
+          stopMusic();        // Stop lobby music first
           playMatchFound();
           stopPolling();
           onMatchFound(response.match_id!);

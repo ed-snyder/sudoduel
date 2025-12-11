@@ -125,7 +125,7 @@ export default function ResultScreen({
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound, playVictory, playDefeat } = useSoundEffects();
-  const { playMenuMusic } = useMusic();
+  const { playMenuMusic, stopMusic } = useMusic();
 
   // Restart menu music when results screen appears
   useEffect(() => {
@@ -552,6 +552,7 @@ export default function ResultScreen({
       
       if (result.status === 'matched' && result.match_id) {
         // Instant match found
+        stopMusic();        // Stop lobby music first
         playMatchFound();
         console.log('[ResultScreen] Instant match found:', result.match_id);
         onFindNewMatch(result.match_id);
@@ -567,6 +568,7 @@ export default function ResultScreen({
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
             
             if (status.status === 'matched' && status.match_id) {
+              stopMusic();      // Stop lobby music first
               playMatchFound();
               if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
