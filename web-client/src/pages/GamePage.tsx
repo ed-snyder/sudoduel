@@ -1793,6 +1793,41 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     return counts;
   }, [myGrid]);
 
+  // Emote handler - defined early for use in early returns (ResultScreen)
+  const handleSelectEmote = useCallback((emote: string) => {
+    // Hide picker
+    setShowEmotePicker(false);
+    if (emotePickerTimeoutRef.current) {
+      clearTimeout(emotePickerTimeoutRef.current);
+    }
+
+    // Reset fade-out state
+    setMyEmoteFadingOut(false);
+    
+    // Show my emote locally
+    setMyEmote(emote);
+    
+    // Clear any existing timeout
+    if (myEmoteTimeoutRef.current) {
+      clearTimeout(myEmoteTimeoutRef.current);
+    }
+    
+    // Start fade-out after display duration, then hide after animation completes
+    myEmoteTimeoutRef.current = setTimeout(() => {
+      setMyEmoteFadingOut(true);
+      setTimeout(() => {
+        setMyEmote(null);
+        setMyEmoteFadingOut(false);
+      }, 200); // Match fade-out animation duration
+    }, EMOTE_DISPLAY_DURATION);
+
+    // Send to opponent via WebSocket
+    wsRef.current?.send(JSON.stringify({
+      type: 'EMOTE',
+      data: { emote },
+    }));
+  }, []);
+
   // Connecting screen
   if (gameStatus === 'connecting') {
     return (
@@ -1886,6 +1921,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         onFindNewMatch={onFindNewMatch || ((_matchId: number) => onGameEnd())}
         rematchState={rematchState}
         rematchCountdown={rematchCountdown}
+        onSendEmote={handleSelectEmote}
+        myEmote={myEmote}
+        opponentEmote={opponentEmote}
+        myEmoteFadingOut={myEmoteFadingOut}
+        opponentEmoteFadingOut={opponentEmoteFadingOut}
       />
     );
   }
@@ -1908,42 +1948,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       </div>
     );
   }
-
-
-
-  const handleSelectEmote = (emote: string) => {
-    // Hide picker
-    setShowEmotePicker(false);
-    if (emotePickerTimeoutRef.current) {
-      clearTimeout(emotePickerTimeoutRef.current);
-    }
-
-    // Reset fade-out state
-    setMyEmoteFadingOut(false);
-    
-    // Show my emote locally
-    setMyEmote(emote);
-    
-    // Clear any existing timeout
-    if (myEmoteTimeoutRef.current) {
-      clearTimeout(myEmoteTimeoutRef.current);
-    }
-    
-    // Start fade-out after 2 seconds, then hide after animation completes
-    myEmoteTimeoutRef.current = setTimeout(() => {
-      setMyEmoteFadingOut(true);
-      setTimeout(() => {
-        setMyEmote(null);
-        setMyEmoteFadingOut(false);
-      }, 200); // Match fade-out animation duration
-    }, EMOTE_DISPLAY_DURATION);
-
-    // Send to opponent via WebSocket
-    wsRef.current?.send(JSON.stringify({
-      type: 'EMOTE',
-      data: { emote },
-    }));
-  };
 
   // Main game UI - Compact layout with header above grid
   return (

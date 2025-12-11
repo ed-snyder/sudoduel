@@ -35,6 +35,12 @@ interface ResultScreenProps {
   onFindNewMatch: (matchId: number) => void;
   rematchState: 'idle' | 'requested' | 'waiting';
   rematchCountdown?: number;
+  // Emote props - same as during gameplay
+  onSendEmote?: (emote: string) => void;
+  myEmote?: string | null;
+  opponentEmote?: string | null;
+  myEmoteFadingOut?: boolean;
+  opponentEmoteFadingOut?: boolean;
 }
 
 interface Particle {
@@ -119,8 +125,31 @@ export default function ResultScreen({
   onFindNewMatch,
   rematchState,
   rematchCountdown = 0,
+  onSendEmote,
+  myEmote,
+  opponentEmote,
+  myEmoteFadingOut = false,
+  opponentEmoteFadingOut = false,
 }: ResultScreenProps) {
   const { user, token } = useAuth();
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
+
+  // Get custom emotes from localStorage (same as during gameplay)
+  const customEmotes = (() => {
+    try {
+      const saved = localStorage.getItem('customEmotes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+      }
+    } catch {}
+    return ['👋', '👍', '😭', '🫵😂'];
+  })();
+
+  const handleEmoteSelect = (emote: string) => {
+    onSendEmote?.(emote);
+    setShowEmotePicker(false);
+  };
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
@@ -936,35 +965,51 @@ export default function ResultScreen({
 
         {/* Score comparison with equal-sized name boxes */}
         <div className="flex items-center justify-center gap-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
-          {/* DEBUG: Score boxes should show full names */}
-          {/* Your score box */}
-          <div 
-            className="flex flex-col items-center justify-center rounded-lg"
-            style={{
-              background: 'rgba(0,255,255,0.08)',
-              border: '2px solid rgba(0,255,255,0.4)',
-              boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
-              width: '140px',
-              height: '140px',
-              padding: '12px 8px',
-            }}
-          >
-            <span 
-              className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
-              style={{ 
-                color: 'rgba(0,255,255,0.9)',
-                fontSize: myName.length > 12 ? '9px' : myName.length > 8 ? '10px' : '11px',
+          {/* Your score box + emote */}
+          <div className="flex items-center gap-2">
+            <div 
+              className="flex flex-col items-center justify-center rounded-lg"
+              style={{
+                background: 'rgba(0,255,255,0.08)',
+                border: '2px solid rgba(0,255,255,0.4)',
+                boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
+                width: '140px',
+                height: '140px',
+                padding: '12px 8px',
               }}
-              title={myName}
             >
-              {myName}
-            </span>
-            <span 
-              className="text-5xl font-mono font-bold text-player"
-              style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
-            >
-              {myResult.cellsCompleted}
-            </span>
+              <span 
+                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+                style={{ 
+                  color: 'rgba(0,255,255,0.9)',
+                  fontSize: myName.length > 12 ? '9px' : myName.length > 8 ? '10px' : '11px',
+                }}
+                title={myName}
+              >
+                {myName}
+              </span>
+              <span 
+                className="text-5xl font-mono font-bold text-player"
+                style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
+              >
+                {myResult.cellsCompleted}
+              </span>
+            </div>
+            {/* My emote - RIGHT of my score box (toward center) */}
+            {myEmote && (
+              <div 
+                className={`text-4xl sm:text-5xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                style={{
+                  background: 'rgba(139,0,255,0.1)',
+                  border: '2px solid rgba(139,0,255,0.3)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                }}
+              >
+                {myEmote}
+              </div>
+            )}
           </div>
           
           <span 
@@ -974,39 +1019,56 @@ export default function ResultScreen({
             —
           </span>
           
-          {/* Opponent score box - clickable */}
-          <button
-            onClick={() => setShowOpponentModal(true)}
-            className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
-            style={{
-              background: 'rgba(255,0,255,0.08)',
-              border: '2px solid rgba(255,0,255,0.4)',
-              boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
-              width: '140px',
-              height: '140px',
-              padding: '12px 8px',
-            }}
-          >
-            <span 
-              className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
-              style={{ 
-                color: 'rgba(255,0,255,0.9)',
-                fontSize: opponentName.length > 12 ? '9px' : opponentName.length > 8 ? '10px' : '11px',
+          {/* Opponent emote + score box - clickable */}
+          <div className="flex items-center gap-2">
+            {/* Opponent emote - LEFT of their score box (toward center) */}
+            {opponentEmote && (
+              <div 
+                className={`text-4xl sm:text-5xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                style={{
+                  background: 'rgba(139,0,255,0.1)',
+                  border: '2px solid rgba(139,0,255,0.3)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                }}
+              >
+                {opponentEmote}
+              </div>
+            )}
+            <button
+              onClick={() => setShowOpponentModal(true)}
+              className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'rgba(255,0,255,0.08)',
+                border: '2px solid rgba(255,0,255,0.4)',
+                boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
+                width: '140px',
+                height: '140px',
+                padding: '12px 8px',
               }}
-              title={opponentName}
             >
-              {opponentName}
-            </span>
-            <span 
-              className="text-5xl font-mono font-bold text-opponent"
-              style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
-            >
-              {opponentResult.cellsCompleted}
-            </span>
-            <span className="text-[10px] font-body text-muted mt-1 opacity-60">
-              tap for stats
-            </span>
-          </button>
+              <span 
+                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+                style={{ 
+                  color: 'rgba(255,0,255,0.9)',
+                  fontSize: opponentName.length > 12 ? '9px' : opponentName.length > 8 ? '10px' : '11px',
+                }}
+                title={opponentName}
+              >
+                {opponentName}
+              </span>
+              <span 
+                className="text-5xl font-mono font-bold text-opponent"
+                style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
+              >
+                {opponentResult.cellsCompleted}
+              </span>
+              <span className="text-[10px] font-body text-muted mt-1 opacity-60">
+                tap for stats
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Stats row */}
@@ -1132,6 +1194,51 @@ export default function ResultScreen({
           ) : (
             /* Normal button state */
             <>
+              {/* Emote Button - Same styling as toolbar, above other buttons */}
+              {onSendEmote && (
+                <div className="relative mb-2">
+                  <button
+                    onClick={() => {
+                      handleButtonPress();
+                      setShowEmotePicker(!showEmotePicker);
+                    }}
+                    className="w-full py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center"
+                    style={{
+                      background: 'rgba(20, 12, 30, 0.8)',
+                      border: '2px solid rgba(139, 0, 255, 0.5)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                    }}
+                  >
+                    Emote
+                  </button>
+                  
+                  {/* Emote Picker - Opens BELOW the button */}
+                  {showEmotePicker && (
+                    <div 
+                      className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50
+                                 bg-surface/95 backdrop-blur-md rounded-xl p-3
+                                 border-2 border-purple/50"
+                      style={{
+                        boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)',
+                      }}
+                    >
+                      <div className="flex gap-2">
+                        {customEmotes.map((emote, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleEmoteSelect(emote)}
+                            className="w-12 h-12 text-2xl flex items-center justify-center
+                                       rounded-lg hover:bg-purple/30 active:scale-90 transition-all"
+                          >
+                            {emote}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Rematch - hidden for bot matches since you can only play the bot once */}
               {!isBotMatch && (
                 <button
