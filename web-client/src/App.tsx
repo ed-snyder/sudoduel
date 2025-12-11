@@ -95,8 +95,8 @@ function AppContent() {
     try {
       const result = await playerAPI.setInitialRating(rating);
       console.log(`[Tutorial] API response:`, result);
-    } catch (error) {
-      console.error(`[Tutorial] Failed to set ${level} rating:`, error);
+    } catch (error: any) {
+      console.error(`[Tutorial] Failed to set ${level} rating:`, error?.message || error);
       // Continue anyway
     }
   };
