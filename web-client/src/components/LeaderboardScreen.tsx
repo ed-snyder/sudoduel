@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import { leaderboardAPI } from '../services/api';
 import type { LeaderboardEntry } from '../services/api';
-import { useSoundEffects } from '../hooks/useSoundEffects';
 
 interface LeaderboardScreenProps {
   isOpen: boolean;
@@ -9,8 +8,6 @@ interface LeaderboardScreenProps {
 }
 
 export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreenProps) {
-  const { playModalOpen, playModalClose } = useSoundEffects(0.8);
-  const hasPlayedOpenSound = useRef(false);
   const [top100, setTop100] = useState<LeaderboardEntry[]>([]);
   const [neighborhood, setNeighborhood] = useState<LeaderboardEntry[]>([]);
   const [yourRank, setYourRank] = useState<number>(0);
@@ -18,23 +15,6 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const yourRowRef = useRef<HTMLDivElement>(null);
-
-  // Play modal open sound
-  useEffect(() => {
-    if (isOpen && !hasPlayedOpenSound.current) {
-      playModalOpen();
-      hasPlayedOpenSound.current = true;
-    }
-    if (!isOpen) {
-      hasPlayedOpenSound.current = false;
-    }
-  }, [isOpen, playModalOpen]);
-
-  // Handle close with sound
-  const handleClose = useCallback(() => {
-    playModalClose();
-    onClose();
-  }, [playModalClose, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,7 +59,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       {/* Backdrop */}
       <div 
         className="fixed inset-0 z-40 bg-void/80 backdrop-blur-sm"
-        onClick={handleClose}
+        onClick={onClose}
       />
       
       {/* Modal */}
@@ -99,7 +79,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line bg-surface">
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="text-muted hover:text-player transition-colors p-1"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

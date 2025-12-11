@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { friendsAPI } from '../services/api';
 import type { Friend, FriendRequest, PlayerSearchResult, MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { useSoundEffects } from '../hooks/useSoundEffects';
 
 interface FriendsListModalProps {
   isOpen: boolean;
@@ -21,8 +20,6 @@ const vibrate = async () => {
 };
 
 export default function FriendsListModal({ isOpen, onClose, onMatchFound }: FriendsListModalProps) {
-  const { playModalOpen, playModalClose } = useSoundEffects(0.8);
-  const hasPlayedOpenSound = useRef(false);
   const [activeTab, setActiveTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingReceived, setPendingReceived] = useState<FriendRequest[]>([]);
@@ -37,23 +34,6 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
   const [outgoingMatchRequest, setOutgoingMatchRequest] = useState<MatchRequest | null>(null);
   const [incomingMatchRequests, setIncomingMatchRequests] = useState<MatchRequest[]>([]);
   const [matchRequestPolling, setMatchRequestPolling] = useState(false);
-
-  // Play modal open sound
-  useEffect(() => {
-    if (isOpen && !hasPlayedOpenSound.current) {
-      playModalOpen();
-      hasPlayedOpenSound.current = true;
-    }
-    if (!isOpen) {
-      hasPlayedOpenSound.current = false;
-    }
-  }, [isOpen, playModalOpen]);
-
-  // Handle close with sound
-  const handleClose = useCallback(() => {
-    playModalClose();
-    onClose();
-  }, [playModalClose, onClose]);
 
   // Load friends data when modal opens
   useEffect(() => {
@@ -315,7 +295,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     const secondsRemaining = Math.max(0, Math.ceil((expiresAt - now) / 1000));
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
         <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
         
         <div 
@@ -365,7 +345,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     const request = incomingMatchRequests[0];
     
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
         <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
         
         <div 
@@ -434,7 +414,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
       
       <div 
@@ -446,7 +426,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
         <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line">
           <h2 className="font-heading font-bold text-lg text-primary">Friends</h2>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="text-muted hover:text-player transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
