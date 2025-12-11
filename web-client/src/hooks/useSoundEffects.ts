@@ -55,10 +55,10 @@ const COUNTDOWN_PITCH: Record<number | 'go', number> = {
   go: 2.0, // One octave higher (2x frequency)
 };
 
-// Read SFX volume from localStorage
+// Read SFX volume from localStorage (default 55%)
 const getSfxVolume = (): number => {
   const stored = localStorage.getItem('sudoduel_sfx_volume');
-  return stored ? parseInt(stored, 10) : 100;
+  return stored ? parseInt(stored, 10) : 55;
 };
 
 export function useSoundEffects(volumeMultiplier: number = 1.0) {

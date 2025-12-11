@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useMusic } from '../context/MusicContext';
 import { authAPI } from '../services/api';
 
 interface SettingsModalProps {
@@ -13,12 +14,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
   const { isPremium, updatePremiumStatus } = useSubscription();
   const { playModalOpen, playModalClose, playButtonTap } = useSoundEffects(0.8);
+  const { setVolume: setMusicVolumeDirectly } = useMusic();
   const hasPlayedOpenSound = useRef(false);
   const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [simplifyGraphics, setSimplifyGraphics] = useState(false);
-  const [musicVolume, setMusicVolume] = useState(70);
-  const [sfxVolume, setSfxVolume] = useState(80);
+  const [musicVolume, setMusicVolume] = useState(100);
+  const [sfxVolume, setSfxVolume] = useState(55);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -52,10 +54,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (savedSimplify !== null) setSimplifyGraphics(savedSimplify === 'true');
     
     const savedMusic = localStorage.getItem('sudoduel_music_volume');
-    if (savedMusic !== null) setMusicVolume(parseInt(savedMusic, 10));
+    setMusicVolume(savedMusic !== null ? parseInt(savedMusic, 10) : 100);
     
     const savedSfx = localStorage.getItem('sudoduel_sfx_volume');
-    if (savedSfx !== null) setSfxVolume(parseInt(savedSfx, 10));
+    setSfxVolume(savedSfx !== null ? parseInt(savedSfx, 10) : 55);
   }, [isOpen]);
 
   // Play modal open sound
@@ -91,17 +93,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setMusicVolume(value);
     localStorage.setItem('sudoduel_music_volume', String(value));
     
-    // Direct update: find and update any audio elements playing music
-    // This is a fallback in case the event doesn't work
-    const audioElements = document.querySelectorAll('audio');
-    audioElements.forEach(audio => {
-      if (audio.src.includes('/music/')) {
-        audio.volume = value / 100;
-      }
-    });
-    
-    // Dispatch custom event so MusicContext updates immediately
-    window.dispatchEvent(new Event('musicVolumeChange'));
+    // Direct call to MusicContext to update volume immediately
+    setMusicVolumeDirectly(value);
   };
 
   // Debounce for SFX test sound

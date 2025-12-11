@@ -8,6 +8,7 @@ interface MusicContextType {
   playGameMusic: () => void;
   stopMusic: () => void;
   fadeOut: (duration?: number) => void;
+  setVolume: (volume: number) => void;
   currentTrack: MusicTrack;
 }
 
@@ -105,6 +106,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }, stepTime);
   }, [stopMusic]);
 
+  // Direct volume setter - called from Settings
+  const setVolume = useCallback((volume: number) => {
+    const normalizedVolume = Math.max(0, Math.min(100, volume)) / 100;
+    console.log('[Music] setVolume called:', normalizedVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = normalizedVolume;
+    }
+  }, []);
+
   // Listen for volume changes
   useEffect(() => {
     const handleVolumeChange = () => {
@@ -150,6 +160,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       playGameMusic,
       stopMusic,
       fadeOut,
+      setVolume,
       currentTrack,
     }}>
       {children}
