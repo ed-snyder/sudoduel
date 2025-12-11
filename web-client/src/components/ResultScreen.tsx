@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAds } from '../hooks/useAds';
 import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useMusic } from '../context/MusicContext';
 import { matchmakingAPI, friendsAPI, playerAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -123,7 +124,28 @@ export default function ResultScreen({
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
-  const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects();
+  const { playJoinQueue, playSearching, stopSearching, playMatchFound, playVictory, playDefeat } = useSoundEffects();
+  const { playMenuMusic } = useMusic();
+
+  // Restart menu music when results screen appears
+  useEffect(() => {
+    playMenuMusic();
+  }, [playMenuMusic]);
+
+  // Play victory/defeat sound on mount
+  const hasPlayedResultSound = useRef(false);
+  useEffect(() => {
+    if (hasPlayedResultSound.current) return;
+    hasPlayedResultSound.current = true;
+    
+    if (isDraw) {
+      // No sound for draw
+    } else if (didWin) {
+      playVictory();
+    } else {
+      playDefeat();
+    }
+  }, [isDraw, didWin, playVictory, playDefeat]);
 
   // Determine result type for ad logic
   const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';

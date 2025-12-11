@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef, memo, startTransition } from 'react';
 import { playerAPI } from '../services/api';
+import { useMusic } from '../context/MusicContext';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from './SudokuGrid';
 import './TutorialFlow.css';
@@ -62,6 +63,13 @@ const SOLO_MODE_STEPS: TutorialStep[] = [
 ];
 
 export default function TutorialFlow({ onComplete, onSkip, onSkillSelect: onSkillSelectProp, gameMode = 'duel' }: TutorialFlowProps) {
+  const { playMenuMusic } = useMusic();
+
+  // Play menu music on mount
+  useEffect(() => {
+    playMenuMusic();
+  }, [playMenuMusic]);
+
   // Always assume new to sudoku - skip the experience question
   const [step, setStep] = useState<TutorialStep>(() => {
     // Start directly with the first tutorial step

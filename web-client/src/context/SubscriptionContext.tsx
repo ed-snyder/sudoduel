@@ -21,6 +21,18 @@ const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 
 const STORAGE_KEY = 'sudoduel_premium';
 
+// Helper function to play purchase sound (not a hook, can be called from context)
+const playPurchaseSound = () => {
+  try {
+    const audio = new Audio('/sounds/premium/purchased.mp3');
+    const volume = parseInt(localStorage.getItem('sudoduel_sfx_volume') || '100', 10);
+    audio.volume = volume / 100;
+    audio.play().catch(err => console.warn('[Purchase] Could not play sound:', err));
+  } catch (e) {
+    console.warn('[Purchase] Could not play sound:', e);
+  }
+};
+
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
   const [isPremium, setIsPremium] = useState<boolean>(() => {
@@ -89,6 +101,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const result = await purchaseService.purchase(productId);
       
       if (result.success) {
+        // Play purchase success sound
+        playPurchaseSound();
         // Update premium status in backend and local state
         await updatePremiumStatus(true);
         setIsUpgradeModalOpen(false);
@@ -113,6 +127,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const result = await purchaseService.restorePurchases();
       
       if (result.success) {
+        playPurchaseSound();
         await updatePremiumStatus(true);
       }
       

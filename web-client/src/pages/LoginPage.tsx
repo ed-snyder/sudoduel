@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useMusic } from '../context/MusicContext';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
 import { validateUsername } from '../utils/usernameValidator';
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
+  const { playMenuMusic } = useMusic();
+
+  // Start menu music on mount
+  useEffect(() => {
+    playMenuMusic();
+  }, [playMenuMusic]);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

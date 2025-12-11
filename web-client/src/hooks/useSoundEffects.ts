@@ -47,12 +47,12 @@ const STREAK_PITCH_MULTIPLIERS = [
   2.0,    // streak 8
 ];
 
-// Pitch multipliers for countdown (3, 2, 1, GO!)
+// Pitch multipliers for countdown (3, 2, 1 same pitch, GO! one octave higher)
 const COUNTDOWN_PITCH: Record<number | 'go', number> = {
   3: 1.0,
-  2: 1.1,
-  1: 1.2,
-  go: 1.4,
+  2: 1.0,
+  1: 1.0,
+  go: 2.0, // One octave higher (2x frequency)
 };
 
 // Read SFX volume from localStorage
@@ -208,7 +208,7 @@ export function useSoundEffects() {
   
   const playCountdown = useCallback((number: 3 | 2 | 1 | 'go') => {
     const pitch = COUNTDOWN_PITCH[number];
-    const volume = number === 'go' ? 1.3 : 1.2;
+    const volume = number === 'go' ? 1.4 : 1.2; // GO! louder
     playSound('countdown', { pitch, volume });
   }, [playSound]);
   

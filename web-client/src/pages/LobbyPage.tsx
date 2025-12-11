@@ -7,7 +7,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { useMusic } from '../hooks/useMusic';
+import { useMusic } from '../context/MusicContext';
 
 // Lazy load modals for code splitting
 const MatchHistoryModal = lazy(() => import('../components/MatchHistoryModal'));
@@ -38,7 +38,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects();
-  const { playMenuMusic, stopMusic } = useMusic();
+  const { playMenuMusic } = useMusic();
   
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -73,11 +73,11 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
     attemptsRef.current = 0;
   };
 
-  // Start menu music on mount
+  // Start menu music on mount (persists across screens)
   useEffect(() => {
     playMenuMusic();
-    return () => stopMusic();
-  }, [playMenuMusic, stopMusic]);
+    // Don't stop on unmount - music persists to other screens
+  }, [playMenuMusic]);
 
   const handleFindMatch = async () => {
     setError('');

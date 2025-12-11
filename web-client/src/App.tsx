@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
+import { MusicProvider } from './context/MusicContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
@@ -179,8 +180,10 @@ export default function App() {
   return (
     <AuthProvider>
       <SubscriptionProvider>
-        <AppContent />
-        <UpgradeModal />
+        <MusicProvider>
+          <AppContent />
+          <UpgradeModal />
+        </MusicProvider>
       </SubscriptionProvider>
     </AuthProvider>
   );

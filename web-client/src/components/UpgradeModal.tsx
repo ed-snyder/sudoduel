@@ -1,15 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 import { purchaseService, PRODUCT_IDS } from '../services/purchaseService';
 
 export default function UpgradeModal() {
   const { isUpgradeModalOpen, closeUpgradeModal, purchaseSubscription, restorePurchases: contextRestorePurchases } = useSubscription();
+  const { playModalOpen, playModalClose } = useSoundEffects();
+  const hasPlayedOpenSound = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
   const [yearlyPrice, setYearlyPrice] = useState('$29.99');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Play modal open sound
+  useEffect(() => {
+    if (isUpgradeModalOpen && !hasPlayedOpenSound.current) {
+      playModalOpen();
+      hasPlayedOpenSound.current = true;
+    }
+    if (!isUpgradeModalOpen) {
+      hasPlayedOpenSound.current = false;
+    }
+  }, [isUpgradeModalOpen, playModalOpen]);
+
+  // Handle close with sound
+  const handleClose = () => {
+    playModalClose();
+    closeUpgradeModal();
+  };
 
   // Initialize purchase service and load prices when modal opens
   useEffect(() => {
@@ -97,7 +117,7 @@ export default function UpgradeModal() {
   return (
     <div 
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-      onClick={closeUpgradeModal}
+      onClick={handleClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" />
@@ -113,7 +133,7 @@ export default function UpgradeModal() {
       >
         {/* Close button */}
         <button
-          onClick={closeUpgradeModal}
+          onClick={handleClose}
           className="absolute top-4 right-4 text-muted hover:text-secondary transition-colors z-10"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

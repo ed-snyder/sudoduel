@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } f
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { useMusic } from '../hooks/useMusic';
+import { useMusic } from '../context/MusicContext';
 import { useHaptics } from '../hooks/useHaptics';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from '../components/SudokuGrid';
@@ -50,13 +50,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     playCellTap,
     playToolbarButton,
     playTimesUp,
-    playVictory, 
-    playDefeat,
     playEmoteReceived,
     resetStreak, 
     initAudio 
   } = useSoundEffects();
-  const { playGameMusic, fadeOut, stopMusic } = useMusic();
+  const { playGameMusic, fadeOut } = useMusic();
   const { error: hapticError, impact, victory: hapticVictory, defeat: hapticDefeat } = useHaptics();
   
   // Event banner system - defined early for use in triggerScoreFeedback
@@ -310,15 +308,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [isDownToWire, setIsDownToWire] = useState(false);
   const [shownLowTimeWarning, setShownLowTimeWarning] = useState(false);
   
-  // Cleanup banner timeout and music on unmount
+  // Cleanup banner timeout on unmount
   useEffect(() => {
     return () => {
       if (bannerTimeoutRef.current) {
         clearTimeout(bannerTimeoutRef.current);
       }
-      stopMusic();
     };
-  }, [stopMusic]);
+  }, []);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -502,7 +499,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded]);
 
-  // Victory/Defeat haptic and sound feedback on game end
+  // Haptic feedback and times up sound on game end
+  // (Victory/Defeat sounds play in ResultScreen when it mounts)
   const hasPlayedEndSoundRef = useRef(false);
   useEffect(() => {
     if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !hasPlayedEndSoundRef.current) {
@@ -515,19 +513,18 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       const reason = gameResult.reason || 'DRAW';
       const isDraw = winnerSlot === null || reason === 'DRAW';
       
-      // Play times up sound if it was a timeout
+      // Play times up sound immediately if it was a timeout
       if (reason === 'TIMEOUT' || reason === 'TIMEOUT_SCORE') {
         playTimesUp();
       }
       
+      // Haptic feedback only (sounds play in ResultScreen)
       if (!isDraw) {
         const didWin = winnerSlot !== null && winnerSlot === mySlot;
         if (didWin) {
           hapticVictory();
-          playVictory();
         } else {
           hapticDefeat();
-          playDefeat();
         }
       }
     }
@@ -536,7 +533,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     if (gameStatus === 'playing') {
       hasPlayedEndSoundRef.current = false;
     }
-  }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat, fadeOut, playVictory, playDefeat, playTimesUp]);
+  }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat, fadeOut, playTimesUp]);
 
   // Clear last move result after animation
   useEffect(() => {

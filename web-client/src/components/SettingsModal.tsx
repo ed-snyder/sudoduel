@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 import { authAPI } from '../services/api';
 
 interface SettingsModalProps {
@@ -11,6 +12,8 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
   const { isPremium, updatePremiumStatus } = useSubscription();
+  const { playModalOpen, playModalClose } = useSoundEffects();
+  const hasPlayedOpenSound = useRef(false);
   const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [simplifyGraphics, setSimplifyGraphics] = useState(false);
@@ -55,6 +58,23 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (savedSfx !== null) setSfxVolume(parseInt(savedSfx, 10));
   }, [isOpen]);
 
+  // Play modal open sound
+  useEffect(() => {
+    if (isOpen && !hasPlayedOpenSound.current) {
+      playModalOpen();
+      hasPlayedOpenSound.current = true;
+    }
+    if (!isOpen) {
+      hasPlayedOpenSound.current = false;
+    }
+  }, [isOpen, playModalOpen]);
+
+  // Handle close with sound
+  const handleClose = () => {
+    playModalClose();
+    onClose();
+  };
+
   const handleHapticToggle = () => {
     const newValue = !hapticEnabled;
     setHapticEnabled(newValue);
@@ -83,7 +103,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleLogoutConfirm = () => {
     logout();
-    onClose();
+    handleClose();
   };
 
   const handleLogoutCancel = () => {
@@ -113,7 +133,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
@@ -128,7 +148,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-grid-line flex-shrink-0">
           <h2 className="font-heading font-bold text-lg text-primary">Settings</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-muted hover:text-player transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
