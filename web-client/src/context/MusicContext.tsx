@@ -19,9 +19,23 @@ const getMusicVolume = (): number => {
   return stored ? parseInt(stored, 10) : 100;
 };
 
-// Module-level audio element - persists across re-renders
+// Module-level audio context and nodes - iOS requires Web Audio API for volume control
+let audioContext: AudioContext | null = null;
+let sourceNode: MediaElementAudioSourceNode | null = null;
+let gainNode: GainNode | null = null;
 let globalAudio: HTMLAudioElement | null = null;
 let globalCurrentTrack: MusicTrack = null;
+
+// Initialize or get AudioContext
+const getAudioContext = (): AudioContext => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+  return audioContext;
+};
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -35,8 +49,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (globalAudio) {
       globalAudio.pause();
       globalAudio.src = '';
-      globalAudio = null;
     }
+    if (sourceNode) {
+      try { sourceNode.disconnect(); } catch (e) {}
+      sourceNode = null;
+    }
+    globalAudio = null;
     globalCurrentTrack = null;
     setCurrentTrack(null);
   }, []);
@@ -58,17 +76,42 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       globalAudio.pause();
       globalAudio.src = '';
     }
+    if (sourceNode) {
+      try { sourceNode.disconnect(); } catch (e) {}
+      sourceNode = null;
+    }
 
-    // Start new track
+    // Create audio element
     const audio = new Audio(src);
     audio.loop = true;
-    audio.volume = getMusicVolume() / 100;
+    audio.crossOrigin = 'anonymous';
+    
+    // Set up Web Audio API for volume control (required for iOS)
+    const ctx = getAudioContext();
+    
+    // Create nodes
+    const source = ctx.createMediaElementSource(audio);
+    const gain = ctx.createGain();
+    
+    // Set initial volume
+    const volume = getMusicVolume() / 100;
+    gain.gain.value = volume;
+    
+    // Connect: source -> gain -> destination
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Store references
+    sourceNode = source;
+    gainNode = gain;
+    globalAudio = audio;
+    globalCurrentTrack = track;
+    
+    // Start playback
     audio.play().catch(err => {
       console.warn('[Music] Autoplay blocked:', err);
     });
 
-    globalAudio = audio;
-    globalCurrentTrack = track;
     setCurrentTrack(track);
   }, []);
 
@@ -81,14 +124,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [playTrack]);
 
   const fadeOut = useCallback((duration: number = 1000) => {
-    if (!globalAudio) return;
+    if (!gainNode) return;
 
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
     }
 
-    const audio = globalAudio;
-    const startVolume = audio.volume;
+    const startVolume = gainNode.gain.value;
     const steps = 20;
     const stepTime = duration / steps;
     const volumeStep = startVolume / steps;
@@ -96,8 +138,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     let step = 0;
     fadeIntervalRef.current = setInterval(() => {
       step++;
-      if (audio) {
-        audio.volume = Math.max(0, startVolume - (volumeStep * step));
+      if (gainNode) {
+        gainNode.gain.value = Math.max(0, startVolume - (volumeStep * step));
       }
 
       if (step >= steps) {
@@ -110,15 +152,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }, stepTime);
   }, [stopMusic]);
 
-  // Direct volume setter - called from Settings
+  // Direct volume setter - called from Settings (uses GainNode for iOS compatibility)
   const setVolume = useCallback((volume: number) => {
     const normalizedVolume = Math.max(0, Math.min(100, volume)) / 100;
-    console.log('[Music] setVolume called:', normalizedVolume, 'globalAudio exists:', !!globalAudio);
-    if (globalAudio) {
-      globalAudio.volume = normalizedVolume;
-      console.log('[Music] Volume set successfully');
+    console.log('[Music] setVolume called:', normalizedVolume, 'gainNode exists:', !!gainNode);
+    if (gainNode) {
+      gainNode.gain.value = normalizedVolume;
+      console.log('[Music] Volume set via GainNode');
     } else {
-      console.log('[Music] No audio element to set volume on');
+      console.log('[Music] No gainNode to set volume on');
     }
   }, []);
 
