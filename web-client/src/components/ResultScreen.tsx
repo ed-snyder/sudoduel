@@ -119,7 +119,7 @@ export default function ResultScreen({
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
-  const { showAdIfNeeded, recordGamePlayed, isInGracePeriod } = useAds();
+  const { recordGamePlayed, isInGracePeriod } = useAds();
 
   // Determine result type for ad logic
   const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
@@ -498,15 +498,13 @@ export default function ResultScreen({
     }, 1000);
   }, [onFindNewMatch, stopPolling]);
 
-  const handleBackToLobby = async () => {
+  const handleBackToLobby = () => {
     handleButtonPress();
-    await showAdIfNeeded(resultType);
     onBackToLobby();
   };
 
   const handleFindNewMatch = async () => {
     handleButtonPress();
-    await showAdIfNeeded(resultType);
     setIsFindingMatch(true);
     setSearchTime(0);
     

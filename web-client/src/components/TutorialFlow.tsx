@@ -29,10 +29,13 @@ type TutorialStep =
   | 'duel-wrong'
   | 'duel-opponent'
   | 'duel-win-condition'
+  | 'skill-selection'
   | 'ready';
 
+type SkillLevel = 'beginner' | 'experienced' | null;
+
 interface TutorialFlowProps {
-  onComplete: () => void;
+  onComplete: (skillLevel: SkillLevel) => void;
   onSkip: () => void;
   gameMode?: 'duel' | 'solo';
 }
@@ -46,6 +49,7 @@ const NEW_TO_SUDOKU_STEPS: TutorialStep[] = [
   'duel-wrong',
   'duel-opponent',
   'duel-win-condition',
+  'skill-selection',
   'ready',
 ];
 
@@ -54,6 +58,7 @@ const SOLO_MODE_STEPS: TutorialStep[] = [
   'duel-correct',
   'duel-wrong',
   'duel-win-condition',
+  'skill-selection',
   'ready',
 ];
 
@@ -64,19 +69,34 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
     return steps[0];
   });
+  
+  // Track skill level selection
+  const [skillLevel, setSkillLevel] = useState<SkillLevel>(null);
 
   const handleComplete = useCallback(async () => {
     try {
       await playerAPI.markTutorialComplete();
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete();
+      onComplete(skillLevel);
     } catch (error) {
       console.error('Failed to mark tutorial complete:', error);
       // Still complete locally
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      onComplete();
+      onComplete(skillLevel);
     }
-  }, [onComplete]);
+  }, [onComplete, skillLevel]);
+  
+  const handleSkillSelect = useCallback((level: 'beginner' | 'experienced') => {
+    setSkillLevel(level);
+    // Advance to next step
+    const steps = gameMode === 'solo' ? SOLO_MODE_STEPS : NEW_TO_SUDOKU_STEPS;
+    const currentIndex = steps.indexOf('skill-selection');
+    if (currentIndex < steps.length - 1) {
+      startTransition(() => {
+        setStep(steps[currentIndex + 1]);
+      });
+    }
+  }, [gameMode]);
 
   const handleNext = useCallback(() => {
     console.time('Step transition');
@@ -137,13 +157,13 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
   }), [handleNext, handleSkip, handleInteractionComplete, gameMode]);
 
   // Memoized step components for better performance
-  // Memoized step components for better performance
   const MemoizedDuelCorrectStep = memo(DuelCorrectStep);
   const MemoizedSudokuBasics3Step = memo(SudokuBasics3Step);
   const MemoizedDuelTimerStep = memo(DuelTimerStep);
   const MemoizedDuelWrongStep = memo(DuelWrongStep);
   const MemoizedDuelOpponentStep = memo(DuelOpponentStep);
   const MemoizedDuelWinConditionStep = memo(DuelWinConditionStep);
+  const MemoizedSkillSelectionStep = memo(SkillSelectionStep);
   const MemoizedReadyStep = memo(ReadyStep);
   const MemoizedSudokuBasics1Step = memo(SudokuBasics1Step);
   const MemoizedSudokuBasics2Step = memo(SudokuBasics2Step);
@@ -177,6 +197,9 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
       case 'duel-win-condition':
         result = <MemoizedDuelWinConditionStep {...stepProps} />;
         break;
+      case 'skill-selection':
+        result = <MemoizedSkillSelectionStep {...stepProps} onSkillSelect={handleSkillSelect} />;
+        break;
       case 'ready':
         result = <MemoizedReadyStep {...stepProps} onComplete={handleComplete} />;
         break;
@@ -189,7 +212,7 @@ export default function TutorialFlow({ onComplete, onSkip, gameMode = 'duel' }: 
     });
     
     return result;
-  }, [step, stepProps, handleComplete, gameMode]);
+  }, [step, stepProps, handleComplete, handleSkillSelect, gameMode]);
 
   return (
     <div className="tutorial-flow fixed inset-0 z-[2500]">
@@ -877,6 +900,56 @@ function DuelWinConditionStep({ onNext, gameMode }: StepProps) {
         >
           Next
         </button>
+      </div>
+    </TutorialOverlayComponent>
+  );
+}
+
+interface SkillSelectionStepProps extends StepProps {
+  onSkillSelect: (level: 'beginner' | 'experienced') => void;
+}
+
+function SkillSelectionStep({ onSkillSelect }: SkillSelectionStepProps) {
+  return (
+    <TutorialOverlayComponent>
+      <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
+        <h2 className="font-heading font-bold text-2xl text-player">One last thing...</h2>
+        
+        <p className="font-body text-secondary text-lg">
+          Sudoduel matches you with players of similar skill.
+        </p>
+        
+        <p className="font-body text-primary text-xl font-heading">
+          How experienced are you with Sudoku?
+        </p>
+        
+        <div className="flex flex-col w-full gap-4 mt-4">
+          <button
+            onClick={() => onSkillSelect('beginner')}
+            className="w-full py-4 px-6 rounded-xl transition-all active:scale-[0.98]"
+            style={{
+              background: 'rgba(0, 255, 255, 0.1)',
+              border: '2px solid rgba(0, 255, 255, 0.5)',
+              boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)',
+            }}
+          >
+            <span className="text-player font-heading text-lg block">I'm a beginner</span>
+            <p className="text-secondary text-sm mt-1">Match me with other newcomers</p>
+          </button>
+          
+          <button
+            onClick={() => onSkillSelect('experienced')}
+            className="w-full py-4 px-6 rounded-xl transition-all active:scale-[0.98]"
+            style={{
+              background: 'rgba(255, 0, 255, 0.1)',
+              border: '2px solid rgba(255, 0, 255, 0.5)',
+              boxShadow: '0 0 20px rgba(255, 0, 255, 0.2)',
+            }}
+          >
+            <span className="text-opponent font-heading text-lg block">I've played before</span>
+            <p className="text-secondary text-sm mt-1">Standard matchmaking</p>
+          </button>
+        </div>
       </div>
     </TutorialOverlayComponent>
   );

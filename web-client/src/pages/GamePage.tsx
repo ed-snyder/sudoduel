@@ -17,6 +17,7 @@ import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { log } from '../utils/logger';
+import { useAds } from '../hooks/useAds';
 
 const DEFAULT_EMOTES = ['👋', '👍', '😭', '🫵😂'];
 const EMOTE_DISPLAY_DURATION = 2000; // 2 seconds
@@ -256,6 +257,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [gameEndReason, setGameEndReason] = useState<'complete' | 'timeout'>('complete');
   const [pendingGameResult, setPendingGameResult] = useState<any>(null);
   
+  // Ad state - track if ad has been shown/dismissed
+  const { showAdIfNeeded, recordGamePlayed, shouldShowAd } = useAds();
+  const [adComplete, setAdComplete] = useState(false);
+  const adShownRef = useRef(false);
+  
   // Countdown system state
   const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
   const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
@@ -306,6 +312,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     setGameResult(null);
     setRematchState('idle');
     setRematchCountdown(30);
+    // Reset ad state
+    setAdComplete(false);
+    adShownRef.current = false;
+    setShowGameEndOverlay(false);
+    setPendingGameResult(null);
     
     const ws = createGameSocket(matchId, token);
     wsRef.current = ws;
@@ -419,6 +430,43 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       }
     }
   }, [gameStatus, gameResult, user?.id, mySlot]); // Removed displayedRating from dependencies to prevent infinite loop
+
+  // Handle ad on game end - show ad BEFORE showing GameEndOverlay
+  useEffect(() => {
+    if (gameStatus !== 'ended' || !pendingGameResult || adShownRef.current) return;
+    
+    const winnerSlot = pendingGameResult.winner_slot;
+    const isDraw = winnerSlot === null;
+    const didWin = winnerSlot === mySlot;
+    
+    // Determine result type
+    const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
+    
+    // Record the game
+    recordGamePlayed(didWin);
+    
+    // If should show ad, show it and wait for completion
+    if (shouldShowAd(resultType)) {
+      adShownRef.current = true;
+      showAdIfNeeded(resultType).then(() => {
+        setAdComplete(true);
+      }).catch((error) => {
+        console.error('[GamePage] Error showing ad:', error);
+        // If ad fails, proceed anyway
+        setAdComplete(true);
+      });
+    } else {
+      // No ad needed, proceed immediately
+      setAdComplete(true);
+    }
+  }, [gameStatus, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded, recordGamePlayed]);
+
+  // Show GameEndOverlay after ad is complete
+  useEffect(() => {
+    if (gameStatus === 'ended' && adComplete && pendingGameResult && !showGameEndOverlay) {
+      setShowGameEndOverlay(true);
+    }
+  }, [gameStatus, adComplete, pendingGameResult, showGameEndOverlay]);
 
   // Victory/Defeat haptic feedback on game end
   useEffect(() => {
@@ -1108,11 +1156,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Store the result but don't show it yet
         setPendingGameResult(message.data);
         
-        // Show the game end overlay FIRST
-        setShowGameEndOverlay(true);
+        // Reset ad state for new game end
+        setAdComplete(false);
+        adShownRef.current = false;
         
-        // The overlay will call handleGameEndOverlayComplete after 2.5s
-        // which will then show the results screen
+        // Ad will be shown by useEffect before overlay appears
+        // Don't show overlay immediately - wait for ad to complete
         
         // Refresh user data for updated rating
         refreshUser?.();
@@ -1819,12 +1868,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         isActive={showGameCountdown}
       />
 
-      {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! */}
-      <GameEndOverlay
-        isActive={showGameEndOverlay}
-        reason={gameEndReason}
-        onComplete={handleGameEndOverlayComplete}
-      />
+      {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! - Only after ad is complete */}
+      {showGameEndOverlay && adComplete && (
+        <GameEndOverlay
+          isActive={showGameEndOverlay}
+          reason={gameEndReason}
+          onComplete={handleGameEndOverlayComplete}
+        />
+      )}
 
       {/* Countdown overlay */}
       {countdown !== null && (

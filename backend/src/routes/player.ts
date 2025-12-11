@@ -152,6 +152,50 @@ router.patch('/tutorial-complete', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
+// POST /api/player/set-initial-rating - Set initial rating for new players (during tutorial)
+router.post('/set-initial-rating', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { rating } = req.body;
+    
+    // Validate rating (only allow 500 or 1500)
+    if (rating !== 500 && rating !== 1500) {
+      return res.status(400).json({ error: 'Invalid rating value' });
+    }
+    
+    // Get player profile
+    const profile = await PlayerProfileModel.findByUserId(req.userId!);
+    if (!profile) {
+      return res.status(404).json({ error: 'Player profile not found' });
+    }
+    
+    // Check if player has played any games (prevent abuse)
+    const gamesPlayedResult = await query(
+      `SELECT COUNT(*) as count FROM match_players WHERE player_id = $1`,
+      [profile.id]
+    );
+    
+    const gamesPlayed = parseInt(gamesPlayedResult.rows[0].count, 10);
+    if (gamesPlayed > 0) {
+      return res.status(400).json({ error: 'Cannot change rating after playing games' });
+    }
+    
+    // Update rating for default ladder (ladder_id = 1)
+    await query(
+      `UPDATE player_ratings 
+       SET rating = $1, rating_deviation = 350 
+       WHERE player_id = $2 AND ladder_id = 1`,
+      [rating, profile.id]
+    );
+    
+    console.log(`[Rating] User ${req.userId} initial rating set to: ${rating}`);
+    
+    res.json({ success: true, newRating: rating });
+  } catch (error: any) {
+    console.error('Set initial rating error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // PATCH /api/player/premium - Update premium status (for dev/testing)
 router.patch('/premium', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

@@ -181,6 +181,13 @@ export const playerAPI = {
       is_premium: boolean;
       display_name: string;
     }>,
+  
+  // Set initial rating (for new players during tutorial)
+  setInitialRating: (rating: number) =>
+    api.post('/api/player/set-initial-rating', { rating }) as Promise<{
+      success: boolean;
+      newRating: number;
+    }>,
 };
 
 // =====================================================

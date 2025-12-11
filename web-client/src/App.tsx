@@ -9,6 +9,7 @@ import TutorialFlow from './components/TutorialFlow';
 import UpgradeModal from './components/UpgradeModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { adService } from './services/adService';
+import { playerAPI } from './services/api';
 
 function AppContent() {
   const { user, loading, justSignedUp, clearJustSignedUp } = useAuth();
@@ -87,10 +88,27 @@ function AppContent() {
     }
   }, []);
 
-  // Handle tutorial completion
-  const handleTutorialComplete = async () => {
+  // Handle tutorial completion with skill level
+  const handleTutorialComplete = async (skillLevel: 'beginner' | 'experienced' | null) => {
+    // If beginner was selected, set their rating to 500
+    if (skillLevel === 'beginner') {
+      try {
+        await playerAPI.setInitialRating(500);
+        console.log('[Tutorial] Set beginner rating to 500');
+      } catch (error) {
+        console.error('[Tutorial] Failed to set beginner rating:', error);
+        // Continue anyway - they'll just start at 1500
+      }
+    }
+    
     clearJustSignedUp();
     // Also mark in localStorage as backup
+    localStorage.setItem('sudoduel_tutorial_completed', 'true');
+  };
+  
+  // Handle tutorial skip (no skill selection made)
+  const handleTutorialSkip = async () => {
+    clearJustSignedUp();
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
   };
 
@@ -112,7 +130,7 @@ function AppContent() {
     return (
       <TutorialFlow 
         onComplete={handleTutorialComplete}
-        onSkip={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
         gameMode="duel"
       />
     );
