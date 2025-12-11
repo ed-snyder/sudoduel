@@ -6,6 +6,9 @@ interface GameEndOverlayProps {
   isActive: boolean;
   reason: 'complete' | 'timeout'; // 'complete' = GAME OVER, 'timeout' = TIME'S UP
   onComplete: () => void;
+  onSendEmote?: (emote: string) => void;
+  myEmote?: string | null;
+  opponentEmote?: string | null;
 }
 
 // Sound effect for dramatic impact
@@ -73,10 +76,31 @@ export default function GameEndOverlay({
   isActive,
   reason,
   onComplete,
+  onSendEmote,
+  myEmote,
+  opponentEmote,
 }: GameEndOverlayProps) {
   const [phase, setPhase] = useState<'hidden' | 'showing' | 'exiting'>('hidden');
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
   const hasTriggeredRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Get custom emotes from localStorage
+  const customEmotes = (() => {
+    try {
+      const saved = localStorage.getItem('customEmotes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+      }
+    } catch {}
+    return ['👋', '👍', '😭', '🫵😂'];
+  })();
+
+  const handleEmoteSelect = (emote: string) => {
+    onSendEmote?.(emote);
+    setShowEmotePicker(false);
+  };
 
   useEffect(() => {
     return () => {
@@ -102,16 +126,16 @@ export default function GameEndOverlay({
     triggerHeavyHaptic();
     playGameEndSound();
 
-    // 2300ms: Start exit animation
+    // 4700ms: Start exit animation (5 seconds total - 300ms for exit)
     addTimeout(() => {
       setPhase('exiting');
-    }, 2300);
+    }, 4700);
 
-    // 2500ms: Complete, trigger callback
+    // 5000ms: Complete, trigger callback
     addTimeout(() => {
       setPhase('hidden');
       onComplete();
-    }, 2500);
+    }, 5000);
 
   }, [isActive, onComplete]);
 
@@ -119,6 +143,7 @@ export default function GameEndOverlay({
     if (!isActive) {
       hasTriggeredRef.current = false;
       setPhase('hidden');
+      setShowEmotePicker(false);
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = [];
     }
@@ -234,6 +259,63 @@ export default function GameEndOverlay({
         >
           {displayText}
         </span>
+      </div>
+
+      {/* Emotes display during overlay */}
+      <div className="relative z-10 flex justify-center items-center gap-16 mt-8">
+        {myEmote && (
+          <div className="text-5xl sm:text-6xl animate-bounce">
+            {myEmote}
+          </div>
+        )}
+        {opponentEmote && (
+          <div className="text-5xl sm:text-6xl animate-bounce">
+            {opponentEmote}
+          </div>
+        )}
+      </div>
+
+      {/* Emote button - ABOVE the filter, at bottom of screen */}
+      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20">
+        <div className="relative">
+          <button
+            onClick={() => setShowEmotePicker(!showEmotePicker)}
+            className="px-8 py-3 rounded-xl bg-purple/30 border-2 border-purple 
+                       text-chrome font-semibold text-lg
+                       hover:bg-purple/40 active:scale-95 transition-all
+                       backdrop-blur-sm"
+            style={{
+              boxShadow: '0 0 20px rgba(139, 0, 255, 0.3)',
+            }}
+          >
+            😊 Emote
+          </button>
+          
+          {/* Emote Picker - Opens ABOVE the button during overlay */}
+          {showEmotePicker && (
+            <div 
+              className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 
+                         bg-surface/95 backdrop-blur-md rounded-xl p-3
+                         border-2 border-purple/50"
+              style={{
+                boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)',
+              }}
+            >
+              <div className="flex gap-2">
+                {customEmotes.map((emote, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleEmoteSelect(emote)}
+                    className="w-12 h-12 text-2xl flex items-center justify-center
+                               rounded-lg hover:bg-purple/30 active:scale-90 transition-all"
+                  >
+                    {emote}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

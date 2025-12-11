@@ -35,6 +35,9 @@ interface ResultScreenProps {
   onFindNewMatch: (matchId: number) => void;
   rematchState: 'idle' | 'requested' | 'waiting';
   rematchCountdown?: number;
+  onSendEmote?: (emote: string) => void;
+  myEmote?: string | null;
+  opponentEmote?: string | null;
 }
 
 interface Particle {
@@ -119,8 +122,29 @@ export default function ResultScreen({
   onFindNewMatch,
   rematchState,
   rematchCountdown = 0,
+  onSendEmote,
+  myEmote,
+  opponentEmote,
 }: ResultScreenProps) {
   const { user, token } = useAuth();
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
+
+  // Get custom emotes from localStorage
+  const customEmotes = (() => {
+    try {
+      const saved = localStorage.getItem('customEmotes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+      }
+    } catch {}
+    return ['👋', '👍', '😭', '🫵😂'];
+  })();
+
+  const handleEmoteSelect = (emote: string) => {
+    onSendEmote?.(emote);
+    setShowEmotePicker(false);
+  };
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
@@ -1135,6 +1159,67 @@ export default function ResultScreen({
           ) : (
             /* Normal button state */
             <>
+              {/* Emote Button - Top of button stack */}
+              {onSendEmote && (
+                <div className="relative mb-2">
+                  <button
+                    onClick={() => {
+                      handleButtonPress();
+                      setShowEmotePicker(!showEmotePicker);
+                    }}
+                    className="w-full py-3 px-6 rounded-xl bg-purple/20 border-2 border-purple 
+                               text-chrome font-semibold text-lg
+                               hover:bg-purple/30 active:scale-95 transition-all"
+                    style={{
+                      boxShadow: '0 0 15px rgba(139, 0, 255, 0.2)',
+                    }}
+                  >
+                    😊 Emote
+                  </button>
+                  
+                  {/* Emote Picker - Opens BELOW the button */}
+                  {showEmotePicker && (
+                    <div 
+                      className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50
+                                 bg-surface/95 backdrop-blur-md rounded-xl p-3
+                                 border-2 border-purple/50"
+                      style={{
+                        boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)',
+                      }}
+                    >
+                      <div className="flex gap-2">
+                        {customEmotes.map((emote, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleEmoteSelect(emote)}
+                            className="w-12 h-12 text-2xl flex items-center justify-center
+                                       rounded-lg hover:bg-purple/30 active:scale-90 transition-all"
+                          >
+                            {emote}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Emotes Display - Between name boxes and buttons */}
+              {(myEmote || opponentEmote) && (
+                <div className="flex justify-center items-center gap-8 mb-2">
+                  {myEmote && (
+                    <div className="text-4xl animate-bounce">
+                      {myEmote}
+                    </div>
+                  )}
+                  {opponentEmote && (
+                    <div className="text-4xl animate-bounce">
+                      {opponentEmote}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Rematch - hidden for bot matches since you can only play the bot once */}
               {!isBotMatch && (
                 <button
