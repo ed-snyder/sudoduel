@@ -9,8 +9,9 @@ import { createBotPlayer, getBotDisplayName, getBotDisplayRating } from './botSe
 const DEFAULT_LADDER_ID = 1;
 // For MVP, use a very wide rating window so players always find a match,
 // even if their ratings have diverged significantly.
-// Later this can be tightened and/or expanded over time spent in queue.
-const RATING_WINDOW = 1000;
+// With small player base, ratings can diverge 1000+ points, so use 2000 window
+// to ensure matches are always possible. Tighten this as player base grows.
+const RATING_WINDOW = 2000;
 
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId
