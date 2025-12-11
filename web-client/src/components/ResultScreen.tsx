@@ -139,10 +139,12 @@ export default function ResultScreen({
     hasPlayedResultSound.current = true;
     
     if (isDraw) {
-      // No sound for draw
+      console.log('[ResultScreen] Game was a draw - no sound');
     } else if (didWin) {
+      console.log('[ResultScreen] Playing victory sound');
       playVictory();
     } else {
+      console.log('[ResultScreen] Playing defeat sound');
       playDefeat();
     }
   }, [isDraw, didWin, playVictory, playDefeat]);

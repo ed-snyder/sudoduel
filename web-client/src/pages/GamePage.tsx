@@ -50,6 +50,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     playCellTap,
     playToolbarButton,
     playTimesUp,
+    playLockout,
     playEmoteReceived,
     resetStreak, 
     initAudio 
@@ -499,26 +500,19 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded]);
 
-  // Haptic feedback and times up sound on game end
+  // Haptic feedback on game end
+  // (Times up sound plays immediately in GAME_END handler)
   // (Victory/Defeat sounds play in ResultScreen when it mounts)
-  const hasPlayedEndSoundRef = useRef(false);
+  const hasPlayedEndHapticRef = useRef(false);
   useEffect(() => {
-    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !hasPlayedEndSoundRef.current) {
-      hasPlayedEndSoundRef.current = true;
-      
-      // Fade out game music
-      fadeOut(500);
+    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !hasPlayedEndHapticRef.current) {
+      hasPlayedEndHapticRef.current = true;
       
       const winnerSlot = gameResult.winner_slot;
       const reason = gameResult.reason || 'DRAW';
       const isDraw = winnerSlot === null || reason === 'DRAW';
       
-      // Play times up sound immediately if it was a timeout
-      if (reason === 'TIMEOUT' || reason === 'TIMEOUT_SCORE') {
-        playTimesUp();
-      }
-      
-      // Haptic feedback only (sounds play in ResultScreen)
+      // Haptic feedback only (sounds play elsewhere)
       if (!isDraw) {
         const didWin = winnerSlot !== null && winnerSlot === mySlot;
         if (didWin) {
@@ -531,9 +525,25 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // Reset when game starts again
     if (gameStatus === 'playing') {
-      hasPlayedEndSoundRef.current = false;
+      hasPlayedEndHapticRef.current = false;
     }
-  }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat, fadeOut, playTimesUp]);
+  }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat]);
+
+  // Play lockout sound when player's timer hits 0 (but game continues)
+  const hasPlayedLockoutRef = useRef(false);
+  useEffect(() => {
+    // Only trigger for MY lockout during active game
+    if (gameStatus === 'playing' && myTimeRemaining <= 0 && !hasPlayedLockoutRef.current) {
+      console.log('[GamePage] Playing lockout sound - my time ran out');
+      playLockout();
+      hasPlayedLockoutRef.current = true;
+    }
+    
+    // Reset when game starts
+    if (gameStatus !== 'playing') {
+      hasPlayedLockoutRef.current = false;
+    }
+  }, [gameStatus, myTimeRemaining, playLockout]);
 
   // Clear last move result after animation
   useEffect(() => {
@@ -1216,12 +1226,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Determine the reason for game end
         const endReason = message.data.reason === 'timeout' || 
                           message.data.reason === 'time_up' ||
+                          message.data.reason === 'TIMEOUT' ||
+                          message.data.reason === 'TIMEOUT_SCORE' ||
                           myTimeRemaining <= 0 || 
                           opponentTimeRemaining <= 0
           ? 'timeout' 
           : 'complete';
         
         setGameEndReason(endReason);
+        
+        // 🔊 Play times-up sound IMMEDIATELY when overlay appears
+        if (endReason === 'timeout') {
+          console.log('[GamePage] Playing times-up sound immediately on GAME_END');
+          playTimesUp();
+        }
+        
+        // Fade out game music
+        fadeOut(500);
         
         // Store the result but don't show it yet
         setPendingGameResult(message.data);
