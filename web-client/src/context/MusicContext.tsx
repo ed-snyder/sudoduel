@@ -19,29 +19,31 @@ const getMusicVolume = (): number => {
   return stored ? parseInt(stored, 10) : 100;
 };
 
+// Module-level audio element - persists across re-renders
+let globalAudio: HTMLAudioElement | null = null;
+let globalCurrentTrack: MusicTrack = null;
+
 export function MusicProvider({ children }: { children: ReactNode }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentTrackRef = useRef<MusicTrack>(null);
   const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [currentTrack, setCurrentTrack] = useState<MusicTrack>(null);
+  const [currentTrack, setCurrentTrack] = useState<MusicTrack>(globalCurrentTrack);
 
   const stopMusic = useCallback(() => {
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
       fadeIntervalRef.current = null;
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
+    if (globalAudio) {
+      globalAudio.pause();
+      globalAudio.src = '';
+      globalAudio = null;
     }
-    currentTrackRef.current = null;
+    globalCurrentTrack = null;
     setCurrentTrack(null);
   }, []);
 
   const playTrack = useCallback((track: MusicTrack, src: string) => {
     // Don't restart if same track is already playing
-    if (currentTrackRef.current === track && audioRef.current && !audioRef.current.paused) {
+    if (globalCurrentTrack === track && globalAudio && !globalAudio.paused) {
       return;
     }
 
@@ -52,9 +54,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
 
     // Stop current music
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
+    if (globalAudio) {
+      globalAudio.pause();
+      globalAudio.src = '';
     }
 
     // Start new track
@@ -65,8 +67,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       console.warn('[Music] Autoplay blocked:', err);
     });
 
-    audioRef.current = audio;
-    currentTrackRef.current = track;
+    globalAudio = audio;
+    globalCurrentTrack = track;
     setCurrentTrack(track);
   }, []);
 
@@ -79,13 +81,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [playTrack]);
 
   const fadeOut = useCallback((duration: number = 1000) => {
-    if (!audioRef.current) return;
+    if (!globalAudio) return;
 
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
     }
 
-    const audio = audioRef.current;
+    const audio = globalAudio;
     const startVolume = audio.volume;
     const steps = 20;
     const stepTime = duration / steps;
@@ -94,7 +96,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     let step = 0;
     fadeIntervalRef.current = setInterval(() => {
       step++;
-      audio.volume = Math.max(0, startVolume - (volumeStep * step));
+      if (audio) {
+        audio.volume = Math.max(0, startVolume - (volumeStep * step));
+      }
 
       if (step >= steps) {
         if (fadeIntervalRef.current) {
@@ -109,48 +113,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   // Direct volume setter - called from Settings
   const setVolume = useCallback((volume: number) => {
     const normalizedVolume = Math.max(0, Math.min(100, volume)) / 100;
-    console.log('[Music] setVolume called:', normalizedVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = normalizedVolume;
+    console.log('[Music] setVolume called:', normalizedVolume, 'globalAudio exists:', !!globalAudio);
+    if (globalAudio) {
+      globalAudio.volume = normalizedVolume;
+      console.log('[Music] Volume set successfully');
+    } else {
+      console.log('[Music] No audio element to set volume on');
     }
   }, []);
 
-  // Listen for volume changes
-  useEffect(() => {
-    const handleVolumeChange = () => {
-      const newVolume = getMusicVolume() / 100;
-      console.log('[Music] Volume change event received, setting to:', newVolume);
-      if (audioRef.current) {
-        audioRef.current.volume = newVolume;
-      }
-    };
-
-    // Listen for cross-tab changes (storage event)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sudoduel_music_volume') {
-        handleVolumeChange();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Listen for same-tab changes (custom event)
-    window.addEventListener('musicVolumeChange', handleVolumeChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('musicVolumeChange', handleVolumeChange);
-    };
-  }, []);
-
-  // Cleanup on unmount
+  // Cleanup on unmount (don't stop music, just clear fade interval)
   useEffect(() => {
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
     };
   }, []);
 
