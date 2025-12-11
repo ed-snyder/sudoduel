@@ -963,107 +963,66 @@ export default function ResultScreen({
           </div>
         )}
 
-        {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center justify-center gap-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
-          {/* Your score box + emote */}
-          <div className="flex items-center gap-2">
-            <div 
-              className="flex flex-col items-center justify-center rounded-lg"
-              style={{
-                background: 'rgba(0,255,255,0.08)',
-                border: '2px solid rgba(0,255,255,0.4)',
-                boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
-                width: '140px',
-                height: '140px',
-                padding: '12px 8px',
-              }}
-            >
+        {/* Player Info Section - NO BOXES, pushed to edges */}
+        <div className="w-full flex justify-between items-start px-2 mb-6" style={{ position: 'relative', zIndex: 40 }}>
+          
+          {/* Left Side - My Info - NO BOX */}
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-start">
+              {/* Name - no box */}
               <span 
-                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
-                style={{ 
-                  color: 'rgba(0,255,255,0.9)',
-                  fontSize: myName.length > 12 ? '9px' : myName.length > 8 ? '10px' : '11px',
-                }}
-                title={myName}
+                className="text-base sm:text-xl font-bold text-player"
+                style={{ textShadow: '0 0 10px rgba(0,255,255,0.4)' }}
               >
                 {myName}
               </span>
+              
+              {/* Cells - no box */}
               <span 
-                className="text-5xl font-mono font-bold text-player"
-                style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
+                className="text-lg sm:text-2xl font-mono font-bold text-chrome"
+                style={{ textShadow: '0 0 8px rgba(255,255,255,0.2)' }}
               >
-                {myResult.cellsCompleted}
+                {myResult.cellsCompleted} <span className="text-sm text-muted">cells</span>
               </span>
             </div>
-            {/* My emote - RIGHT of my score box (toward center) */}
+            
+            {/* My Emote - RIGHT of my info (toward center) */}
             {myEmote && (
-              <div 
-                className={`text-4xl sm:text-5xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                style={{
-                  background: 'rgba(139,0,255,0.1)',
-                  border: '2px solid rgba(139,0,255,0.3)',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
-                  boxShadow: '0 0 10px rgba(139,0,255,0.1)',
-                }}
-              >
+              <div className={`text-3xl sm:text-4xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}>
                 {myEmote}
               </div>
             )}
           </div>
-          
-          <span 
-            className="text-2xl font-heading font-bold text-primary"
-            style={{ textShadow: '0 0 10px rgba(139,0,255,0.4)' }}
-          >
-            —
-          </span>
-          
-          {/* Opponent emote + score box - clickable */}
-          <div className="flex items-center gap-2">
-            {/* Opponent emote - LEFT of their score box (toward center) */}
+
+          {/* Right Side - Opponent Info - NO BOX */}
+          <div className="flex items-center gap-3">
+            {/* Opponent Emote - LEFT of their info (toward center) */}
             {opponentEmote && (
-              <div 
-                className={`text-4xl sm:text-5xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                style={{
-                  background: 'rgba(139,0,255,0.1)',
-                  border: '2px solid rgba(139,0,255,0.3)',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
-                  boxShadow: '0 0 10px rgba(139,0,255,0.1)',
-                }}
-              >
+              <div className={`text-3xl sm:text-4xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}>
                 {opponentEmote}
               </div>
             )}
+            
             <button
               onClick={() => setShowOpponentModal(true)}
-              className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: 'rgba(255,0,255,0.08)',
-                border: '2px solid rgba(255,0,255,0.4)',
-                boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
-                width: '140px',
-                height: '140px',
-                padding: '12px 8px',
-              }}
+              className="flex flex-col items-end transition-all hover:opacity-80 active:scale-95"
             >
+              {/* Name - no box */}
               <span 
-                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
-                style={{ 
-                  color: 'rgba(255,0,255,0.9)',
-                  fontSize: opponentName.length > 12 ? '9px' : opponentName.length > 8 ? '10px' : '11px',
-                }}
-                title={opponentName}
+                className="text-base sm:text-xl font-bold text-opponent"
+                style={{ textShadow: '0 0 10px rgba(255,0,255,0.4)' }}
               >
                 {opponentName}
               </span>
+              
+              {/* Cells - no box */}
               <span 
-                className="text-5xl font-mono font-bold text-opponent"
-                style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
+                className="text-lg sm:text-2xl font-mono font-bold text-chrome"
+                style={{ textShadow: '0 0 8px rgba(255,255,255,0.2)' }}
               >
-                {opponentResult.cellsCompleted}
+                <span className="text-sm text-muted">cells </span>{opponentResult.cellsCompleted}
               </span>
+              
               <span className="text-[10px] font-body text-muted mt-1 opacity-60">
                 tap for stats
               </span>
@@ -1212,23 +1171,23 @@ export default function ResultScreen({
                     Emote
                   </button>
                   
-                  {/* Emote Picker - Opens BELOW the button */}
+                  {/* Emote Picker - Opens BELOW the button - Wide single row */}
                   {showEmotePicker && (
                     <div 
                       className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50
                                  bg-surface/95 backdrop-blur-md rounded-xl p-3
-                                 border-2 border-purple/50"
+                                 border-2 border-purple/50 min-w-[320px] sm:min-w-[400px]"
                       style={{
                         boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)',
                       }}
                     >
-                      <div className="flex gap-2">
+                      <div className="flex flex-row flex-nowrap justify-center gap-3">
                         {customEmotes.map((emote, index) => (
                           <button
                             key={index}
                             onClick={() => handleEmoteSelect(emote)}
-                            className="w-12 h-12 text-2xl flex items-center justify-center
-                                       rounded-lg hover:bg-purple/30 active:scale-90 transition-all"
+                            className="text-2xl sm:text-3xl p-2 flex items-center justify-center
+                                       rounded-lg hover:bg-purple/30 active:scale-90 transition-all flex-shrink-0"
                           >
                             {emote}
                           </button>
