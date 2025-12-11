@@ -250,6 +250,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [myTimerPaused, setMyTimerPaused] = useState(false);
   const [opponentRating, setOpponentRating] = useState<number | undefined>(undefined);
   const [opponentIsPremium, setOpponentIsPremium] = useState<boolean>(false);
+  const [isBotMatch, setIsBotMatch] = useState<boolean>(false); // Track if playing against bot
   const [erroredCells, setErroredCells] = useState<Set<string>>(new Set()); // Track cells that have received incorrect guesses
   
   // Game end overlay state
@@ -718,6 +719,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setOpponentName(message.data.opponent_name || 'Opponent');
         const opponentPremiumStatus = message.data.opponent_is_premium || false;
         setOpponentIsPremium(opponentPremiumStatus);
+        if (message.data.is_bot_match) {
+          setIsBotMatch(true);
+        }
         if (receivedSlot === 1 || receivedSlot === '1') {
           setMyState(message.data.player1);
           setOpponentState(message.data.player2);
@@ -1788,6 +1792,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         myResult={myResultData}
         opponentResult={opponentResultData}
         isRanked={isRanked}
+        isBotMatch={isBotMatch}
         onRematch={handleRematchRequest}
         onBackToLobby={onGameEnd}
         onFindNewMatch={onFindNewMatch || ((_matchId: number) => onGameEnd())}
@@ -1966,6 +1971,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     : 'non-premium-opponent-name-with-sheen'
               }`}>
                 {opponentName}
+                {isBotMatch && <span className="ml-1 text-muted text-xs">🤖</span>}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">
                 {opponentRating !== undefined ? Math.round(opponentRating) : '—'}

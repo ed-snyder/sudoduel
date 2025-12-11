@@ -3,6 +3,8 @@ import { PlayerRatingModel } from '../models/PlayerRating';
 import { MatchmakingQueueModel } from '../models/MatchmakingQueue';
 import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
+import { query } from '../config/database';
+import { createBotPlayer, getBotDisplayName, getBotDisplayRating } from './botService';
 
 const DEFAULT_LADDER_ID = 1;
 // For MVP, use a very wide rating window so players always find a match,
@@ -12,6 +14,15 @@ const RATING_WINDOW = 1000;
 
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId
+
+// Helper function to check if this is the player's first match ever
+async function isFirstMatch(playerId: number): Promise<boolean> {
+  const result = await query(
+    `SELECT COUNT(*) as count FROM match_players WHERE player_id = $1`,
+    [playerId]
+  );
+  return parseInt(result.rows[0].count, 10) === 0;
+}
 
 export const MatchmakingService = {
   async joinQueue(userId: number) {
@@ -49,6 +60,24 @@ export const MatchmakingService = {
 
     const playerRating = rating?.rating || 1500;
     const playerRd = rating?.rd || 350;
+
+    // Check if this is the player's first match ever - create bot match
+    const firstMatch = await isFirstMatch(profile.id);
+    if (firstMatch) {
+      console.log(`🤖 First match for player ${profile.id}, creating bot match`);
+      const botMatch = await this.createBotMatch(profile.id);
+      playerMatches.set(profile.id, botMatch.id);
+      return { 
+        status: 'matched', 
+        match_id: botMatch.id,
+        is_bot_match: true,
+        opponent: {
+          displayName: getBotDisplayName(),
+          rating: getBotDisplayRating(),
+          isBot: true,
+        }
+      };
+    }
 
     // Check if already in queue
     const inQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
@@ -276,5 +305,46 @@ export const MatchmakingService = {
         playerMatches.delete(playerId);
       }
     }
+  },
+
+  // Create a bot match for first-time players
+  async createBotMatch(playerId: number) {
+    console.log(`🤖 Creating bot match for player ${playerId}`);
+
+    const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
+    if (!puzzle) {
+      throw new Error('No puzzle available');
+    }
+
+    const botPlayer = createBotPlayer();
+
+    // Create match with is_bot_match = true and is_ranked = false
+    const matchResult = await query(
+      `INSERT INTO matches (ladder_id, puzzle_id, status, is_bot_match, is_ranked)
+       VALUES ($1, $2, 'PENDING', true, false)
+       RETURNING *`,
+      [DEFAULT_LADDER_ID, puzzle.id]
+    );
+    const match = matchResult.rows[0];
+
+    // Get player's rating
+    const rating = await PlayerRatingModel.findByPlayerAndLadder(playerId, DEFAULT_LADDER_ID);
+
+    // Add human player as slot 1
+    await query(
+      `INSERT INTO match_players (match_id, player_id, slot, is_bot, rating_before, rd_before, volatility_before)
+       VALUES ($1, $2, 1, false, $3, $4, $5)`,
+      [match.id, playerId, rating?.rating || 1500, rating?.rd || 350, rating?.volatility || 0.06]
+    );
+
+    // Add bot as slot 2 (player_id is NULL for bot)
+    await query(
+      `INSERT INTO match_players (match_id, player_id, slot, is_bot, bot_id, rating_before, rd_before, volatility_before)
+       VALUES ($1, NULL, 2, true, $2, $3, 350, 0.06)`,
+      [match.id, botPlayer.id, getBotDisplayRating()]
+    );
+
+    console.log(`✅ Bot match ${match.id} created for player ${playerId}`);
+    return match;
   },
 };

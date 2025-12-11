@@ -27,6 +27,7 @@ interface ResultScreenProps {
   myResult: PlayerResult;
   opponentResult: PlayerResult;
   isRanked?: boolean;
+  isBotMatch?: boolean;
   onRematch: () => void;
   onBackToLobby: () => void;
   onFindNewMatch: (matchId: number) => void;
@@ -110,6 +111,7 @@ export default function ResultScreen({
   myResult,
   opponentResult,
   isRanked = true,
+  isBotMatch = false,
   onRematch,
   onBackToLobby,
   onFindNewMatch,
@@ -891,6 +893,15 @@ export default function ResultScreen({
           </span>
         </div>
 
+        {/* Bot match message - shown for first-time players after beating the tutorial bot */}
+        {isBotMatch && didWin && (
+          <div className="text-center mb-4" style={{ position: 'relative', zIndex: 40 }}>
+            <p className="text-secondary text-base font-body">
+              Great job! You&apos;re ready for real opponents. 🎮
+            </p>
+          </div>
+        )}
+
         {/* Score comparison with equal-sized name boxes */}
         <div className="flex items-center justify-center gap-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
           {/* DEBUG: Score boxes should show full names */}
@@ -1089,46 +1100,48 @@ export default function ResultScreen({
           ) : (
             /* Normal button state */
             <>
-              {/* Rematch */}
-              <button
-                onClick={() => { 
-                  handleButtonPress(); 
-                  if (rematchState === 'idle' || rematchState === 'waiting') {
-                    onRematch(); 
+              {/* Rematch - hidden for bot matches since you can only play the bot once */}
+              {!isBotMatch && (
+                <button
+                  onClick={() => { 
+                    handleButtonPress(); 
+                    if (rematchState === 'idle' || rematchState === 'waiting') {
+                      onRematch(); 
+                    }
+                  }}
+                  disabled={rematchState === 'requested'}
+                  className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 ${
+                    rematchState === 'waiting' ? '' : rematchState === 'requested' ? 'cursor-not-allowed' : 'animate-button-glow'
+                  }`}
+                  style={
+                    rematchState === 'waiting'
+                      ? {
+                          background: 'rgb(15, 10, 25)',
+                          border: '3px solid #00FF88',
+                          color: '#00FF88',
+                          boxShadow: '0 0 20px rgba(0,255,136,0.4), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+                          animation: 'pulse 1s ease-in-out infinite',
+                        }
+                      : rematchState === 'requested'
+                      ? {
+                          background: 'rgb(20, 12, 30)',
+                          border: '3px solid rgba(139,0,255,0.3)',
+                          color: 'rgba(255,255,255,0.4)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        }
+                      : {
+                          background: 'rgb(15, 10, 25)',
+                          border: '3px solid #00FFFF',
+                          color: '#00FFFF',
+                          boxShadow: '0 0 15px rgba(0,255,255,0.3), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+                        }
                   }
-                }}
-                disabled={rematchState === 'requested'}
-                className={`w-full py-4 text-lg font-body font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 ${
-                  rematchState === 'waiting' ? '' : rematchState === 'requested' ? 'cursor-not-allowed' : 'animate-button-glow'
-                }`}
-                style={
-                  rematchState === 'waiting'
-                    ? {
-                        background: 'rgb(15, 10, 25)',
-                        border: '3px solid #00FF88',
-                        color: '#00FF88',
-                        boxShadow: '0 0 20px rgba(0,255,136,0.4), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                        animation: 'pulse 1s ease-in-out infinite',
-                      }
-                    : rematchState === 'requested'
-                    ? {
-                        background: 'rgb(20, 12, 30)',
-                        border: '3px solid rgba(139,0,255,0.3)',
-                        color: 'rgba(255,255,255,0.4)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                      }
-                    : {
-                        background: 'rgb(15, 10, 25)',
-                        border: '3px solid #00FFFF',
-                        color: '#00FFFF',
-                        boxShadow: '0 0 15px rgba(0,255,255,0.3), 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                      }
-                }
-              >
-                {rematchState === 'idle' && 'Rematch'}
-                {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
-                {rematchState === 'waiting' && '⚔️ Accept Rematch'}
-              </button>
+                >
+                  {rematchState === 'idle' && 'Rematch'}
+                  {rematchState === 'requested' && `Waiting... ${rematchCountdown}s`}
+                  {rematchState === 'waiting' && '⚔️ Accept Rematch'}
+                </button>
+              )}
 
               {/* Find New Match - stays on result screen and starts matchmaking */}
               <button

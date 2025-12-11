@@ -12,6 +12,16 @@ import { MatchmakingService } from './matchmakingService';
 import { cache, CacheKeys } from './cacheService';
 import { HeadToHeadModel } from '../models/HeadToHead';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
+import { 
+  initBotState, 
+  cleanupBotState, 
+  calculateNextBotMove, 
+  getBotMoveDelay, 
+  setBotMoveTimer,
+  getBotDisplayName,
+  getBotDisplayRating,
+  getBotState
+} from './botService';
 
 
 
@@ -24,6 +34,7 @@ interface AuthenticatedWebSocket extends WebSocket {
 const clients = new Map<number, Set<AuthenticatedWebSocket>>();
 const gracePeriodIntervals = new Map<number, NodeJS.Timeout>();
 const rematchRequests = new Map<number, { requestedBy: number; expiresAt: number }>();
+const botMatches = new Map<number, boolean>(); // Track which matches are bot matches
 
 export const setupWebSocketServer = (server: Server) => {
   const wss = new WebSocketServer({ server, path: '/ws/game' });
@@ -58,6 +69,12 @@ export const setupWebSocketServer = (server: Server) => {
         return;
       }
 
+      // Check if this is a bot match
+      const isBotMatch = (match as any).is_bot_match === true;
+      if (isBotMatch) {
+        botMatches.set(matchId, true);
+      }
+
       const players = await MatchModel.getPlayers(matchId);
       if (players.length !== 2) {
         ws.close(1008, 'Invalid match');
@@ -84,6 +101,10 @@ export const setupWebSocketServer = (server: Server) => {
         return;
       }
 
+      // For bot matches, identify the bot player (player_id is NULL or the is_bot flag is true)
+      const botPlayerSlot = players.find(p => (p as any).is_bot === true);
+      const humanPlayerSlot = players.find(p => p.player_id === profile.id);
+
       if (!clients.has(matchId)) {
         clients.set(matchId, new Set());
       }
@@ -100,23 +121,46 @@ export const setupWebSocketServer = (server: Server) => {
         const slot1 = players.find(p => p.slot === 1)!;
         const slot2 = players.find(p => p.slot === 2)!;
 
+        // For bot matches, use a special bot player ID (negative number to avoid conflicts)
+        const player1Id = slot1.player_id ?? -1; // Bot gets ID -1
+        const player2Id = slot2.player_id ?? -1;
+
         game = GameStateManager.createGame(
           matchId,
           puzzle.id,
           puzzle.initial_grid,
           puzzle.solution_grid,
-          Number(slot1.player_id),
-          Number(slot2.player_id),
+          Number(player1Id),
+          Number(player2Id),
           STARTING_TIME_SECONDS
         );
+
+        // Initialize bot state if this is a bot match
+        if (isBotMatch) {
+          initBotState(matchId);
+          console.log(`🤖 Bot match ${matchId} initialized`);
+        }
       }
 
-      // Compute opponent profile for this connection
+      // Compute opponent info for this connection
       const opponentRow = players.find(p => p.player_id !== profile.id)!;
-      const opponentProfile = await PlayerProfileModel.findById(opponentRow.player_id);
-      
-      // Get opponent rating
-      const opponentRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
+      let opponentName: string;
+      let opponentRatingValue: number;
+      let opponentIsPremium: boolean;
+
+      if (isBotMatch && (opponentRow as any).is_bot) {
+        // Bot opponent
+        opponentName = getBotDisplayName();
+        opponentRatingValue = getBotDisplayRating();
+        opponentIsPremium = false;
+      } else {
+        // Human opponent
+        const opponentProfile = await PlayerProfileModel.findById(opponentRow.player_id);
+        const opponentRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
+        opponentName = opponentProfile?.display_name || 'Opponent';
+        opponentRatingValue = opponentRating?.rating || 1500;
+        opponentIsPremium = opponentProfile?.is_premium || false;
+      }
 
       // Check if this is a reconnection
       if (game?.disconnectedPlayerId === profile.id) {
@@ -140,7 +184,9 @@ export const setupWebSocketServer = (server: Server) => {
         }
       }
 
-      if (clients.get(matchId)!.size === 2 && game.status === 'WAITING') {
+      // For bot matches, start with 1 client; for regular matches, need 2 clients
+      const clientsNeeded = isBotMatch ? 1 : 2;
+      if (clients.get(matchId)!.size >= clientsNeeded && game.status === 'WAITING') {
         // Mark game as starting (prevents re-triggering)
         (game as any).status = 'STARTING';
         
@@ -172,8 +218,14 @@ export const setupWebSocketServer = (server: Server) => {
               solution_grid: currentGame.solutionGrid,
               player1_time_remaining: currentGame.player1.timeRemaining,
               player2_time_remaining: currentGame.player2.timeRemaining,
+              is_bot_match: isBotMatch,
             },
           });
+
+          // Start bot move loop for bot matches
+          if (isBotMatch) {
+            startBotMoveLoop(matchId);
+          }
         }, 3000);
       }
 
@@ -183,9 +235,10 @@ export const setupWebSocketServer = (server: Server) => {
           status: game.status,
           your_slot: playerSlot.slot,
           your_name: profile.display_name,
-          opponent_name: opponentProfile?.display_name || 'Opponent',
-          opponent_rating: opponentRating?.rating || 1500,
-          opponent_is_premium: opponentProfile?.is_premium || false,
+          opponent_name: opponentName,
+          opponent_rating: opponentRatingValue,
+          opponent_is_premium: opponentIsPremium,
+          is_bot_match: isBotMatch,
           player1: {
             score: game.player1.score,
             cells_completed: game.player1.cellsCompleted,
@@ -652,6 +705,150 @@ function handleTimerUpdate(matchId: number) {
   }
 }
 
+/**
+ * Start the bot move loop for a bot match
+ * Bot makes moves every 8-12 seconds, with one intentional mistake around 2 minutes
+ */
+function startBotMoveLoop(matchId: number) {
+  console.log(`🤖 Starting bot move loop for match ${matchId}`);
+
+  const runBotMove = async () => {
+    const game = GameStateManager.getGame(matchId);
+    if (!game || game.status !== 'IN_PROGRESS') {
+      console.log(`🤖 Bot loop stopping - game not in progress for match ${matchId}`);
+      return;
+    }
+
+    // Don't make moves if game is completed
+    if (game.status === 'COMPLETED') {
+      cleanupBotState(matchId);
+      return;
+    }
+
+    // Bot is player 2 (slot 2)
+    const botPlayer = game.player2;
+    
+    // Don't make moves if bot is locked out
+    if (botPlayer.isLocked) {
+      console.log(`🤖 Bot is locked out in match ${matchId}`);
+      return;
+    }
+
+    // Don't make moves if human has already won
+    if (game.player1.isSolved) {
+      console.log(`🤖 Human already won in match ${matchId}`);
+      return;
+    }
+
+    const elapsedMs = game.startedAt ? Date.now() - game.startedAt : 0;
+    
+    // Get the bot's current view of the grid (we use the solution grid for reference)
+    const botMove = calculateNextBotMove(
+      matchId,
+      game.solutionGrid,
+      botPlayer.grid,
+      elapsedMs
+    );
+
+    if (botMove) {
+      console.log(`🤖 Bot making move in match ${matchId}: row=${botMove.row}, col=${botMove.col}, value=${botMove.value}, isMistake=${botMove.isMistake}`);
+      
+      if (botMove.isMistake) {
+        // Bot makes a mistake - loses time and doesn't score
+        botPlayer.mistakes++;
+        botPlayer.timeRemaining = Math.max(0, botPlayer.timeRemaining - 10);
+        
+        // Check if bot locked out
+        if (botPlayer.timeRemaining <= 0) {
+          botPlayer.isLocked = true;
+        }
+        
+        // Broadcast the mistake (opponent sees bot lose time)
+        broadcastToMatch(matchId, {
+          type: 'MOVE_RESULT',
+          data: {
+            player_id: -1, // Bot ID
+            slot: 2,
+            row: botMove.row,
+            col: botMove.col,
+            value: botMove.value,
+            correct: false,
+            time_change: -10,
+            player_state: {
+              slot: 2,
+              score: botPlayer.score,
+              cells_completed: botPlayer.cellsCompleted,
+              is_locked: botPlayer.isLocked,
+              is_solved: false,
+              time_remaining: botPlayer.timeRemaining,
+            },
+            game_ended: false,
+            winner_slot: null,
+          },
+        });
+      } else {
+        // Bot makes a correct move
+        botPlayer.grid[botMove.row][botMove.col] = botMove.value;
+        botPlayer.score++;
+        botPlayer.cellsCompleted++;
+        botPlayer.timeRemaining += 3; // TIME_BONUS_CORRECT
+        
+        // Broadcast the move
+        broadcastToMatch(matchId, {
+          type: 'MOVE_RESULT',
+          data: {
+            player_id: -1, // Bot ID
+            slot: 2,
+            row: botMove.row,
+            col: botMove.col,
+            value: botMove.value,
+            correct: true,
+            time_change: 3,
+            player_state: {
+              slot: 2,
+              score: botPlayer.score,
+              cells_completed: botPlayer.cellsCompleted,
+              is_locked: botPlayer.isLocked,
+              is_solved: botPlayer.cellsCompleted === 81,
+              time_remaining: botPlayer.timeRemaining,
+            },
+            game_ended: false,
+            winner_slot: null,
+          },
+        });
+
+        // Check if bot somehow solved (shouldn't happen in practice)
+        if (botPlayer.cellsCompleted === 81) {
+          botPlayer.isSolved = true;
+          await endGame(matchId);
+          cleanupBotState(matchId);
+          return;
+        }
+      }
+
+      // Check victory conditions after bot move
+      // If human is locked and bot surpassed their score
+      if (game.player1.isLocked && botPlayer.score > game.player1.score) {
+        await endGame(matchId);
+        cleanupBotState(matchId);
+        return;
+      }
+    }
+
+    // Schedule next bot move
+    if (game.status === 'IN_PROGRESS' && !botPlayer.isLocked) {
+      const delay = getBotMoveDelay();
+      const timer = setTimeout(runBotMove, delay);
+      setBotMoveTimer(matchId, timer);
+    }
+  };
+
+  // Start first bot move after initial delay
+  const firstMoveDelay = getBotMoveDelay();
+  const timer = setTimeout(runBotMove, firstMoveDelay);
+  setBotMoveTimer(matchId, timer);
+}
+
 async function endGame(matchId: number) {
   console.log(`🎬 endGame CALLED for match ${matchId}`);
 
@@ -688,10 +885,17 @@ async function endGame(matchId: number) {
   console.log(`🏁 Match ${matchId} ended. Winner: ${results.winnerId || 'DRAW'}`);
 
   try {
-    // Check if match is ranked
+    // Check if match is ranked and if it's a bot match
     const match = await MatchModel.findById(matchId);
     const isRanked = match?.is_ranked !== false; // Default to ranked if not set
-    console.log(`📊 Match ${matchId} is_ranked: ${isRanked}`);
+    const isBotMatch = botMatches.get(matchId) || (match as any).is_bot_match === true;
+    console.log(`📊 Match ${matchId} is_ranked: ${isRanked}, is_bot_match: ${isBotMatch}`);
+
+    // Clean up bot state if this is a bot match
+    if (isBotMatch) {
+      cleanupBotState(matchId);
+      botMatches.delete(matchId);
+    }
 
     console.log(`💾 [1/6] Updating match status...`);
     await MatchModel.updateStatus(matchId, 'COMPLETED');
@@ -709,6 +913,98 @@ async function endGame(matchId: number) {
     const player2Data = matchPlayers.find(p => p.slot === 2);
     console.log(`👤 Player 1 data:`, player1Data?.player_id);
     console.log(`👤 Player 2 data:`, player2Data?.player_id);
+
+    // For bot matches, player2 has NULL player_id, so we handle it differently
+    if (isBotMatch) {
+      console.log(`🤖 Bot match - simplified endGame processing`);
+      
+      if (!player1Data) {
+        console.log(`❌ Missing human player data, exiting`);
+        return;
+      }
+
+      const rating1 = await PlayerRatingModel.findByPlayerAndLadder(player1Data.player_id, 1);
+      if (!rating1) {
+        console.error(`❌ Human player rating not found`);
+        return;
+      }
+
+      // Update human player stats only (no rating changes for bot matches)
+      await MatchModel.updatePlayerStats(matchId, player1Data.player_id, {
+        cellsCompleted: results.player1.cellsCompleted,
+        livesUsed: 0,
+        livesRemaining: 0,
+        mistakes: results.player1.mistakes,
+        timeSpentSeconds: 0,
+        finalState: results.player1.finalState,
+        isWinner: results.player1.isWinner,
+        ratingAfter: rating1.rating, // No rating change
+        rdAfter: rating1.rd,
+        volatilityAfter: rating1.volatility,
+        timeAtFinish: results.player1.timeRemaining ?? null,
+        longestCellStreak: results.player1.longestCellStreak ?? 0,
+      });
+
+      // Clear matchmaking cache
+      MatchmakingService.clearMatch(matchId);
+      cache.invalidate(`stats:${player1Data.player_id}`);
+      cache.invalidate(`history:`);
+      cache.invalidate(`profile:`);
+
+      // Determine winner slot and reason
+      let winnerSlot: 1 | 2 | null = null;
+      let reason: 'PUZZLE_SOLVED' | 'TIMEOUT_SCORE' | 'DRAW' | 'FORFEIT' = 'DRAW';
+      
+      if (results.winnerId === results.player1.playerId) {
+        winnerSlot = 1;
+      } else if (results.winnerId === results.player2.playerId) {
+        winnerSlot = 2;
+      }
+
+      if (winnerSlot === null) {
+        reason = 'DRAW';
+      } else {
+        const winnerResult = winnerSlot === 1 ? results.player1 : results.player2;
+        reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
+      }
+
+      // Broadcast GAME_END for bot match
+      broadcastToMatch(matchId, {
+        type: 'GAME_END',
+        data: {
+          winner_slot: winnerSlot,
+          reason,
+          is_ranked: false,
+          is_bot_match: true,
+          final_scores: {
+            player1: results.player1.score,
+            player2: results.player2.score,
+          },
+          player1: {
+            ...results.player1,
+            rating_before: rating1.rating,
+            rating_after: rating1.rating, // No change
+            rating_change: 0,
+          },
+          player2: {
+            ...results.player2,
+            rating_before: getBotDisplayRating(),
+            rating_after: getBotDisplayRating(),
+            rating_change: 0,
+          },
+        },
+      });
+
+      console.log(`📤 GAME_END message broadcasted for bot match`);
+
+      setTimeout(() => {
+        GameStateManager.removeGame(matchId);
+        clients.delete(matchId);
+        console.log(`🧹 Cleaned up bot game state`);
+      }, 30000);
+
+      return; // Exit early for bot matches
+    }
 
     if (!player1Data || !player2Data) {
       console.log(`❌ Missing player data, exiting`);
