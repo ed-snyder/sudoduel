@@ -1870,11 +1870,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
       {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! - Only after ad is complete */}
       {showGameEndOverlay && adComplete && (
-        <GameEndOverlay
-          isActive={showGameEndOverlay}
-          reason={gameEndReason}
-          onComplete={handleGameEndOverlayComplete}
-        />
+      <GameEndOverlay
+        isActive={showGameEndOverlay}
+        reason={gameEndReason}
+        onComplete={handleGameEndOverlayComplete}
+      />
       )}
 
       {/* Countdown overlay */}

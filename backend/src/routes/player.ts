@@ -6,6 +6,7 @@ import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
 import { query } from '../config/database';
 import { validateUsername } from '../utils/usernameValidator';
+import { cache, CacheKeys } from '../services/cacheService';
 
 const router = Router();
 
@@ -186,6 +187,9 @@ router.post('/set-initial-rating', authMiddleware, async (req: AuthRequest, res:
        WHERE player_id = $2 AND ladder_id = 1`,
       [rating, profile.id]
     );
+    
+    // Invalidate cached profile so refreshUser gets the new rating
+    cache.delete(CacheKeys.playerProfile(req.userId!));
     
     console.log(`[Rating] User ${req.userId} initial rating set to: ${rating}`);
     
