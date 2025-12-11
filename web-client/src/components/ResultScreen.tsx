@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAds } from '../hooks/useAds';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 import { matchmakingAPI, friendsAPI, playerAPI } from '../services/api';
 import type { HeadToHeadStats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -122,6 +123,7 @@ export default function ResultScreen({
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
+  const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects();
 
   // Determine result type for ad logic
   const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
@@ -507,6 +509,7 @@ export default function ResultScreen({
 
   const handleFindNewMatch = async () => {
     handleButtonPress();
+    playJoinQueue();
     setIsFindingMatch(true);
     setSearchTime(0);
     
@@ -527,6 +530,7 @@ export default function ResultScreen({
       
       if (result.status === 'matched' && result.match_id) {
         // Instant match found
+        playMatchFound();
         console.log('[ResultScreen] Instant match found:', result.match_id);
         onFindNewMatch(result.match_id);
         setIsFindingMatch(false);
@@ -534,12 +538,14 @@ export default function ResultScreen({
       }
       
       if (result.status === 'queued') {
+        playSearching();
         // Poll for match status
         pollIntervalRef.current = setInterval(async () => {
           try {
             const status = await matchmakingAPI.status() as { status: string; match_id?: number };
             
             if (status.status === 'matched' && status.match_id) {
+              playMatchFound();
               if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
@@ -548,6 +554,7 @@ export default function ResultScreen({
               onFindNewMatch(status.match_id);
             } else if (status.status !== 'queued') {
               // No longer queued and not matched - something went wrong
+              stopSearching();
               if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
@@ -567,6 +574,7 @@ export default function ResultScreen({
 
   const handleCancelSearch = async () => {
     handleButtonPress();
+    stopSearching();
     
     // Clear polling interval first
     if (pollIntervalRef.current) {
@@ -584,14 +592,15 @@ export default function ResultScreen({
     }
   };
 
-  // Cleanup polling on unmount
+  // Cleanup polling and sounds on unmount
   useEffect(() => {
     return () => {
+      stopSearching();
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, []);
+  }, [stopSearching]);
 
   useEffect(() => {
     return () => {

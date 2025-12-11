@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
-import { useGameSounds } from '../hooks/useGameSounds';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import BackgroundEffects from '../components/BackgroundEffects';
@@ -12,7 +12,7 @@ interface SoloModePageProps {
 }
 
 export default function SoloModePage({ onExit }: SoloModePageProps) {
-  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, initAudio } = useGameSounds();
+  const { playCorrect, playIncorrect, initAudio } = useSoundEffects();
   const { error: hapticError, impact } = useHaptics();
   
   // Grid state
@@ -147,8 +147,8 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       impact('medium');
     }
     
-    // 2. Sound
-    playCorrectSound();
+    // 2. Sound (handles streak-based pitch automatically)
+    playCorrect();
     
     // 3. Visual state updates
     setLastMoveResult({ correct: true, row, col });
@@ -162,7 +162,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       setShowMicroShake(true);
       setTimeout(() => setShowMicroShake(false), 150);
     }
-  }, [playCorrectSound, impact]);
+  }, [playCorrect, impact]);
   
   const handleCellClick = useCallback((row: number, col: number) => {
     console.log('[SOLO] Cell clicked:', row, col);
@@ -447,11 +447,8 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
           setErroredCells(prev => new Set(prev).add(cellKey));
         }
         
-        if (isFirstError) {
-          playIncorrectSound();
-        } else {
-          playSofterErrorSound();
-        }
+        // Play incorrect sound (also resets streak internally)
+        playIncorrect();
         hapticError();
         myStreakRef.current = 0;
         
@@ -470,7 +467,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
         });
       }
     }
-  }, [selectedCell, gameStatus, isLocked, notesMode, initialGrid, solutionGrid, myGrid, cellsCompleted, erroredCells, triggerScoreFeedback, playIncorrectSound, playSofterErrorSound, hapticError, clearRelatedNotes, checkCompletions]);
+  }, [selectedCell, gameStatus, isLocked, notesMode, initialGrid, solutionGrid, myGrid, cellsCompleted, erroredCells, triggerScoreFeedback, playIncorrect, hapticError, clearRelatedNotes, checkCompletions]);
   
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || isLocked) return;

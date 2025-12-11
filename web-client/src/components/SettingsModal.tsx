@@ -48,10 +48,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const savedSimplify = localStorage.getItem('simplifyGraphics');
     if (savedSimplify !== null) setSimplifyGraphics(savedSimplify === 'true');
     
-    const savedMusic = localStorage.getItem('musicVolume');
+    const savedMusic = localStorage.getItem('sudoduel_music_volume');
     if (savedMusic !== null) setMusicVolume(parseInt(savedMusic, 10));
     
-    const savedSfx = localStorage.getItem('sfxVolume');
+    const savedSfx = localStorage.getItem('sudoduel_sfx_volume');
     if (savedSfx !== null) setSfxVolume(parseInt(savedSfx, 10));
   }, [isOpen]);
 
@@ -69,12 +69,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleMusicVolume = (value: number) => {
     setMusicVolume(value);
-    localStorage.setItem('musicVolume', String(value));
+    localStorage.setItem('sudoduel_music_volume', String(value));
   };
 
   const handleSfxVolume = (value: number) => {
     setSfxVolume(value);
-    localStorage.setItem('sfxVolume', String(value));
+    localStorage.setItem('sudoduel_sfx_volume', String(value));
   };
 
   const handleLogoutClick = () => {

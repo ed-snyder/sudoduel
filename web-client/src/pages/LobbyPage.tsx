@@ -6,6 +6,8 @@ import type { MatchRequest } from '../services/api';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudoDuelLogo from '../components/SudoDuelLogo';
 import BackgroundEffects from '../components/BackgroundEffects';
+import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useMusic } from '../hooks/useMusic';
 
 // Lazy load modals for code splitting
 const MatchHistoryModal = lazy(() => import('../components/MatchHistoryModal'));
@@ -35,6 +37,8 @@ function ModalLoader() {
 export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
+  const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects();
+  const { playMenuMusic, stopMusic } = useMusic();
   
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -69,21 +73,31 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
     attemptsRef.current = 0;
   };
 
+  // Start menu music on mount
+  useEffect(() => {
+    playMenuMusic();
+    return () => stopMusic();
+  }, [playMenuMusic, stopMusic]);
+
   const handleFindMatch = async () => {
     setError('');
     setSearching(true);
     attemptsRef.current = 0;
+    playJoinQueue();
 
     try {
       const response = await matchmakingAPI.join() as { status: string; match_id?: number };
       
       if (response.status === 'matched') {
+        playMatchFound();
         stopPolling();
         onMatchFound(response.match_id!);
       } else {
+        playSearching();
         pollForMatch();
       }
     } catch (err: any) {
+      stopSearching();
       setError(err.message);
       setSearching(false);
     }
@@ -97,6 +111,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         try {
           await matchmakingAPI.leave();
         } catch (e) {}
+        stopSearching();
         setSearching(false);
         setError('No opponent found. Try again!');
         stopPolling();
@@ -107,15 +122,18 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         const response = await matchmakingAPI.status() as { status: string; match_id?: number };
         
         if (response.status === 'matched') {
+          playMatchFound();
           stopPolling();
           onMatchFound(response.match_id!);
         } else if (response.status === 'queued') {
           pollForMatch();
         } else {
+          stopSearching();
           setSearching(false);
           stopPolling();
         }
       } catch (err) {
+        stopSearching();
         setSearching(false);
         stopPolling();
       }
@@ -123,6 +141,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   };
 
   const handleCancel = async () => {
+    stopSearching();
     stopPolling();
     try {
       await matchmakingAPI.leave();

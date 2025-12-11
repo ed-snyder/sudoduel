@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
-import { useGameSounds } from '../hooks/useGameSounds';
+import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useMusic } from '../hooks/useMusic';
 import { useHaptics } from '../hooks/useHaptics';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from '../components/SudokuGrid';
@@ -42,7 +43,20 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { isPremium } = useSubscription();
   const { isCapacitor } = useMobileDetect();
   const wsRef = useRef<WebSocket | null>(null);
-  const { playCorrectSound, playIncorrectSound, playSofterErrorSound, resetStreak, initAudio } = useGameSounds();
+  const { 
+    playCorrect, 
+    playIncorrect, 
+    playCountdown,
+    playCellTap,
+    playToolbarButton,
+    playTimesUp,
+    playVictory, 
+    playDefeat,
+    playEmoteReceived,
+    resetStreak, 
+    initAudio 
+  } = useSoundEffects();
+  const { playGameMusic, fadeOut, stopMusic } = useMusic();
   const { error: hapticError, impact, victory: hapticVictory, defeat: hapticDefeat } = useHaptics();
   
   // Event banner system - defined early for use in triggerScoreFeedback
@@ -94,8 +108,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       impact('medium'); // Base correct = medium impact
     }
     
-    // 2. Sound (no delay)
-    playCorrectSound();
+    // 2. Sound (no delay) - handles streak-based pitch automatically
+    playCorrect();
     
     // 3. Visual state updates
     setLastMoveResult({ correct: true, row, col });
@@ -104,7 +118,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     setLastScoredCell({ row, col });
     setTimeout(() => setLastScoredCell(null), 300);
     
-  }, [playCorrectSound, impact, showBanner]);
+  }, [playCorrect, impact, showBanner]);
   
   const [myGrid, setMyGrid] = useState<number[][]>([]);
   const [initialGrid, setInitialGrid] = useState<number[][]>([]);
@@ -262,6 +276,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { showAdIfNeeded, recordGamePlayed, shouldShowAd } = useAds();
   const [adComplete, setAdComplete] = useState(false);
   const adShownRef = useRef(false);
+  const gameRecordedRef = useRef(false);
   
   // Countdown system state
   const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
@@ -295,14 +310,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [isDownToWire, setIsDownToWire] = useState(false);
   const [shownLowTimeWarning, setShownLowTimeWarning] = useState(false);
   
-  // Cleanup banner timeout on unmount
+  // Cleanup banner timeout and music on unmount
   useEffect(() => {
     return () => {
       if (bannerTimeoutRef.current) {
         clearTimeout(bannerTimeoutRef.current);
       }
+      stopMusic();
     };
-  }, []);
+  }, [stopMusic]);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -316,6 +332,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Reset ad state
     setAdComplete(false);
     adShownRef.current = false;
+    gameRecordedRef.current = false;
     setShowGameEndOverlay(false);
     setPendingGameResult(null);
     setOverlayAnimationDone(false);
@@ -440,6 +457,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [gameStatus, pendingGameResult, showGameEndOverlay]);
 
+  // Record game played when overlay shows (separate from ad logic to avoid re-render issues)
+  useEffect(() => {
+    if (!showGameEndOverlay || !pendingGameResult || gameRecordedRef.current) return;
+    
+    const winnerSlot = pendingGameResult.winner_slot;
+    const didWin = winnerSlot === mySlot;
+    
+    gameRecordedRef.current = true;
+    recordGamePlayed(didWin);
+  }, [showGameEndOverlay, pendingGameResult, mySlot, recordGamePlayed]);
+
   // Show ad AFTER "Game Over" text appears (1.5 second delay)
   useEffect(() => {
     if (!showGameEndOverlay || adShownRef.current || !pendingGameResult) return;
@@ -451,11 +479,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Determine result type
     const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
     
-    // Record the game
-    recordGamePlayed(didWin);
+    // Capture current shouldShowAd result to avoid dependency issues
+    const needsAd = shouldShowAd(resultType);
     
     // If should show ad, wait for "Game Over" text to appear, then show ad
-    if (shouldShowAd(resultType)) {
+    if (needsAd) {
       adShownRef.current = true;
       // Wait 1.5 seconds for "Game Over" text to be visible, then show ad
       const adTimer = setTimeout(() => {
@@ -472,25 +500,43 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       // No ad needed, proceed immediately
       setAdComplete(true);
     }
-  }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded, recordGamePlayed]);
+  }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded]);
 
-  // Victory/Defeat haptic feedback on game end
+  // Victory/Defeat haptic and sound feedback on game end
+  const hasPlayedEndSoundRef = useRef(false);
   useEffect(() => {
-    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !showGameEndOverlay) {
+    if (gameStatus === 'ended' && gameResult && gameResult.player1 && gameResult.player2 && !hasPlayedEndSoundRef.current) {
+      hasPlayedEndSoundRef.current = true;
+      
+      // Fade out game music
+      fadeOut(500);
+      
       const winnerSlot = gameResult.winner_slot;
       const reason = gameResult.reason || 'DRAW';
       const isDraw = winnerSlot === null || reason === 'DRAW';
+      
+      // Play times up sound if it was a timeout
+      if (reason === 'TIMEOUT' || reason === 'TIMEOUT_SCORE') {
+        playTimesUp();
+      }
       
       if (!isDraw) {
         const didWin = winnerSlot !== null && winnerSlot === mySlot;
         if (didWin) {
           hapticVictory();
+          playVictory();
         } else {
           hapticDefeat();
+          playDefeat();
         }
       }
     }
-  }, [gameStatus, gameResult, mySlot, showGameEndOverlay, hapticVictory, hapticDefeat]);
+    
+    // Reset when game starts again
+    if (gameStatus === 'playing') {
+      hasPlayedEndSoundRef.current = false;
+    }
+  }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat, fadeOut, playVictory, playDefeat, playTimesUp]);
 
   // Clear last move result after animation
   useEffect(() => {
@@ -633,16 +679,26 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       // Start grid draw and number animations when countdown starts (at "3!")
       setGridAnimateIn(true);
     } else if (phase === 'go') {
+      playCountdown('go');
       setControlsVisible(true);
     }
-  }, []);
+  }, [playCountdown]);
+
+  // Handle countdown number changes - play sound for 3, 2, 1
+  const handleCountdownNumberChange = useCallback((num: number | null) => {
+    setCountdownNumber(num);
+    if (num === 3) playCountdown(3);
+    else if (num === 2) playCountdown(2);
+    else if (num === 1) playCountdown(1);
+  }, [playCountdown]);
 
   const handleCountdownComplete = useCallback(() => {
     log.countdown('Complete');
     setShowGameCountdown(false);
     setGridAnimateIn(false);
     setCountdownPhase('complete');
-  }, []);
+    playGameMusic(); // Start game music when countdown completes
+  }, [playGameMusic]);
 
   // Track when overlay animation is done
   const [overlayAnimationDone, setOverlayAnimationDone] = useState(false);
@@ -1176,6 +1232,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Reset ad state for new game end
         setAdComplete(false);
         adShownRef.current = false;
+        gameRecordedRef.current = false;
         setOverlayAnimationDone(false);
         
         // Overlay shows immediately, ad appears after "Game Over" text (1.5s delay)
@@ -1211,6 +1268,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setOpponentEmoteFadingOut(false);
         
         setOpponentEmote(message.data.emote);
+        playEmoteReceived();
         
         // Start fade-out after 2 seconds, then hide after animation completes
         opponentEmoteTimeoutRef.current = setTimeout(() => {
@@ -1267,6 +1325,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       return;
     }
 
+    playCellTap();
     log.perf(`After selection check: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     // Check if cell is an initial clue - allow clicking for highlighting but log it
@@ -1296,7 +1355,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     log.perf(`After setSelectedCell: ${(performance.now() - startTime).toFixed(2)}ms`);
     
     log.perf(`Cell click END: ${(performance.now() - startTime).toFixed(2)}ms`);
-  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, countdownPhase]);
+  }, [gameStatus, myState?.is_locked, initialGrid, selectedCell, countdownPhase, playCellTap]);
 
   // Back button removed - forfeit can be accessed via other means if needed
   // const handleBackClick = () => { ... }
@@ -1536,14 +1595,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           setErroredCells(prev => new Set(prev).add(cellKey));
         }
         
-        log.perf(`Error path - before playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
-        // Use different sound for first vs subsequent errors
-        if (isFirstError) {
-          playIncorrectSound();
-        } else {
-          playSofterErrorSound();
-        }
-        log.perf(`Error path - after playIncorrectSound: ${(performance.now() - startTime).toFixed(2)}ms`);
+        log.perf(`Error path - before playIncorrect: ${(performance.now() - startTime).toFixed(2)}ms`);
+        // Play incorrect sound (also resets streak internally)
+        playIncorrect();
+        log.perf(`Error path - after playIncorrect: ${(performance.now() - startTime).toFixed(2)}ms`);
         hapticError();
         myStreakRef.current = 0; // Reset streak on error
         
@@ -1642,10 +1697,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       
       log.perf(`Number click END: ${(performance.now() - startTime).toFixed(2)}ms`);
     }
-  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrectSound, hapticError, countdownPhase]);
+  }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrect, hapticError, countdownPhase]);
 
   const handleErase = () => {
     if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
+    playToolbarButton();
     
     // Check if cell is initial clue - can't erase those
     if (initialGrid[selectedCell.row] && initialGrid[selectedCell.row][selectedCell.col] !== 0) {
@@ -1688,6 +1744,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   };
 
   const handleToggleNotes = () => {
+    playToolbarButton();
     setNotesMode((prev) => !prev);
   };
 
@@ -1881,7 +1938,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
       <GameCountdown
         onPhaseChange={handleCountdownPhaseChange}
-        onCountdownNumberChange={setCountdownNumber}
+        onCountdownNumberChange={handleCountdownNumberChange}
         onComplete={handleCountdownComplete}
         isActive={showGameCountdown}
       />
@@ -2433,7 +2490,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
             {/* Emote Button */}
             <button
-              onClick={() => setShowEmotePicker(true)}
+              onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
               disabled={countdownPhase !== 'complete'}
               className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
               style={{
