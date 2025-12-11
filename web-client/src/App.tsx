@@ -12,7 +12,7 @@ import { adService } from './services/adService';
 import { playerAPI } from './services/api';
 
 function AppContent() {
-  const { user, loading, justSignedUp, clearJustSignedUp } = useAuth();
+  const { user, loading, justSignedUp, clearJustSignedUp, refreshUser } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
   const [soloMode, setSoloMode] = useState(false);
 
@@ -91,9 +91,10 @@ function AppContent() {
   // Handle skill level selection - called immediately when user picks
   const handleSkillSelect = async (level: 'beginner' | 'experienced') => {
     const rating = level === 'beginner' ? 500 : 1500;
+    console.log(`[Tutorial] User selected: ${level}, setting rating to: ${rating}`);
     try {
-      await playerAPI.setInitialRating(rating);
-      console.log(`[Tutorial] Set ${level} rating to ${rating}`);
+      const result = await playerAPI.setInitialRating(rating);
+      console.log(`[Tutorial] API response:`, result);
     } catch (error) {
       console.error(`[Tutorial] Failed to set ${level} rating:`, error);
       // Continue anyway
@@ -102,6 +103,14 @@ function AppContent() {
 
   // Handle tutorial completion
   const handleTutorialComplete = async () => {
+    // Refresh user data to get updated rating
+    try {
+      await refreshUser();
+      console.log('[Tutorial] User data refreshed');
+    } catch (error) {
+      console.error('[Tutorial] Failed to refresh user:', error);
+    }
+    
     clearJustSignedUp();
     // Also mark in localStorage as backup
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
@@ -109,6 +118,13 @@ function AppContent() {
   
   // Handle tutorial skip (no skill selection made)
   const handleTutorialSkip = async () => {
+    // Refresh user data
+    try {
+      await refreshUser();
+    } catch (error) {
+      console.error('[Tutorial] Failed to refresh user on skip:', error);
+    }
+    
     clearJustSignedUp();
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
   };

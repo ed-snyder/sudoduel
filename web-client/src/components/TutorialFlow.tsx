@@ -854,7 +854,7 @@ function DuelOpponentStep({ onNext }: StepProps) {
       <div className="bg-surface border border-grid-line rounded-xl p-6 space-y-4 text-center">
         <h2 className="font-heading font-bold text-2xl text-opponent">The Fog of War</h2>
         <p className="font-body text-secondary">
-          Magenta cells show where your opponent has already scored. You can still score here and might help you catch up!
+          Magenta cells show where your opponent has already scored. If you're stuck, try solving these cells first.
         </p>
         <div className="flex justify-center">
           <SudokuGrid
