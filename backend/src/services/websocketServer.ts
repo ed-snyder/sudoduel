@@ -716,11 +716,6 @@ function startBotMoveLoop(matchId: number) {
     const game = GameStateManager.getGame(matchId);
     if (!game || game.status !== 'IN_PROGRESS') {
       console.log(`🤖 Bot loop stopping - game not in progress for match ${matchId}`);
-      return;
-    }
-
-    // Don't make moves if game is completed
-    if (game.status === 'COMPLETED') {
       cleanupBotState(matchId);
       return;
     }
