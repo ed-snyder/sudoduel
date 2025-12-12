@@ -1013,7 +1013,7 @@ export default function ResultScreen({
                   fontSize: '1.75rem',
                   left: '100%',
                   marginLeft: '8px',
-                  top: '55px',
+                  top: '48px',
                   transform: 'translateY(-50%)',
                   display: 'flex',
                   flexDirection: 'row',
