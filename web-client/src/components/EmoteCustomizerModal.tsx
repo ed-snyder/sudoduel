@@ -21,8 +21,12 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length === 4) {
+          // Sanitize any existing emotes that might have skin tones
+          const sanitized = parsed.map(emote => stripSkinTones(emote));
+          // Save sanitized version back to localStorage
+          localStorage.setItem('customEmotes', JSON.stringify(sanitized));
           // Use setTimeout to avoid calling setState synchronously in effect
-          setTimeout(() => setEmotes(parsed), 0);
+          setTimeout(() => setEmotes(sanitized), 0);
         }
       } catch {
         console.error('Failed to parse saved emotes');
@@ -37,17 +41,39 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    // Strip skin tones FIRST from raw input to prevent them from appearing
+    const valueWithoutSkinTones = stripSkinTones(value);
     // Extract emojis only - allow up to 2 complete emojis
-    const emojis = extractEmojis(value, 2);
-    // Strip skin tones immediately so user sees the base emoji
-    const stripped = emojis.map(stripSkinTones).join('');
-    setInputValue(stripped);
+    const emojis = extractEmojis(valueWithoutSkinTones, 2);
+    // Join the extracted emojis (already stripped of skin tones)
+    const finalValue = emojis.join('');
+    setInputValue(finalValue);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    // Strip skin tones from pasted content
+    const valueWithoutSkinTones = stripSkinTones(pastedText);
+    // Extract emojis only
+    const emojis = extractEmojis(valueWithoutSkinTones, 2);
+    const finalValue = emojis.join('');
+    setInputValue(finalValue);
+  };
+
+  const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+    // Handle emoji picker input (composition events)
+    const value = (e.target as HTMLInputElement).value;
+    const valueWithoutSkinTones = stripSkinTones(value);
+    const emojis = extractEmojis(valueWithoutSkinTones, 2);
+    const finalValue = emojis.join('');
+    setInputValue(finalValue);
   };
 
   const handleSaveEmote = () => {
     if (editingIndex === null || !inputValue) return;
     
-    // Strip skin tone modifiers before saving
+    // Double-check: strip skin tone modifiers before saving (should already be stripped, but safety check)
     const sanitizedEmote = stripSkinTones(inputValue);
     
     const newEmotes = [...emotes];
@@ -128,6 +154,8 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
                   type="text"
                   value={inputValue}
                   onChange={handleInputChange}
+                  onPaste={handlePaste}
+                  onCompositionEnd={handleCompositionEnd}
                   placeholder="Tap to select"
                   autoFocus
                   className="flex-1 px-2 py-1.5 bg-elevated border border-grid-line rounded-lg text-xl text-center focus:outline-none focus:border-player focus:shadow-glow-player-subtle transition-all placeholder:text-muted/50 placeholder:text-sm emote-input-placeholder"
