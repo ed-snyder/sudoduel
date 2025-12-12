@@ -250,6 +250,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [opponentEmote, setOpponentEmote] = useState<string | null>(null);
   const [myEmoteFadingOut, setMyEmoteFadingOut] = useState(false);
   const [opponentEmoteFadingOut, setOpponentEmoteFadingOut] = useState(false);
+  const [emoteKey, setEmoteKey] = useState(0);
+  const [opponentEmoteKey, setOpponentEmoteKey] = useState(0);
   const emotePickerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const myEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1285,6 +1287,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Reset fade-out state
         setOpponentEmoteFadingOut(false);
         
+        // Increment key to force animation re-trigger
+        setOpponentEmoteKey(prev => prev + 1);
+        
         setOpponentEmote(message.data.emote);
         playEmoteReceived();
         
@@ -1804,6 +1809,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Reset fade-out state
     setMyEmoteFadingOut(false);
     
+    // Increment key to force animation re-trigger
+    setEmoteKey(prev => prev + 1);
+    
     // Show my emote locally
     setMyEmote(emote);
     
@@ -2127,7 +2135,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {myEmote && (
                 <div 
                   className={`absolute text-4xl sm:text-5xl pointer-events-none ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  key={myEmote}
+                  key={`my-emote-${emoteKey}`}
                   style={{ 
                     zIndex: 10,
                     left: '100%',
@@ -2157,7 +2165,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               {opponentEmote && (
                 <div 
                   className={`absolute text-4xl sm:text-5xl pointer-events-none ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-                  key={opponentEmote}
+                  key={`opponent-emote-${opponentEmoteKey}`}
                   style={{ 
                     zIndex: 10,
                     right: '100%',

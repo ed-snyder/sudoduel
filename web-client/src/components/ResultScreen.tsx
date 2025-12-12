@@ -964,11 +964,11 @@ export default function ResultScreen({
         )}
 
         {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center justify-between w-full px-1 mb-6" style={{ position: 'relative', zIndex: 40 }}>
+        <div className="flex items-center justify-between w-full px-0 mb-6" style={{ position: 'relative', zIndex: 40 }}>
           {/* Your score box + emote */}
-          <div className="relative">
+          <div className="relative ml-2" style={{ height: '110px' }}>
             <div 
-              className="flex flex-col items-center justify-center rounded-lg"
+              className="flex flex-col items-center justify-center rounded-lg h-full"
               style={{
                 background: 'rgba(0,255,255,0.08)',
                 border: '2px solid rgba(0,255,255,0.4)',
@@ -998,6 +998,7 @@ export default function ResultScreen({
             {/* My emote - positioned to the RIGHT of box (toward center) */}
             {myEmote && (
               <div 
+                key={`my-emote-${myEmote}-${Date.now()}`}
                 className={`absolute ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
@@ -1021,10 +1022,11 @@ export default function ResultScreen({
           </div>
           
           {/* Opponent emote + score box - clickable */}
-          <div className="relative">
+          <div className="relative mr-2" style={{ height: '110px' }}>
             {/* Opponent emote - positioned to the LEFT of box (toward center) */}
             {opponentEmote && (
               <div 
+                key={`opponent-emote-${opponentEmote}-${Date.now()}`}
                 className={`absolute ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
@@ -1047,7 +1049,7 @@ export default function ResultScreen({
             )}
             <button
               onClick={() => setShowOpponentModal(true)}
-              className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
+              className="flex flex-col items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95 h-full"
               style={{
                 background: 'rgba(255,0,255,0.08)',
                 border: '2px solid rgba(255,0,255,0.4)',
