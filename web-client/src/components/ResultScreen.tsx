@@ -964,9 +964,9 @@ export default function ResultScreen({
         )}
 
         {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center justify-between w-full px-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
+        <div className="flex items-center justify-between w-full px-1 mb-6" style={{ position: 'relative', zIndex: 40 }}>
           {/* Your score box + emote */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <div 
               className="flex flex-col items-center justify-center rounded-lg"
               style={{
@@ -979,7 +979,7 @@ export default function ResultScreen({
               }}
             >
               <span 
-                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+                className="font-body uppercase tracking-wider mb-1 text-center w-full break-words leading-tight"
                 style={{ 
                   color: 'rgba(0,255,255,0.9)',
                   fontSize: myName.length > 12 ? '11px' : myName.length > 8 ? '12px' : '14px',
@@ -995,16 +995,17 @@ export default function ResultScreen({
                 {myResult.cellsCompleted}
               </span>
             </div>
-            {/* My emote - RIGHT of my score box (toward center) */}
+            {/* My emote - positioned to the RIGHT of box (toward center) */}
             {myEmote && (
               <div 
-                className={`absolute text-3xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                className={`absolute ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
                   border: '2px solid rgba(139,0,255,0.3)',
                   padding: '4px 8px',
                   borderRadius: '8px',
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                  fontSize: '1.75rem',
                   left: '100%',
                   marginLeft: '8px',
                   top: '50%',
@@ -1020,17 +1021,18 @@ export default function ResultScreen({
           </div>
           
           {/* Opponent emote + score box - clickable */}
-          <div style={{ position: 'relative' }}>
-            {/* Opponent emote - LEFT of their score box (toward center) */}
+          <div className="relative">
+            {/* Opponent emote - positioned to the LEFT of box (toward center) */}
             {opponentEmote && (
               <div 
-                className={`absolute text-3xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                className={`absolute ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
                   border: '2px solid rgba(139,0,255,0.3)',
                   padding: '4px 8px',
                   borderRadius: '8px',
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                  fontSize: '1.75rem',
                   right: '100%',
                   marginRight: '8px',
                   top: '50%',
@@ -1056,7 +1058,7 @@ export default function ResultScreen({
               }}
             >
               <span 
-                className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
+                className="font-body uppercase tracking-wider mb-1 text-center w-full break-words leading-tight"
                 style={{ 
                   color: 'rgba(255,0,255,0.9)',
                   fontSize: opponentName.length > 12 ? '11px' : opponentName.length > 8 ? '12px' : '14px',
