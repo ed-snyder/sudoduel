@@ -74,10 +74,11 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   };
 
   // Start menu music on mount (persists across screens)
-  useEffect(() => {
-    playMenuMusic();
-    // Don't stop on unmount - music persists to other screens
-  }, [playMenuMusic]);
+  // DISABLED: Lobby music disabled per user request
+  // useEffect(() => {
+  //   playMenuMusic();
+  //   // Don't stop on unmount - music persists to other screens
+  // }, [playMenuMusic]);
 
   const handleFindMatch = async () => {
     setError('');
