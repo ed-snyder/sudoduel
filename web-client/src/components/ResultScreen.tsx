@@ -964,32 +964,32 @@ export default function ResultScreen({
         )}
 
         {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center justify-center gap-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
+        <div className="flex items-center justify-between gap-2 mb-6 px-4" style={{ position: 'relative', zIndex: 40 }}>
           {/* Your score box + emote */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ position: 'relative' }}>
             <div 
               className="flex flex-col items-center justify-center rounded-lg"
               style={{
                 background: 'rgba(0,255,255,0.08)',
                 border: '2px solid rgba(0,255,255,0.4)',
                 boxShadow: '0 0 15px rgba(0,255,255,0.15), inset 0 0 20px rgba(0,255,255,0.05)',
-                width: '140px',
-                height: '140px',
-                padding: '12px 8px',
+                width: '110px',
+                height: '110px',
+                padding: '8px 6px',
               }}
             >
               <span 
                 className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
                 style={{ 
                   color: 'rgba(0,255,255,0.9)',
-                  fontSize: myName.length > 12 ? '9px' : myName.length > 8 ? '10px' : '11px',
+                  fontSize: myName.length > 12 ? '11px' : myName.length > 8 ? '12px' : '14px',
                 }}
                 title={myName}
               >
                 {myName}
               </span>
               <span 
-                className="text-5xl font-mono font-bold text-player"
+                className="text-3xl font-mono font-bold text-player"
                 style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
               >
                 {myResult.cellsCompleted}
@@ -998,13 +998,18 @@ export default function ResultScreen({
             {/* My emote - RIGHT of my score box (toward center) */}
             {myEmote && (
               <div 
-                className={`text-4xl sm:text-5xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                className={`absolute text-3xl ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
                   border: '2px solid rgba(139,0,255,0.3)',
                   padding: '4px 8px',
                   borderRadius: '8px',
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                  left: '100%',
+                  marginLeft: '8px',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {myEmote}
@@ -1020,17 +1025,22 @@ export default function ResultScreen({
           </span>
           
           {/* Opponent emote + score box - clickable */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ position: 'relative' }}>
             {/* Opponent emote - LEFT of their score box (toward center) */}
             {opponentEmote && (
               <div 
-                className={`text-4xl sm:text-5xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+                className={`absolute text-3xl ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
                   border: '2px solid rgba(139,0,255,0.3)',
                   padding: '4px 8px',
                   borderRadius: '8px',
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
+                  right: '100%',
+                  marginRight: '8px',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {opponentEmote}
@@ -1043,23 +1053,23 @@ export default function ResultScreen({
                 background: 'rgba(255,0,255,0.08)',
                 border: '2px solid rgba(255,0,255,0.4)',
                 boxShadow: '0 0 15px rgba(255,0,255,0.15), inset 0 0 20px rgba(255,0,255,0.05)',
-                width: '140px',
-                height: '140px',
-                padding: '12px 8px',
+                width: '110px',
+                height: '110px',
+                padding: '8px 6px',
               }}
             >
               <span 
                 className="font-body uppercase tracking-wider mb-2 text-center w-full break-words leading-tight"
                 style={{ 
                   color: 'rgba(255,0,255,0.9)',
-                  fontSize: opponentName.length > 12 ? '9px' : opponentName.length > 8 ? '10px' : '11px',
+                  fontSize: opponentName.length > 12 ? '11px' : opponentName.length > 8 ? '12px' : '14px',
                 }}
                 title={opponentName}
               >
                 {opponentName}
               </span>
               <span 
-                className="text-5xl font-mono font-bold text-opponent"
+                className="text-3xl font-mono font-bold text-opponent"
                 style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
               >
                 {opponentResult.cellsCompleted}
@@ -1227,8 +1237,13 @@ export default function ResultScreen({
                           <button
                             key={index}
                             onClick={() => handleEmoteSelect(emote)}
-                            className="w-12 h-12 text-2xl flex items-center justify-center
+                            className="min-w-12 h-12 px-2 text-2xl flex items-center justify-center
                                        rounded-lg hover:bg-purple/30 active:scale-90 transition-all"
+                            style={{
+                              display: 'inline-flex',
+                              flexDirection: 'row',
+                              whiteSpace: 'nowrap',
+                            }}
                           >
                             {emote}
                           </button>
