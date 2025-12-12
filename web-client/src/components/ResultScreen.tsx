@@ -964,9 +964,9 @@ export default function ResultScreen({
         )}
 
         {/* Score comparison with equal-sized name boxes */}
-        <div className="flex items-center justify-between gap-2 mb-6 px-4" style={{ position: 'relative', zIndex: 40 }}>
+        <div className="flex items-center justify-between w-full px-4 mb-6" style={{ position: 'relative', zIndex: 40 }}>
           {/* Your score box + emote */}
-          <div className="flex items-center gap-2" style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
             <div 
               className="flex flex-col items-center justify-center rounded-lg"
               style={{
@@ -1007,6 +1007,8 @@ export default function ResultScreen({
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   left: '100%',
                   marginLeft: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
                   display: 'flex',
                   flexDirection: 'row',
                   whiteSpace: 'nowrap',
@@ -1017,15 +1019,8 @@ export default function ResultScreen({
             )}
           </div>
           
-          <span 
-            className="text-2xl font-heading font-bold text-primary"
-            style={{ textShadow: '0 0 10px rgba(139,0,255,0.4)' }}
-          >
-            —
-          </span>
-          
           {/* Opponent emote + score box - clickable */}
-          <div className="flex items-center gap-2" style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
             {/* Opponent emote - LEFT of their score box (toward center) */}
             {opponentEmote && (
               <div 
@@ -1038,6 +1033,8 @@ export default function ResultScreen({
                   boxShadow: '0 0 10px rgba(139,0,255,0.1)',
                   right: '100%',
                   marginRight: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
                   display: 'flex',
                   flexDirection: 'row',
                   whiteSpace: 'nowrap',
