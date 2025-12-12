@@ -19,8 +19,6 @@ const BLOCKED_WORDS = [
   'asshole', 'fuck', 'shit', 'cunt', 'bitch', 'whore', 'slut', 'cock', 'dick', 'pussy', 'bastard', 'damn', 'ass', 'tits', 'boob', 'penis', 'vagina',
   // Racial slurs
   'chink', 'gook', 'spic', 'wetback', 'kike', 'raghead', 'towelhead', 'injun',
-  // Drugs
-  'weed', 'marijuana', 'drug',
 ];
 
 // Leetspeak substitutions
