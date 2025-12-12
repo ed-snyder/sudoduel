@@ -38,7 +38,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const { user, token } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects(0.8);
-  const { playMenuMusic, stopMusic } = useMusic();
+  const { stopMusic } = useMusic();
   
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -73,12 +73,6 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
     attemptsRef.current = 0;
   };
 
-  // Start menu music on mount (persists across screens)
-  // DISABLED: Lobby music disabled per user request
-  // useEffect(() => {
-  //   playMenuMusic();
-  //   // Don't stop on unmount - music persists to other screens
-  // }, [playMenuMusic]);
 
   const handleFindMatch = async () => {
     setError('');

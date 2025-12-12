@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 type MusicTrack = 'menu' | 'game' | null;
 
 interface MusicContextType {
-  playMenuMusic: () => void;
   playGameMusic: () => void;
   stopMusic: () => void;
   fadeOut: (duration?: number) => void;
@@ -115,10 +114,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setCurrentTrack(track);
   }, []);
 
-  const playMenuMusic = useCallback(() => {
-    playTrack('menu', '/sounds/music/menu-lobby.mp3');
-  }, [playTrack]);
-
   const playGameMusic = useCallback(() => {
     playTrack('game', '/sounds/music/in-game.mp3');
   }, [playTrack]);
@@ -173,7 +168,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   return (
     <MusicContext.Provider value={{
-      playMenuMusic,
       playGameMusic,
       stopMusic,
       fadeOut,

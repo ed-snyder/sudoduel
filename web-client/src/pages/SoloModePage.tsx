@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { useMusic } from '../context/MusicContext';
 import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import BackgroundEffects from '../components/BackgroundEffects';
@@ -14,13 +13,7 @@ interface SoloModePageProps {
 
 export default function SoloModePage({ onExit }: SoloModePageProps) {
   const { playCorrect, playIncorrect, initAudio } = useSoundEffects();
-  const { playMenuMusic } = useMusic();
   const { error: hapticError, impact } = useHaptics();
-
-  // Keep menu music playing in solo mode
-  useEffect(() => {
-    playMenuMusic();
-  }, [playMenuMusic]);
   
   // Grid state
   const [myGrid, setMyGrid] = useState<number[][]>([]);
