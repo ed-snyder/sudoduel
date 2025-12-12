@@ -36,8 +36,22 @@ function normalize(str: string): string {
 }
 
 function hasBannedWord(text: string): boolean {
+  // Normalize the input
   const normalized = normalize(text);
-  return BLOCKED_WORDS.some(word => normalized.includes(word));
+  
+  // Also check before repeated character removal to catch cases like "kkk" -> "kk"
+  // We need to check both because:
+  // - "kkk" should be blocked (but gets normalized to "kk")
+  // - "shiiit" should be blocked (normalized to "shit")
+  let beforeRepeatRemoval = text.toLowerCase().replace(/[_\-.\s]/g, '');
+  for (const [k, v] of Object.entries(LEET)) {
+    beforeRepeatRemoval = beforeRepeatRemoval.split(k).join(v);
+  }
+  
+  // Check both versions
+  return BLOCKED_WORDS.some(word => 
+    normalized.includes(word) || beforeRepeatRemoval.includes(word)
+  );
 }
 
 export function validateUsername(username: string): { valid: boolean; error?: string } {
