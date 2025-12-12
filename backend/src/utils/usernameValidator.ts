@@ -8,15 +8,19 @@ const BLOCKED_WORDS = [
   // N-word - instant rejection
   'nigger', 'nigga',
   // Anti-LGBTQ
-  'faggot', 'fag',
+  'faggot', 'fag', 'dyke',
   // Hate groups
-  'nazi', 'hitler', 'kkk', 'klan',
+  'nazi', 'hitler', 'kkk', 'klan', 'whitepow', 'whitepower', 'heil', 'sieg',
   // Child safety
-  'pedo', 'pedophile', 'paedo',
+  'pedo', 'pedophile', 'paedo', 'loli', 'shota', 'jailbait', 'underage',
   // Sexual
-  'porn', 'rape',
+  'porn', 'rape', 'hentai', 'naked', 'horny', 'jizz', 'orgasm', 'masturbat', 'blowjob', 'handjob', 'anal', 'dildo', 'vibrator',
   // Profanity
-  'asshole',
+  'asshole', 'fuck', 'shit', 'cunt', 'bitch', 'whore', 'slut', 'cock', 'dick', 'pussy', 'bastard', 'damn', 'ass', 'tits', 'boob', 'penis', 'vagina',
+  // Racial slurs
+  'chink', 'gook', 'spic', 'wetback', 'kike', 'raghead', 'towelhead', 'injun',
+  // Drugs
+  'weed', 'marijuana', 'drug',
 ];
 
 // Leetspeak substitutions

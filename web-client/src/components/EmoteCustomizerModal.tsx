@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { extractEmojis } from '../utils/emoji';
+import { extractEmojis, stripSkinTones } from '../utils/emoji';
 
 interface EmoteCustomizerModalProps {
   isOpen: boolean;
@@ -39,14 +39,19 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
     const value = e.target.value;
     // Extract emojis only - allow up to 2 complete emojis
     const emojis = extractEmojis(value, 2);
-    setInputValue(emojis.join(''));
+    // Strip skin tones immediately so user sees the base emoji
+    const stripped = emojis.map(stripSkinTones).join('');
+    setInputValue(stripped);
   };
 
   const handleSaveEmote = () => {
     if (editingIndex === null || !inputValue) return;
     
+    // Strip skin tone modifiers before saving
+    const sanitizedEmote = stripSkinTones(inputValue);
+    
     const newEmotes = [...emotes];
-    newEmotes[editingIndex] = inputValue;
+    newEmotes[editingIndex] = sanitizedEmote;
     setEmotes(newEmotes);
     localStorage.setItem('customEmotes', JSON.stringify(newEmotes));
     setEditingIndex(null);

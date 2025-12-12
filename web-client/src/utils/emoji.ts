@@ -63,3 +63,23 @@ export function isOnlyEmojis(str: string): boolean {
   const clusters = getGraphemeClusters(str);
   return clusters.length > 0 && clusters.every(isEmoji);
 }
+
+/**
+ * Fitzpatrick skin tone modifier Unicode range
+ * U+1F3FB (🏻) Light Skin Tone
+ * U+1F3FC (🏼) Medium-Light Skin Tone  
+ * U+1F3FD (🏽) Medium Skin Tone
+ * U+1F3FE (🏾) Medium-Dark Skin Tone
+ * U+1F3FF (🏿) Dark Skin Tone
+ */
+const SKIN_TONE_MODIFIERS = /[\u{1F3FB}-\u{1F3FF}]/gu;
+
+/**
+ * Remove skin tone modifiers from an emoji string
+ * Converts emojis like 👋🏽 to 👋 (base yellow)
+ * @param emoji Input emoji string (can contain multiple emojis)
+ * @returns Emoji string with skin tones stripped
+ */
+export function stripSkinTones(emoji: string): string {
+  return emoji.replace(SKIN_TONE_MODIFIERS, '');
+}
