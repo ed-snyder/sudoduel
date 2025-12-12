@@ -14,11 +14,11 @@ const BLOCKED_WORDS = [
   // Child safety
   'pedo', 'pedophile', 'paedo', 'loli', 'shota', 'jailbait', 'underage',
   // Sexual
-  'porn', 'rape', 'hentai', 'naked', 'horny', 'jizz', 'orgasm', 'masturbat', 'blowjob', 'handjob', 'anal', 'dildo', 'vibrator',
+  'porn', 'rape', 'hentai', 'horny', 'jizz', 'orgasm', 'masturbat', 'blowjob', 'handjob', 'anal', 'dildo',
   // Profanity
   'asshole', 'fuck', 'shit', 'cunt', 'bitch', 'whore', 'slut', 'cock', 'dick', 'pussy', 'bastard', 'damn', 'ass', 'tits', 'boob', 'penis', 'vagina',
   // Racial slurs
-  'chink', 'gook', 'spic', 'wetback', 'kike', 'raghead', 'towelhead', 'injun',
+  'chink', 'gook', 'spic', 'wetback', 'kike', 'injun',
 ];
 
 // Leetspeak substitutions
