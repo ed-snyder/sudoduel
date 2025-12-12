@@ -41,6 +41,8 @@ interface ResultScreenProps {
   opponentEmote?: string | null;
   myEmoteFadingOut?: boolean;
   opponentEmoteFadingOut?: boolean;
+  myEmoteKey?: number;
+  opponentEmoteKey?: number;
 }
 
 interface Particle {
@@ -130,6 +132,8 @@ export default function ResultScreen({
   opponentEmote,
   myEmoteFadingOut = false,
   opponentEmoteFadingOut = false,
+  myEmoteKey = 0,
+  opponentEmoteKey = 0,
 }: ResultScreenProps) {
   const { user, token } = useAuth();
   const [showEmotePicker, setShowEmotePicker] = useState(false);
@@ -849,7 +853,7 @@ export default function ResultScreen({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 -mt-8 relative z-30">
+      <div className="flex-1 flex flex-col items-center justify-center px-0 pb-10 -mt-8 relative z-30">
         {/* Result Title - Logo style with shimmer and float */}
         <div 
           className={`relative mb-6 ${showTitle ? 'animate-slam-in' : 'opacity-0 scale-150'}`}
@@ -998,7 +1002,7 @@ export default function ResultScreen({
             {/* My emote - positioned to the RIGHT of box (toward center) */}
             {myEmote && (
               <div 
-                key={`my-emote-${myEmote}-${Date.now()}`}
+                key={`my-emote-${myEmoteKey}-${myEmote}`}
                 className={`absolute ${myEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',
@@ -1026,7 +1030,7 @@ export default function ResultScreen({
             {/* Opponent emote - positioned to the LEFT of box (toward center) */}
             {opponentEmote && (
               <div 
-                key={`opponent-emote-${opponentEmote}-${Date.now()}`}
+                key={`opponent-emote-${opponentEmoteKey}-${opponentEmote}`}
                 className={`absolute ${opponentEmoteFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}
                 style={{
                   background: 'rgba(139,0,255,0.1)',

@@ -1934,6 +1934,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         opponentEmote={opponentEmote}
         myEmoteFadingOut={myEmoteFadingOut}
         opponentEmoteFadingOut={opponentEmoteFadingOut}
+        myEmoteKey={emoteKey}
+        opponentEmoteKey={opponentEmoteKey}
       />
     );
   }
