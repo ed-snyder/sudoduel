@@ -24,46 +24,29 @@ export function FitText({
 }: FitTextProps) {
   const [fontSize, setFontSize] = useState(maxFontSize);
   const containerRef = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
   const measureRef = useRef<HTMLSpanElement | null>(null);
-  const retryTimeoutRef = useRef<number | null>(null);
 
   const calculateFontSize = useCallback(() => {
     const container = containerRef.current;
-    if (!container || !children) return;
-
-    // Clear any pending retry
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-
-    // Get the parent container's width (the score box div)
-    const parent = container.parentElement;
-    if (!parent) {
-      // If no parent, try again after a delay
-      if (!retryTimeoutRef.current) {
-        retryTimeoutRef.current = window.setTimeout(() => {
-          retryTimeoutRef.current = null;
-          calculateFontSize();
-        }, 100);
-      }
+    const textEl = textRef.current;
+    
+    if (!container || !textEl || !children) {
       return;
     }
 
-    const parentStyle = window.getComputedStyle(parent);
-    const parentWidth = parent.offsetWidth;
-    const parentPaddingLeft = parseFloat(parentStyle.paddingLeft) || 0;
-    const parentPaddingRight = parseFloat(parentStyle.paddingRight) || 0;
-    const availableWidth = parentWidth - parentPaddingLeft - parentPaddingRight;
+    // Get container's available width
+    const containerStyle = window.getComputedStyle(container);
+    const containerWidth = container.offsetWidth;
+    const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(containerStyle.paddingRight) || 0;
+    const availableWidth = containerWidth - paddingLeft - paddingRight;
 
-    if (availableWidth <= 0) {
-      // If container not ready, try again after a short delay
-      if (!retryTimeoutRef.current) {
-        retryTimeoutRef.current = window.setTimeout(() => {
-          retryTimeoutRef.current = null;
-          calculateFontSize();
-        }, 100);
-      }
+    if (availableWidth <= 0 || containerWidth === 0) {
+      // Retry after a short delay if container not ready
+      requestAnimationFrame(() => {
+        setTimeout(() => calculateFontSize(), 100);
+      });
       return;
     }
 
@@ -85,44 +68,59 @@ export function FitText({
     const measureSpan = measureRef.current;
 
     // Copy all font-related styles from container to measurement element
-    const containerStyle = window.getComputedStyle(container);
     measureSpan.style.fontFamily = containerStyle.fontFamily || 'inherit';
     measureSpan.style.fontWeight = containerStyle.fontWeight || 'normal';
     measureSpan.style.fontStyle = containerStyle.fontStyle || 'normal';
     measureSpan.style.letterSpacing = containerStyle.letterSpacing || 'normal';
     measureSpan.style.textTransform = containerStyle.textTransform || 'none';
     measureSpan.style.textDecoration = containerStyle.textDecoration || 'none';
-    measureSpan.style.fontSize = `${maxFontSize}px`; // Start with max
     measureSpan.textContent = children;
 
-    // Start from max and work down until it fits
-    let optimalSize = maxFontSize;
-    measureSpan.style.fontSize = `${optimalSize}px`;
-    
-    // Force reflow
-    void measureSpan.offsetWidth;
-    
-    // If it doesn't fit, reduce font size
-    while (measureSpan.offsetWidth > availableWidth && optimalSize > minFontSize) {
-      optimalSize -= 0.5; // Use smaller increments for better fit
-      measureSpan.style.fontSize = `${optimalSize}px`;
+    // Binary search for optimal font size
+    let low = minFontSize;
+    let high = maxFontSize;
+    let optimalSize = minFontSize;
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      measureSpan.style.fontSize = `${mid}px`;
+      
+      // Force reflow
       void measureSpan.offsetWidth;
+      
+      const textWidth = measureSpan.offsetWidth;
+      
+      if (textWidth <= availableWidth) {
+        optimalSize = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
     }
+
+    // Ensure we don't go below minFontSize
+    optimalSize = Math.max(optimalSize, minFontSize);
     
-    // Round to nearest integer
-    optimalSize = Math.max(Math.round(optimalSize), minFontSize);
-    setFontSize(optimalSize);
-  }, [children, minFontSize, maxFontSize]);
+    // Only update if changed to avoid unnecessary re-renders
+    if (optimalSize !== fontSize) {
+      setFontSize(optimalSize);
+    }
+  }, [children, minFontSize, maxFontSize, fontSize]);
 
   useEffect(() => {
-    // Initial calculation with a small delay to ensure container is rendered
+    // Initial calculation - use requestAnimationFrame to ensure DOM is ready
+    let rafId: number;
     const timeoutId = setTimeout(() => {
-      calculateFontSize();
+      rafId = requestAnimationFrame(() => {
+        calculateFontSize();
+      });
     }, 0);
 
     // Recalculate on resize
     const resizeObserver = new ResizeObserver(() => {
-      calculateFontSize();
+      requestAnimationFrame(() => {
+        calculateFontSize();
+      });
     });
 
     if (containerRef.current) {
@@ -131,9 +129,8 @@ export function FitText({
 
     return () => {
       clearTimeout(timeoutId);
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
       resizeObserver.disconnect();
       // Cleanup measurement element
@@ -163,11 +160,11 @@ export function FitText({
       title={title}
     >
       <span
+        ref={textRef}
         style={{
           fontSize: `${fontSize}px`,
           display: 'inline-block',
           whiteSpace: 'nowrap',
-          maxWidth: '100%',
         }}
       >
         {children}
