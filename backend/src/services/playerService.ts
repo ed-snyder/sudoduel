@@ -2,6 +2,7 @@ import { PlayerProfileModel } from '../models/PlayerProfile';
 import { PlayerRatingModel } from '../models/PlayerRating';
 import { query } from '../config/database';
 import { cache, CacheKeys, CacheTTL } from './cacheService';
+import { STARTING_TIME_SECONDS } from '../constants';
 
 const DEFAULT_LADDER_ID = 1;
 
@@ -221,9 +222,8 @@ export const PlayerService = {
       
       const totalCells = parseInt(cpmResult.rows[0]?.total_cells || '0', 10);
       const totalTimeRemaining = parseInt(cpmResult.rows[0]?.total_time_remaining || '0', 10);
-      // Calculate total time played: STARTING_TIME (210) * games - total_time_remaining
-      const STARTING_TIME = 210;
-      const totalTimePlayedSeconds = (totalMatches * STARTING_TIME) - totalTimeRemaining;
+      // Calculate total time played: STARTING_TIME_SECONDS * games - total_time_remaining
+      const totalTimePlayedSeconds = (totalMatches * STARTING_TIME_SECONDS) - totalTimeRemaining;
       cpm = totalTimePlayedSeconds > 0 ? (totalCells / (totalTimePlayedSeconds / 60)) : 0;
 
       // Speed Stats: Avg Time at Win & Fastest Win

@@ -643,7 +643,7 @@ function DuelTimerStep({ onNext }: StepProps) {
         </p>
         <div className="flex justify-center items-center gap-4">
           <div className="px-4 py-2 rounded-lg border-2 border-player bg-player/20">
-            <div className="text-3xl font-mono font-bold text-player">3:30</div>
+            <div className="text-3xl font-mono font-bold text-player">3:00</div>
           </div>
           <div className="text-success text-xl font-bold">+Time</div>
         </div>
