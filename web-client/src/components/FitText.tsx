@@ -24,12 +24,11 @@ export function FitText({
 }: FitTextProps) {
   const [fontSize, setFontSize] = useState(maxFontSize);
   const containerRef = useRef<HTMLElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
 
   const calculateFontSize = useCallback(() => {
     const container = containerRef.current;
-    const textEl = textRef.current;
-    if (!container || !textEl) return;
+    if (!container || !children) return;
 
     // Get container's available width (accounting for padding)
     const containerStyle = window.getComputedStyle(container);
@@ -39,21 +38,60 @@ export function FitText({
 
     if (availableWidth <= 0) return;
 
-    // Start with max and reduce until it fits
-    let currentSize = maxFontSize;
-    textEl.style.fontSize = `${currentSize}px`;
-
-    while (textEl.scrollWidth > availableWidth && currentSize > minFontSize) {
-      currentSize -= 1;
-      textEl.style.fontSize = `${currentSize}px`;
+    // Create hidden measurement element if it doesn't exist
+    if (!measureRef.current) {
+      const span = document.createElement('span');
+      span.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        white-space: nowrap;
+        pointer-events: none;
+        top: -9999px;
+        left: -9999px;
+      `;
+      document.body.appendChild(span);
+      measureRef.current = span;
     }
 
-    setFontSize(currentSize);
+    const measureSpan = measureRef.current;
+
+    // Copy all font-related styles from container to measurement element
+    measureSpan.style.fontFamily = containerStyle.fontFamily;
+    measureSpan.style.fontWeight = containerStyle.fontWeight;
+    measureSpan.style.fontStyle = containerStyle.fontStyle;
+    measureSpan.style.letterSpacing = containerStyle.letterSpacing;
+    measureSpan.style.textTransform = containerStyle.textTransform;
+    measureSpan.style.textDecoration = containerStyle.textDecoration;
+    measureSpan.textContent = children;
+
+    // Binary search for optimal font size
+    let low = minFontSize;
+    let high = maxFontSize;
+    let optimalSize = minFontSize;
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      measureSpan.style.fontSize = `${mid}px`;
+      
+      // Force reflow
+      measureSpan.offsetWidth;
+      
+      if (measureSpan.offsetWidth <= availableWidth) {
+        optimalSize = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    setFontSize(optimalSize);
   }, [children, minFontSize, maxFontSize]);
 
   useEffect(() => {
-    // Initial calculation
-    calculateFontSize();
+    // Initial calculation with a small delay to ensure container is rendered
+    const timeoutId = setTimeout(() => {
+      calculateFontSize();
+    }, 0);
 
     // Recalculate on resize
     const resizeObserver = new ResizeObserver(() => {
@@ -64,7 +102,15 @@ export function FitText({
       resizeObserver.observe(containerRef.current);
     }
 
-    return () => resizeObserver.disconnect();
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+      // Cleanup measurement element
+      if (measureRef.current) {
+        measureRef.current.remove();
+        measureRef.current = null;
+      }
+    };
   }, [calculateFontSize]);
 
   // Recalculate when text changes
@@ -85,10 +131,10 @@ export function FitText({
       title={title}
     >
       <span
-        ref={textRef}
         style={{
           fontSize: `${fontSize}px`,
           display: 'inline-block',
+          whiteSpace: 'nowrap',
         }}
       >
         {children}

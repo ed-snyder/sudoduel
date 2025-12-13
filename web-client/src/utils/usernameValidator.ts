@@ -65,8 +65,8 @@ export function validateUsername(username: string): { valid: boolean; error?: st
     return { valid: false, error: 'Username must be at least 3 characters' };
   }
   
-  if (trimmed.length > 20) {
-    return { valid: false, error: 'Username must be 20 characters or less' };
+  if (trimmed.length > 15) {
+    return { valid: false, error: 'Username must be 15 characters or less' };
   }
   
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(trimmed)) {
