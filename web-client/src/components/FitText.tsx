@@ -33,7 +33,6 @@ export function FitText({
       // Get the PARENT container's width (the score box)
       const parent = container.parentElement;
       if (!parent) {
-        console.warn('[FitText] No parent element found');
         return;
       }
       
@@ -42,19 +41,9 @@ export function FitText({
       const paddingLeft = parseFloat(parentStyle.paddingLeft) || 0;
       const paddingRight = parseFloat(parentStyle.paddingRight) || 0;
       const availableWidth = parentWidth - paddingLeft - paddingRight;
-      
-      // Debug logging
-      console.log('[FitText] Measuring:', { 
-        text: children, 
-        parentWidth, 
-        paddingLeft, 
-        paddingRight, 
-        availableWidth 
-      });
 
       if (availableWidth <= 0) {
         // Container not ready, retry
-        console.log('[FitText] Container not ready, retrying...');
         requestAnimationFrame(calculateSize);
         return;
       }
@@ -71,7 +60,6 @@ export function FitText({
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('[FitText] Could not get canvas context');
         return;
       }
 
@@ -93,15 +81,12 @@ export function FitText({
         const spacingWidth = letterSpacing * Math.max(0, textToMeasure.length - 1);
         const totalWidth = textWidth + spacingWidth;
         
-        console.log('[FitText] Testing size:', { size, textWidth, totalWidth, availableWidth, fits: totalWidth <= availableWidth });
-        
         if (totalWidth <= availableWidth) {
           optimalSize = size;
           break;
         }
       }
 
-      console.log('[FitText] Final size:', optimalSize, 'for text:', children);
       setFontSize(optimalSize);
       hasCalculated.current = true;
     };
