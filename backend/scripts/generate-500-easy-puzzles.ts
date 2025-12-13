@@ -208,6 +208,77 @@ function adjustToExactClues(initial: string, solution: string, targetClues: numb
   return grid.join('');
 }
 
+// Sudoku solver - backtracking algorithm
+function isValidPlacement(grid: number[][], row: number, col: number, num: number): boolean {
+  // Check row
+  for (let j = 0; j < 9; j++) {
+    if (grid[row][j] === num) return false;
+  }
+  // Check column
+  for (let i = 0; i < 9; i++) {
+    if (grid[i][col] === num) return false;
+  }
+  // Check 3x3 box
+  const boxRow = Math.floor(row / 3) * 3;
+  const boxCol = Math.floor(col / 3) * 3;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (grid[boxRow + i][boxCol + j] === num) return false;
+    }
+  }
+  return true;
+}
+
+function solveSudoku(grid: number[][]): boolean {
+  for (let i = 0; i < 9; i++) {
+    for (let j = 0; j < 9; j++) {
+      if (grid[i][j] === 0) {
+        for (let num = 1; num <= 9; num++) {
+          if (isValidPlacement(grid, i, j, num)) {
+            grid[i][j] = num;
+            if (solveSudoku(grid)) return true;
+            grid[i][j] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function validateSolution(grid: number[][]): boolean {
+  // Check all rows have 1-9
+  for (let i = 0; i < 9; i++) {
+    const row = new Set(grid[i]);
+    if (row.size !== 9 || row.has(0)) return false;
+  }
+  // Check all columns have 1-9
+  for (let j = 0; j < 9; j++) {
+    const col = new Set<number>();
+    for (let i = 0; i < 9; i++) col.add(grid[i][j]);
+    if (col.size !== 9 || col.has(0)) return false;
+  }
+  // Check all boxes have 1-9
+  for (let boxRow = 0; boxRow < 3; boxRow++) {
+    for (let boxCol = 0; boxCol < 3; boxCol++) {
+      const box = new Set<number>();
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          box.add(grid[boxRow * 3 + i][boxCol * 3 + j]);
+        }
+      }
+      if (box.size !== 9 || box.has(0)) return false;
+    }
+  }
+  return true;
+}
+
+// Deep clone a grid
+function cloneGrid(grid: number[][]): number[][] {
+  return grid.map(row => [...row]);
+}
+
 // Generate 500 unique puzzles
 const puzzles: Array<{ initial: string; solution: string; clues: number }> = [];
 const seen = new Set<string>();
@@ -222,11 +293,40 @@ while (puzzles.length < 500 && attempts < 50000) {
   
   // Adjust to exactly 56 clues
   const adjustedInitial = adjustToExactClues(transformed.initial, transformed.solution, 56);
+  
+  // RE-SOLVE the puzzle to get a guaranteed valid solution
+  const initialGrid = stringToGrid(adjustedInitial);
+  const solveGrid = cloneGrid(initialGrid);
+  
+  if (!solveSudoku(solveGrid)) {
+    // Puzzle is unsolvable, skip it
+    continue;
+  }
+  
+  // Validate the solution is correct
+  if (!validateSolution(solveGrid)) {
+    continue;
+  }
+  
+  // Verify initial clues match the solution
+  let cluesMatch = true;
+  for (let i = 0; i < 9; i++) {
+    for (let j = 0; j < 9; j++) {
+      if (initialGrid[i][j] !== 0 && initialGrid[i][j] !== solveGrid[i][j]) {
+        cluesMatch = false;
+        break;
+      }
+    }
+    if (!cluesMatch) break;
+  }
+  if (!cluesMatch) continue;
+  
+  const freshSolution = gridToString(solveGrid);
   const clues = countClues(adjustedInitial);
   
   if (clues === 56 && !seen.has(adjustedInitial)) {
     seen.add(adjustedInitial);
-    puzzles.push({ initial: adjustedInitial, solution: transformed.solution, clues });
+    puzzles.push({ initial: adjustedInitial, solution: freshSolution, clues });
     
     if (puzzles.length % 50 === 0) {
       console.log(`Generated ${puzzles.length}/500 puzzles...`);
