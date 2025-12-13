@@ -25,18 +25,35 @@ export function FitText({
   const [fontSize, setFontSize] = useState(maxFontSize);
   const containerRef = useRef<HTMLElement>(null);
   const measureRef = useRef<HTMLSpanElement | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
 
   const calculateFontSize = useCallback(() => {
     const container = containerRef.current;
     if (!container || !children) return;
 
-    // Get container's available width (accounting for padding)
+    // Clear any pending retry
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
+    // Get container's width (it should be 100% of parent)
     const containerStyle = window.getComputedStyle(container);
+    const containerWidth = container.offsetWidth;
     const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
     const paddingRight = parseFloat(containerStyle.paddingRight) || 0;
-    const availableWidth = container.offsetWidth - paddingLeft - paddingRight;
+    const availableWidth = containerWidth - paddingLeft - paddingRight;
 
-    if (availableWidth <= 0) return;
+    if (availableWidth <= 0) {
+      // If container not ready, try again after a short delay
+      if (!retryTimeoutRef.current) {
+        retryTimeoutRef.current = window.setTimeout(() => {
+          retryTimeoutRef.current = null;
+          calculateFontSize();
+        }, 100);
+      }
+      return;
+    }
 
     // Create hidden measurement element if it doesn't exist
     if (!measureRef.current) {
@@ -74,7 +91,7 @@ export function FitText({
       measureSpan.style.fontSize = `${mid}px`;
       
       // Force reflow
-      measureSpan.offsetWidth;
+      void measureSpan.offsetWidth;
       
       if (measureSpan.offsetWidth <= availableWidth) {
         optimalSize = mid;
@@ -104,6 +121,10 @@ export function FitText({
 
     return () => {
       clearTimeout(timeoutId);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       resizeObserver.disconnect();
       // Cleanup measurement element
       if (measureRef.current) {
@@ -125,6 +146,7 @@ export function FitText({
       style={{
         ...style,
         display: 'block',
+        width: '100%',
         overflow: 'hidden',
         whiteSpace: 'nowrap',
       }}

@@ -983,19 +983,18 @@ export default function ResultScreen({
                 padding: '8px 6px',
               }}
             >
-              <div className="w-full mb-1" style={{ minHeight: '20px' }}>
-                <FitText
-                  minFontSize={10}
-                  maxFontSize={14}
-                  className="font-body uppercase tracking-wider text-center"
-                  style={{ 
-                    color: 'rgba(0,255,255,0.9)',
-                  }}
-                  title={myName}
-                >
-                  {myName}
-                </FitText>
-              </div>
+              <FitText
+                minFontSize={10}
+                maxFontSize={14}
+                className="font-body uppercase tracking-wider text-center mb-1"
+                style={{ 
+                  color: 'rgba(0,255,255,0.9)',
+                  width: '100%',
+                }}
+                title={myName}
+              >
+                {myName}
+              </FitText>
               <span 
                 className="text-3xl font-mono font-bold text-player"
                 style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
@@ -1066,19 +1065,18 @@ export default function ResultScreen({
                 padding: '8px 6px',
               }}
             >
-              <div className="w-full mb-1" style={{ minHeight: '20px' }}>
-                <FitText
-                  minFontSize={10}
-                  maxFontSize={14}
-                  className="font-body uppercase tracking-wider text-center"
-                  style={{ 
-                    color: 'rgba(255,0,255,0.9)',
-                  }}
-                  title={opponentName}
-                >
-                  {opponentName}
-                </FitText>
-              </div>
+              <FitText
+                minFontSize={10}
+                maxFontSize={14}
+                className="font-body uppercase tracking-wider text-center mb-1"
+                style={{ 
+                  color: 'rgba(255,0,255,0.9)',
+                  width: '100%',
+                }}
+                title={opponentName}
+              >
+                {opponentName}
+              </FitText>
               <span 
                 className="text-3xl font-mono font-bold text-opponent"
                 style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
