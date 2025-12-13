@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import ReportModal from './ReportModal';
 import { reportUser, blockUser } from '../services/socialService';
+import { FitText } from './FitText';
 
 interface PlayerResult {
   playerId: number;
@@ -982,16 +983,19 @@ export default function ResultScreen({
                 padding: '8px 6px',
               }}
             >
-              <span 
-                className="font-body uppercase tracking-wider mb-1 text-center w-full break-words leading-tight"
-                style={{ 
-                  color: 'rgba(0,255,255,0.9)',
-                  fontSize: myName.length > 12 ? '11px' : myName.length > 8 ? '12px' : '14px',
-                }}
-                title={myName}
-              >
-                {myName}
-              </span>
+              <div className="w-full mb-1" style={{ minHeight: '20px' }}>
+                <FitText
+                  minFontSize={10}
+                  maxFontSize={14}
+                  className="font-body uppercase tracking-wider text-center"
+                  style={{ 
+                    color: 'rgba(0,255,255,0.9)',
+                  }}
+                  title={myName}
+                >
+                  {myName}
+                </FitText>
+              </div>
               <span 
                 className="text-3xl font-mono font-bold text-player"
                 style={{ textShadow: '0 0 20px rgba(0,255,255,0.5)' }}
@@ -1062,16 +1066,19 @@ export default function ResultScreen({
                 padding: '8px 6px',
               }}
             >
-              <span 
-                className="font-body uppercase tracking-wider mb-1 text-center w-full break-words leading-tight"
-                style={{ 
-                  color: 'rgba(255,0,255,0.9)',
-                  fontSize: opponentName.length > 12 ? '11px' : opponentName.length > 8 ? '12px' : '14px',
-                }}
-                title={opponentName}
-              >
-                {opponentName}
-              </span>
+              <div className="w-full mb-1" style={{ minHeight: '20px' }}>
+                <FitText
+                  minFontSize={10}
+                  maxFontSize={14}
+                  className="font-body uppercase tracking-wider text-center"
+                  style={{ 
+                    color: 'rgba(255,0,255,0.9)',
+                  }}
+                  title={opponentName}
+                >
+                  {opponentName}
+                </FitText>
+              </div>
               <span 
                 className="text-3xl font-mono font-bold text-opponent"
                 style={{ textShadow: '0 0 20px rgba(255,0,255,0.5)' }}
