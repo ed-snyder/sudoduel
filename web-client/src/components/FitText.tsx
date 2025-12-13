@@ -37,12 +37,24 @@ export function FitText({
       retryTimeoutRef.current = null;
     }
 
-    // Get container's width (it should be 100% of parent)
-    const containerStyle = window.getComputedStyle(container);
-    const containerWidth = container.offsetWidth;
-    const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
-    const paddingRight = parseFloat(containerStyle.paddingRight) || 0;
-    const availableWidth = containerWidth - paddingLeft - paddingRight;
+    // Get the parent container's width (the score box div)
+    const parent = container.parentElement;
+    if (!parent) {
+      // If no parent, try again after a delay
+      if (!retryTimeoutRef.current) {
+        retryTimeoutRef.current = window.setTimeout(() => {
+          retryTimeoutRef.current = null;
+          calculateFontSize();
+        }, 100);
+      }
+      return;
+    }
+
+    const parentStyle = window.getComputedStyle(parent);
+    const parentWidth = parent.offsetWidth;
+    const parentPaddingLeft = parseFloat(parentStyle.paddingLeft) || 0;
+    const parentPaddingRight = parseFloat(parentStyle.paddingRight) || 0;
+    const availableWidth = parentWidth - parentPaddingLeft - parentPaddingRight;
 
     if (availableWidth <= 0) {
       // If container not ready, try again after a short delay
@@ -73,34 +85,32 @@ export function FitText({
     const measureSpan = measureRef.current;
 
     // Copy all font-related styles from container to measurement element
-    measureSpan.style.fontFamily = containerStyle.fontFamily;
-    measureSpan.style.fontWeight = containerStyle.fontWeight;
-    measureSpan.style.fontStyle = containerStyle.fontStyle;
-    measureSpan.style.letterSpacing = containerStyle.letterSpacing;
-    measureSpan.style.textTransform = containerStyle.textTransform;
-    measureSpan.style.textDecoration = containerStyle.textDecoration;
+    const containerStyle = window.getComputedStyle(container);
+    measureSpan.style.fontFamily = containerStyle.fontFamily || 'inherit';
+    measureSpan.style.fontWeight = containerStyle.fontWeight || 'normal';
+    measureSpan.style.fontStyle = containerStyle.fontStyle || 'normal';
+    measureSpan.style.letterSpacing = containerStyle.letterSpacing || 'normal';
+    measureSpan.style.textTransform = containerStyle.textTransform || 'none';
+    measureSpan.style.textDecoration = containerStyle.textDecoration || 'none';
+    measureSpan.style.fontSize = `${maxFontSize}px`; // Start with max
     measureSpan.textContent = children;
 
-    // Binary search for optimal font size
-    let low = minFontSize;
-    let high = maxFontSize;
-    let optimalSize = minFontSize;
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      measureSpan.style.fontSize = `${mid}px`;
-      
-      // Force reflow
+    // Start from max and work down until it fits
+    let optimalSize = maxFontSize;
+    measureSpan.style.fontSize = `${optimalSize}px`;
+    
+    // Force reflow
+    void measureSpan.offsetWidth;
+    
+    // If it doesn't fit, reduce font size
+    while (measureSpan.offsetWidth > availableWidth && optimalSize > minFontSize) {
+      optimalSize -= 0.5; // Use smaller increments for better fit
+      measureSpan.style.fontSize = `${optimalSize}px`;
       void measureSpan.offsetWidth;
-      
-      if (measureSpan.offsetWidth <= availableWidth) {
-        optimalSize = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
     }
-
+    
+    // Round to nearest integer
+    optimalSize = Math.max(Math.round(optimalSize), minFontSize);
     setFontSize(optimalSize);
   }, [children, minFontSize, maxFontSize]);
 
@@ -157,6 +167,7 @@ export function FitText({
           fontSize: `${fontSize}px`,
           display: 'inline-block',
           whiteSpace: 'nowrap',
+          maxWidth: '100%',
         }}
       >
         {children}
