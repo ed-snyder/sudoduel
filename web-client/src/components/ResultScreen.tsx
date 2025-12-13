@@ -984,12 +984,12 @@ export default function ResultScreen({
               }}
             >
               <FitText
-                minFontSize={10}
+                minFontSize={9}
                 maxFontSize={14}
-                className="font-body uppercase tracking-wider text-center mb-1"
+                className="uppercase tracking-wider text-center"
                 style={{ 
                   color: 'rgba(0,255,255,0.9)',
-                  width: '100%',
+                  marginBottom: '4px',
                 }}
                 title={myName}
               >
@@ -1066,12 +1066,12 @@ export default function ResultScreen({
               }}
             >
               <FitText
-                minFontSize={10}
+                minFontSize={9}
                 maxFontSize={14}
-                className="font-body uppercase tracking-wider text-center mb-1"
+                className="uppercase tracking-wider text-center"
                 style={{ 
                   color: 'rgba(255,0,255,0.9)',
-                  width: '100%',
+                  marginBottom: '4px',
                 }}
                 title={opponentName}
               >
