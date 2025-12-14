@@ -423,7 +423,7 @@ function SudokuGrid({
                           ${shouldAnimateNumber ? 'cell-number-animate cell-number-slam' : ''}
                         `}
                         style={{ 
-                          fontSize: 'clamp(1.5rem, 6vw, 2.1rem)',
+                          fontSize: 'clamp(1.8rem, 7.2vw, 2.52rem)',
                           lineHeight: 1,
                           fontFamily: 'Industry, Orbitron, sans-serif',
                           color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
