@@ -390,10 +390,17 @@ function SudokuGrid({
                     onCellClick(rowIndex, colIndex);
                   }
                 }}
+                onTouchStart={(e) => {
+                  // Prevent the 300ms touch delay on mobile by handling touch immediately
+                  if (!lockedOut) {
+                    e.preventDefault();
+                    onCellClick(rowIndex, colIndex);
+                  }
+                }}
                 disabled={lockedOut}
                 className={`
                   relative flex items-center justify-center
-                  transition-all duration-75 touch-manipulation
+                  transition-colors duration-75 touch-manipulation
                   ${isCompleted ? 'completion-flash' : ''}
                   ${isAlmostComplete ? 'almost-complete-glow' : ''}
                   ${cellClassName}

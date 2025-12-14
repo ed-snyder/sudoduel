@@ -2449,6 +2449,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               <button
                 key={num}
                 onClick={() => handleNumberClick(num)}
+                onTouchStart={(e) => {
+                  // Prevent the 300ms touch delay on mobile by handling touch immediately
+                  if (gameStatus === 'playing' && !myState.is_locked && !depleted) {
+                    e.preventDefault();
+                    handleNumberClick(num);
+                  }
+                }}
                 disabled={gameStatus !== 'playing' || myState.is_locked || depleted}
                 className="py-3 touch-manipulation font-heading font-bold flex items-center justify-center transition-none active:scale-95 active:text-player active:ring-2 active:ring-player active:ring-offset-0"
                 style={{
