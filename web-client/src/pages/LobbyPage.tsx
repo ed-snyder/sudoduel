@@ -449,7 +449,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                     color: '#00FFFF',
                   }}
                 >
-                  Solo Mode
+                  Daily Run
                 </button>
               ) : (
                 /* Free users: Upgrade + Solo Mode side by side */
@@ -477,7 +477,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                       color: '#00FFFF',
                     }}
                   >
-                    Solo Mode
+                    Daily Run
                   </button>
                 </div>
               )}

@@ -251,4 +251,48 @@ export const leaderboardAPI = {
     api.get('/api/leaderboard') as Promise<LeaderboardResponse>,
 };
 
-export default { authAPI, playerAPI, matchmakingAPI, friendsAPI, puzzleAPI, leaderboardAPI };
+// =====================================================
+// DAILY RUN API
+// =====================================================
+
+export interface DailyPuzzleResponse {
+  puzzle: {
+    id: number;
+    initial_grid: string;
+    solution_grid: string;
+  };
+  already_completed: boolean;
+  previous_result: { time_ms: number; rank: number } | null;
+}
+
+export interface DailyResultResponse {
+  rank: number;
+  total_players: number;
+  time_ms: number;
+}
+
+export interface DailyLeaderboardEntry {
+  rank: number;
+  display_name: string;
+  time_ms: number;
+  is_you: boolean;
+}
+
+export interface DailyLeaderboardResponse {
+  top50: DailyLeaderboardEntry[];
+  your_result: { rank: number; time_ms: number } | null;
+  total_players: number;
+}
+
+export const dailyAPI = {
+  getPuzzle: () => 
+    api.get('/api/daily/puzzle') as Promise<DailyPuzzleResponse>,
+  
+  submitResult: (time_ms: number) =>
+    api.post('/api/daily/complete', { time_ms }) as Promise<DailyResultResponse>,
+  
+  getLeaderboard: () =>
+    api.get('/api/daily/leaderboard') as Promise<DailyLeaderboardResponse>,
+};
+
+export default { authAPI, playerAPI, matchmakingAPI, friendsAPI, puzzleAPI, leaderboardAPI, dailyAPI };

@@ -5,7 +5,7 @@ import { MusicProvider } from './context/MusicContext';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
-import SoloModePage from './pages/SoloModePage';
+import DailyRunPage from './pages/DailyRunPage';
 import TutorialFlow from './components/TutorialFlow';
 import UpgradeModal from './components/UpgradeModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -15,7 +15,7 @@ import { playerAPI } from './services/api';
 function AppContent() {
   const { user, loading, justSignedUp, clearJustSignedUp, refreshUser } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
-  const [soloMode, setSoloMode] = useState(false);
+  const [dailyRun, setDailyRun] = useState(false);
 
   // Initialize ads - deferred to not block initial render
   useEffect(() => {
@@ -155,9 +155,9 @@ function AppContent() {
     );
   }
 
-  // Solo mode - show solo game
-  if (soloMode) {
-    return <SoloModePage onExit={() => setSoloMode(false)} />;
+  // Daily Run - show daily run game
+  if (dailyRun) {
+    return <DailyRunPage onExit={() => setDailyRun(false)} />;
   }
 
   // In a match - show game
@@ -173,7 +173,7 @@ function AppContent() {
   }
 
   // Default - show lobby
-  return <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setSoloMode(true)} />;
+  return <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setDailyRun(true)} />;
 }
 
 export default function App() {

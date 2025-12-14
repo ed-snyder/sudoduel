@@ -10,6 +10,7 @@ import friendsRoutes from './routes/friends';
 import reportsRoutes from './routes/reports';
 import usersRoutes from './routes/users';
 import leaderboardRoutes from './routes/leaderboard';
+import dailyRoutes from './routes/daily';
 import { setupWebSocketServer } from './services/websocketServer';
 import { warmupDatabase } from './config/database';
 import { cache } from './services/cacheService';
@@ -85,6 +86,7 @@ app.use('/api/friends', friendsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/daily', dailyRoutes);
 
 // Create HTTP server
 const server = createServer(app);
