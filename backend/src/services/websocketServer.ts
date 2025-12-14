@@ -449,20 +449,40 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       break;
     case 'FORFEIT':
       try {
+        // CRITICAL: Check game status and mark forfeit IMMEDIATELY, before any awaits
+        // This wins the race against the timer interval
+        const game = GameStateManager.getGame(matchId);
+        if (!game) {
+          console.log(`[WS] FORFEIT ignored: game doesn't exist for match ${matchId}`);
+          return;
+        }
+        
+        if (game.status !== 'IN_PROGRESS') {
+          console.log(`[WS] FORFEIT ignored: match ${matchId} not in progress (status: ${game.status})`);
+          return;
+        }
+        
+        // CRITICAL: Mark forfeit intent IMMEDIATELY to prevent race condition
+        // The timer interval checks this flag before ending the game normally
+        game.forfeitPending = true;
+        
+        // Stop the timer immediately to prevent any more ticks
+        if (game.timerInterval) {
+          clearInterval(game.timerInterval);
+          game.timerInterval = null;
+          console.log(`[WS] Stopped timer interval immediately on FORFEIT`);
+        }
+
         const userProfile = await PlayerProfileModel.findByUserId(userId);
         if (!userProfile) {
           console.error(`❌ Player profile not found for user ${userId}`);
-          return;
-        }
-
-        const game = GameStateManager.getGame(matchId);
-        if (!game || game.status !== 'IN_PROGRESS') {
-          console.log(`[WS] FORFEIT ignored: match ${matchId} not in progress`);
+          game.forfeitPending = false;  // Reset if we can't proceed
           return;
         }
 
         console.log(`[WS] FORFEIT from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
-        // Mark forfeit in game state and then end the game (ratings, stats, GAME_END)
+        
+        // Mark forfeit in game state - this sets forfeitingPlayerId and forfeitWinnerId
         GameStateManager.forfeit(matchId, userProfile.id);
         
         // Verify forfeit state was set correctly
@@ -474,6 +494,11 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         await endGame(matchId);
       } catch (error) {
         console.error(`❌ Error handling FORFEIT:`, error);
+        // Try to clean up forfeitPending flag on error
+        const game = GameStateManager.getGame(matchId);
+        if (game) {
+          game.forfeitPending = false;
+        }
       }
       break;
     case 'PING':

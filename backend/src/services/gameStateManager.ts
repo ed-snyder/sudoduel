@@ -29,6 +29,7 @@ interface GameState {
   timerInterval: any | null; // Interval for per-player timer countdown
   forfeitWinnerId?: number | null; // Optional winner override for forfeits
   forfeitingPlayerId?: number | null; // Track which player forfeited (for validation)
+  forfeitPending?: boolean; // Set immediately when forfeit requested, before async ops
   // Disconnect tracking
   disconnectedPlayerId: number | null;
   disconnectTime: number | null;  // timestamp when disconnect occurred
@@ -91,6 +92,7 @@ export const GameStateManager = {
       timerInterval: null,
       forfeitWinnerId: null,
       forfeitingPlayerId: null,
+      forfeitPending: false,
       disconnectedPlayerId: null,
       disconnectTime: null,
       gracePeriodTimer: null,
@@ -116,6 +118,12 @@ export const GameStateManager = {
 
     // Start per-player timer countdown (every 1 second)
     game.timerInterval = setInterval(() => {
+      // CRITICAL: If forfeit is pending, don't process timer - let forfeit handler end the game
+      if (game.forfeitPending) {
+        console.log(`[GameState] Timer tick skipped - forfeit pending for match ${matchId}`);
+        return;
+      }
+      
       if (game.status !== 'IN_PROGRESS') {
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
@@ -667,6 +675,12 @@ export const GameStateManager = {
    * Forfeit handling must be done separately via getFinalResults().
    */
   checkVictoryConditions(game: GameState): boolean {
+    // CRITICAL: If forfeit is pending, return false to let forfeit handler end the game
+    if (game.forfeitPending) {
+      console.log(`[GameState] checkVictoryConditions: Forfeit pending, returning false`);
+      return false;
+    }
+    
     // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
     // Forfeit must be handled separately to ensure forfeiting player always loses
     if (game.forfeitingPlayerId != null) {
