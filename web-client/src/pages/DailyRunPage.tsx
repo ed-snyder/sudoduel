@@ -55,6 +55,9 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   // Countdown to next challenge
   const [nextChallengeCountdown, setNextChallengeCountdown] = useState('');
   
+  // Exit confirmation modal
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  
   // Notes state
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map());
@@ -527,6 +530,35 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
     setNotesMode((prev) => !prev);
   };
   
+  // Handle exit button click - show confirmation if playing
+  const handleExitClick = () => {
+    if (gameStatus === 'playing') {
+      setShowExitConfirm(true);
+    } else {
+      onExit();
+    }
+  };
+  
+  // Handle forfeit - submit with max time (99:99.9 = 5999900ms)
+  const handleForfeit = async () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    const forfeitTime = 5999900; // 99:99.9 in milliseconds
+    
+    try {
+      const result = await dailyAPI.submitResult(forfeitTime);
+      setFinalResult(result);
+      setGameStatus('complete');
+    } catch (err) {
+      console.error('Failed to submit forfeit:', err);
+      // Still exit even if submission fails
+      setFinalResult({ rank: 0, total_players: 0, time_ms: forfeitTime });
+      setGameStatus('complete');
+    }
+    
+    setShowExitConfirm(false);
+  };
+  
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const mins = Math.floor(totalSeconds / 60);
@@ -595,7 +627,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
       <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
         <div className="flex justify-between items-center px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
           <button
-            onClick={onExit}
+            onClick={handleExitClick}
             className="p-2 text-muted hover:text-secondary transition-colors"
             aria-label="Exit"
           >
@@ -917,6 +949,42 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
                 className="px-8 py-3 bg-surface border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/10 transition-colors"
               >
                 Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-void/95">
+          <div 
+            className="bg-surface border-2 border-error rounded-xl w-full max-w-sm p-6"
+            style={{ boxShadow: '0 0 30px rgba(255, 51, 102, 0.3)' }}
+          >
+            <h2 
+              className="text-2xl font-display font-black text-error text-center mb-4"
+              style={{ textShadow: '0 0 15px rgba(255, 51, 102, 0.5)' }}
+            >
+              Are you sure?
+            </h2>
+            
+            <p className="text-secondary font-body text-center mb-6">
+              If you leave, you will forfeit and automatically rank in last place.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="w-full py-3 bg-player/20 border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/30 transition-colors"
+              >
+                Back to Game
+              </button>
+              <button
+                onClick={handleForfeit}
+                className="w-full py-3 bg-error/20 border-2 border-error text-error rounded-lg font-display font-bold hover:bg-error/30 transition-colors"
+              >
+                Yes, Forfeit
               </button>
             </div>
           </div>
