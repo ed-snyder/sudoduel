@@ -452,50 +452,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         console.error(`❌ Error erasing cell:`, error);
       }
       break;
-    case 'FORFEIT':
-      try {
-        const game = GameStateManager.getGame(matchId);
-        if (!game) {
-          console.log(`[WS] FORFEIT ignored: game doesn't exist for match ${matchId}`);
-          return;
-        }
-        
-        // CRITICAL: Set ALL forfeit state IMMEDIATELY, SYNCHRONOUSLY, BEFORE any checks
-        // This ensures getFinalResults() will see the forfeit even if timer wins the race
-        // The forfeiting player ALWAYS loses, opponent ALWAYS wins - NO EXCEPTIONS
-        const opponentPlayerId = playerId === game.player1.playerId 
-          ? game.player2.playerId 
-          : game.player1.playerId;
-        
-        game.forfeitingPlayerId = playerId;
-        game.forfeitWinnerId = opponentPlayerId;
-        game.forfeitPending = true;
-        
-        console.log(`[WS] FORFEIT: Set forfeit state IMMEDIATELY - forfeitingPlayerId=${playerId}, forfeitWinnerId=${opponentPlayerId}`);
-        
-        // Stop timer immediately to prevent any more ticks
-        if (game.timerInterval) {
-          clearInterval(game.timerInterval);
-          game.timerInterval = null;
-          console.log(`[WS] FORFEIT: Stopped timer interval`);
-        }
-        
-        // Mark forfeiting player as locked out
-        const forfeiter = playerId === game.player1.playerId ? game.player1 : game.player2;
-        forfeiter.isLocked = true;
-        forfeiter.timeRemaining = 0;
-        
-        // Only call endGame if not already completed
-        // (If timer already called endGame, it will pick up our forfeit state)
-        if (game.status !== 'COMPLETED') {
-          await endGame(matchId);
-        } else {
-          console.log(`[WS] FORFEIT: Game already COMPLETED, forfeit state is set for any pending getFinalResults() call`);
-        }
-      } catch (error) {
-        console.error(`❌ Error handling FORFEIT:`, error);
-      }
-      break;
+    // FORFEIT case removed - forfeit only happens via disconnect (grace period expiry)
     case 'PING':
       ws.send(JSON.stringify({ type: 'PONG' }));
       break;

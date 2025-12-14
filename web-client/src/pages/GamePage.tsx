@@ -6,7 +6,7 @@ import { useMusic } from '../context/MusicContext';
 import { useHaptics } from '../hooks/useHaptics';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import SudokuGrid from '../components/SudokuGrid';
-import { ForfeitModal } from '../components/ForfeitModal';
+// ForfeitModal removed - forfeit only happens via disconnect
 import { ProgressBar } from '../components/ProgressBar';
 import ResultScreen from '../components/ResultScreen';
 import GameBackgroundEffects from '../components/GameBackgroundEffects';
@@ -244,7 +244,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }, [gameStatus, myGrid.length, initialGrid.length, warmUpRenderer]);
   
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
-  const [showForfeitModal, setShowForfeitModal] = useState(false);
+  // showForfeitModal removed - forfeit only happens via disconnect
   const [showEmotePicker, setShowEmotePicker] = useState(false);
   const [myEmote, setMyEmote] = useState<string | null>(null);
   const [opponentEmote, setOpponentEmote] = useState<string | null>(null);
@@ -1383,17 +1383,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // Back button removed - forfeit can be accessed via other means if needed
   // const handleBackClick = () => { ... }
 
-  const handleForfeit = () => {
-    // Send FORFEIT even if game just ended - backend will handle late forfeits
-    // This handles the race condition where game ends while forfeit modal is open
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log('[GamePage] Sending FORFEIT message');
-      wsRef.current.send(JSON.stringify({ type: 'FORFEIT' }));
-    } else {
-      console.log('[GamePage] Cannot send FORFEIT - WebSocket not open');
-    }
-    setShowForfeitModal(false);
-  };
+  // handleForfeit removed - forfeit only happens via disconnect
 
   // Check for completed rows/columns/boxes and trigger flash
   const checkCompletions = useCallback((grid: number[][], row: number, col: number) => {
@@ -2026,7 +2016,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               <p className="text-sm opacity-90 font-body">
                 Waiting {graceTimeRemaining}s for reconnection...
               </p>
-              <p className="text-xs opacity-75 mt-1 font-body">Your timer is paused</p>
+              <p className="text-xs opacity-75 mt-1 font-body">Game paused until reconnection</p>
             </div>
             {/* Progress bar showing grace period */}
             <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255, 184, 0, 0.3)' }}>
@@ -2045,18 +2035,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       {/* Header Section - Push down significantly more */}
       {/* z-index 60 ensures player names, timers, and emotes stay ABOVE the game end overlay (z-50) */}
       <div className="flex-shrink-0 relative" style={{ marginTop: '48px', paddingBottom: '0px', zIndex: 60 }}>
-        {/* Settings button - top right, below safe area */}
-        <div className="flex justify-end px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px' }}>
-          <button
-            onClick={() => setShowForfeitModal(true)}
-            className="p-2 text-muted hover:text-secondary transition-colors"
-            aria-label="Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
+        {/* Settings button removed - no in-game forfeit option */}
+        {/* To forfeit, player must disconnect (close app) */}
 
         {/* Names and Scores - Compact header, reduced spacing */}
         <div className="px-3 sm:px-4" style={{ paddingTop: '0px', paddingBottom: '4px', marginTop: isCapacitor ? '4px' : '0px' }}>
@@ -2594,12 +2574,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         )}
       </div>
 
-      {/* Forfeit confirmation modal */}
-      <ForfeitModal
-        isOpen={showForfeitModal}
-        onConfirm={handleForfeit}
-        onCancel={() => setShowForfeitModal(false)}
-      />
+      {/* ForfeitModal removed - forfeit only happens via disconnect */}
     </div>
   );
 }
