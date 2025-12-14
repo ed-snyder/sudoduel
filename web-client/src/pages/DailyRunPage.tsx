@@ -22,7 +22,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   
   // Game state
   const [gameStatus, setGameStatus] = useState<'loading' | 'playing' | 'complete' | 'already_done'>('loading');
-  const [cellsCompleted, setCellsCompleted] = useState(0);
+  const [_cellsCompleted, setCellsCompleted] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   
   // Timer state - COUNTS UP in milliseconds
