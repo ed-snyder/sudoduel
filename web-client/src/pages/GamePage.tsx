@@ -2059,7 +2059,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                     : 'non-premium-opponent-name-with-sheen'
               }`}>
                 {opponentName}
-                {isBotMatch && <span className="ml-1 text-muted text-xs">🤖</span>}
               </div>
               <div className="text-xs sm:text-sm text-muted font-mono">
                 {opponentRating !== undefined ? Math.round(opponentRating) : '—'}

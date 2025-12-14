@@ -1,5 +1,5 @@
 // Generate 500 easy Sudoku puzzles using transformations
-// Easy puzzles have exactly 56 clues (out of 81)
+// Easy puzzles have exactly 51 clues (30 empty cells)
 
 // Multiple base easy puzzles with valid solutions
 const BASE_PUZZLES = [
@@ -161,8 +161,8 @@ function countClues(initial: string): number {
   return initial.split('').filter(c => c !== '0').length;
 }
 
-// Adjust puzzle to have exactly 56 clues
-function adjustToExactClues(initial: string, solution: string, targetClues: number = 56): string {
+// Adjust puzzle to have exactly 51 clues (30 empty cells)
+function adjustToExactClues(initial: string, solution: string, targetClues: number = 51): string {
   let grid = initial.split('');
   const solutionArr = solution.split('');
   let currentClues = grid.filter(c => c !== '0').length;
@@ -291,8 +291,8 @@ while (puzzles.length < 500 && attempts < 50000) {
   const base = BASE_PUZZLES[Math.floor(Math.random() * BASE_PUZZLES.length)];
   const transformed = transformPuzzle(base.initial, base.solution);
   
-  // Adjust to exactly 56 clues
-  const adjustedInitial = adjustToExactClues(transformed.initial, transformed.solution, 56);
+  // Adjust to exactly 51 clues (30 empty cells)
+  const adjustedInitial = adjustToExactClues(transformed.initial, transformed.solution, 51);
   
   // RE-SOLVE the puzzle to get a guaranteed valid solution
   const initialGrid = stringToGrid(adjustedInitial);
@@ -324,7 +324,7 @@ while (puzzles.length < 500 && attempts < 50000) {
   const freshSolution = gridToString(solveGrid);
   const clues = countClues(adjustedInitial);
   
-  if (clues === 56 && !seen.has(adjustedInitial)) {
+  if (clues === 51 && !seen.has(adjustedInitial)) {
     seen.add(adjustedInitial);
     puzzles.push({ initial: adjustedInitial, solution: freshSolution, clues });
     
@@ -343,7 +343,7 @@ console.log(`\n✅ Generated ${puzzles.length} unique easy puzzles!\n`);
 
 // Generate SQL file
 const sqlLines: string[] = [];
-sqlLines.push('-- 500 Easy Sudoku Puzzles (exactly 56 clues each)');
+sqlLines.push('-- 500 Easy Sudoku Puzzles (exactly 51 clues each, 30 empty cells)');
 sqlLines.push('-- Generated using transformations on base valid sudoku');
 sqlLines.push('');
 sqlLines.push('DELETE FROM puzzles WHERE ladder_id = 1;');

@@ -18,7 +18,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const hasPlayedOpenSound = useRef(false);
   const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
-  const [simplifyGraphics, setSimplifyGraphics] = useState(false);
   const [musicVolume, setMusicVolume] = useState(100);
   const [sfxVolume, setSfxVolume] = useState(55);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -50,9 +49,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const savedHaptic = localStorage.getItem('hapticEnabled');
     if (savedHaptic !== null) setHapticEnabled(savedHaptic === 'true');
     
-    const savedSimplify = localStorage.getItem('simplifyGraphics');
-    if (savedSimplify !== null) setSimplifyGraphics(savedSimplify === 'true');
-    
     const savedMusic = localStorage.getItem('sudoduel_music_volume');
     setMusicVolume(savedMusic !== null ? parseInt(savedMusic, 10) : 100);
     
@@ -81,12 +77,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const newValue = !hapticEnabled;
     setHapticEnabled(newValue);
     localStorage.setItem('hapticEnabled', String(newValue));
-  };
-
-  const handleSimplifyToggle = () => {
-    const newValue = !simplifyGraphics;
-    setSimplifyGraphics(newValue);
-    localStorage.setItem('simplifyGraphics', String(newValue));
   };
 
   const handleMusicVolume = (value: number) => {
@@ -230,30 +220,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div 
                 className={`absolute top-1 w-5 h-5 rounded-full transition-all ${
                   hapticEnabled 
-                    ? 'right-1 bg-player' 
-                    : 'left-1 bg-muted'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Simplify Graphics Toggle */}
-          <div className="px-4 py-4 flex items-center justify-between">
-            <span className="font-body text-primary">Simplify Graphics</span>
-            <button
-              onClick={handleSimplifyToggle}
-              className={`relative w-12 h-7 rounded-full transition-all ${
-                simplifyGraphics 
-                  ? 'bg-player/30 border border-player' 
-                  : 'bg-elevated border border-grid-line'
-              }`}
-              style={{
-                boxShadow: simplifyGraphics ? '0 0 10px rgba(0,255,255,0.3)' : 'none',
-              }}
-            >
-              <div 
-                className={`absolute top-1 w-5 h-5 rounded-full transition-all ${
-                  simplifyGraphics 
                     ? 'right-1 bg-player' 
                     : 'left-1 bg-muted'
                 }`}
