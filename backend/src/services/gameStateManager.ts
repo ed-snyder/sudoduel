@@ -618,10 +618,20 @@ export const GameStateManager = {
   // ABSOLUTE RULE: FORFEITING PLAYER ALWAYS LOSES, NO EXCEPTIONS
   forfeit(matchId: number, forfeitingPlayerId: number): void {
     const game = gameStates.get(matchId);
-    if (!game || game.status !== 'IN_PROGRESS') {
-      console.log(`[GameState] Forfeit ignored: game not in progress or doesn't exist`);
+    
+    // Allow forfeit for IN_PROGRESS or COMPLETED (handles race where timer ended game first)
+    if (!game) {
+      console.log(`[GameState] Forfeit ignored: game doesn't exist`);
       return;
     }
+
+    // If game is COMPLETED, we can still set forfeit state - endGame() will pick it up
+    if (game.status !== 'IN_PROGRESS' && game.status !== 'COMPLETED') {
+      console.log(`[GameState] Forfeit ignored: game status is ${game.status}`);
+      return;
+    }
+    
+    console.log(`[GameState] Processing forfeit for match ${matchId}, status=${game.status}`);
 
     const p1 = game.player1;
     const p2 = game.player2;

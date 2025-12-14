@@ -344,19 +344,19 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       const { row, col, value } = data;
       
       try {
-        const userProfile = await PlayerProfileModel.findByUserId(userId);
-        if (!userProfile) {
-          console.error(`❌ Player profile not found for user ${userId}`);
+        // Use cached playerId - NO DB lookup needed!
+        if (!playerId) {
+          console.error(`❌ No cached playerId for user ${userId}`);
           return;
         }
 
         console.log(
-          `[WS] PLACE_NUMBER from userId=${userId} playerId=${userProfile.id} row=${row} col=${col} value=${value}`
+          `[WS] PLACE_NUMBER from userId=${userId} playerId=${playerId} row=${row} col=${col} value=${value}`
         );
-        const result = GameStateManager.applyMove(matchId, userProfile.id, row, col, value);
+        const result = GameStateManager.applyMove(matchId, playerId, row, col, value);
 
         console.log(
-          `[WS] MOVE_RESULT userId=${userId} playerId=${userProfile.id} ` +
+          `[WS] MOVE_RESULT userId=${userId} playerId=${playerId} ` +
           `success=${result.success} correct=${result.correct} ` +
           `score=${result.player.score} isLocked=${result.player.isLocked} ` +
           `cellsCompleted=${result.player.cellsCompleted} timeRemaining=${result.player.timeRemaining} gameEnded=${result.gameEnded}`
@@ -369,7 +369,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           broadcastToMatch(matchId, {
             type: 'MOVE_RESULT',
             data: {
-              player_id: userProfile.id,
+              player_id: playerId,
               slot: result.player.slot,
               row,
               col,
@@ -400,7 +400,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         } else {
           // Log why the move was rejected (locked out or timed out)
           console.log(
-            `[WS] MOVE_REJECTED userId=${userId} playerId=${userProfile.id} ` +
+            `[WS] MOVE_REJECTED userId=${userId} playerId=${playerId} ` +
             `isLocked=${result.player.isLocked} ` +
             `timeRemaining=${result.player.timeRemaining}`
           );
@@ -414,13 +414,13 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       const { row: eraseRow, col: eraseCol } = data;
       
       try {
-        const userProfile = await PlayerProfileModel.findByUserId(userId);
-        if (!userProfile) {
-          console.error(`❌ Player profile not found for user ${userId}`);
+        // Use cached playerId - NO DB lookup needed!
+        if (!playerId) {
+          console.error(`❌ No cached playerId for user ${userId}`);
           return;
         }
         
-        const result = GameStateManager.eraseCell(matchId, userProfile.id, eraseRow, eraseCol);
+        const result = GameStateManager.eraseCell(matchId, playerId, eraseRow, eraseCol);
 
         if (result.success) {
           const game = GameStateManager.getGame(matchId);
@@ -429,7 +429,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           broadcastToMatch(matchId, {
             type: 'ERASE_RESULT',
             data: {
-              player_id: userProfile.id,
+              player_id: playerId,
               slot: result.player.slot,
               row: eraseRow,
               col: eraseCol,
@@ -919,22 +919,8 @@ async function endGame(matchId: number) {
   game.status = 'COMPLETED';
   console.log(`✅ Set game.status to COMPLETED in memory`);
   
-  // CRITICAL: Wait briefly to allow any pending forfeit messages to be processed
-  // This handles the race condition where forfeit arrives just as game ends
-  // The forfeit handler will set forfeitingPlayerId during this window
-  console.log(`[endGame] Waiting 300ms for any pending forfeit messages...`);
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Log forfeit state AFTER the delay
-  console.log(`[endGame] After delay - Forfeit state check: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}, forfeitingUserId=${game.forfeitingUserId}`);
-  
-  // If forfeitingUserId is set but forfeitingPlayerId isn't, the forfeit is being processed
-  // Wait a bit more for it to complete
-  if (game.forfeitingUserId && !game.forfeitingPlayerId) {
-    console.log(`[endGame] forfeitingUserId set but forfeitingPlayerId not set yet, waiting 200ms more...`);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    console.log(`[endGame] After extra delay - forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
-  }
+  // Log forfeit state for debugging
+  console.log(`[endGame] Forfeit state: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
 
   const results = GameStateManager.getFinalResults(matchId);
   console.log(`📊 Final results:`, results);
