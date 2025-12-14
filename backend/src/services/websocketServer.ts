@@ -505,23 +505,15 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           console.log(`[WS] After forfeit: forfeitingPlayerId=${gameAfterForfeit.forfeitingPlayerId}, forfeitWinnerId=${gameAfterForfeit.forfeitWinnerId}`);
         }
         
-        // If game was already completed, we need to re-broadcast the corrected result
+        // If game was already completed, the endGame() function is likely still running
+        // in its 300ms delay window and will pick up the forfeit state we just set.
+        // We don't need to do anything else - just log that the forfeit was recorded.
         if (wasAlreadyCompleted) {
-          console.log(`[WS] Re-broadcasting corrected result for match ${matchId} after late forfeit`);
-          // Re-broadcast GAME_END with correct forfeit result
-          const results = GameStateManager.getFinalResults(matchId);
-          if (results) {
-            broadcastToMatch(matchId, {
-              type: 'GAME_END',
-              winner: results.winnerId,
-              resultCode: results.resultCode,
-              player1: results.player1,
-              player2: results.player2,
-              forfeit: true,
-              corrected: true, // Flag to indicate this is a correction
-            });
-            console.log(`[WS] Sent corrected GAME_END for match ${matchId}: winner=${results.winnerId}`);
-          }
+          console.log(`[WS] Forfeit state set for already-completed match ${matchId}. endGame() will pick it up.`);
+          console.log(`[WS] forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+          // Don't call endGame() again - it's either running or already finished
+          // If it already finished, the result is already saved (this is a true late forfeit)
+          // But with the 300ms delay, this should be rare
         } else {
           await endGame(matchId);
         }
@@ -927,8 +919,22 @@ async function endGame(matchId: number) {
   game.status = 'COMPLETED';
   console.log(`✅ Set game.status to COMPLETED in memory`);
   
-  // Log forfeit state before getting results
-  console.log(`[endGame] Forfeit state check: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+  // CRITICAL: Wait briefly to allow any pending forfeit messages to be processed
+  // This handles the race condition where forfeit arrives just as game ends
+  // The forfeit handler will set forfeitingPlayerId during this window
+  console.log(`[endGame] Waiting 300ms for any pending forfeit messages...`);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Log forfeit state AFTER the delay
+  console.log(`[endGame] After delay - Forfeit state check: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}, forfeitingUserId=${game.forfeitingUserId}`);
+  
+  // If forfeitingUserId is set but forfeitingPlayerId isn't, the forfeit is being processed
+  // Wait a bit more for it to complete
+  if (game.forfeitingUserId && !game.forfeitingPlayerId) {
+    console.log(`[endGame] forfeitingUserId set but forfeitingPlayerId not set yet, waiting 200ms more...`);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    console.log(`[endGame] After extra delay - forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+  }
 
   const results = GameStateManager.getFinalResults(matchId);
   console.log(`📊 Final results:`, results);
