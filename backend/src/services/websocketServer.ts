@@ -29,6 +29,7 @@ import {
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: number;
   matchId?: number;
+  playerId?: number; // Cached on connection to avoid DB lookup in time-critical handlers
 }
 
 const clients = new Map<number, Set<AuthenticatedWebSocket>>();
@@ -86,6 +87,9 @@ export const setupWebSocketServer = (server: Server) => {
         ws.close(1008, 'Player profile not found');
         return;
       }
+      
+      // Store playerId on WebSocket for quick access (avoids DB lookup in FORFEIT handler)
+      ws.playerId = profile.id;
       
       // Check if this player's profile is in the match
       const playerSlot = players.find(p => p.player_id === profile.id);
@@ -333,6 +337,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
   const { type, data } = message;
   const matchId = ws.matchId!;
   const userId = ws.userId!;
+  const playerId = ws.playerId!; // Cached on connection to avoid DB lookup in time-critical handlers
 
   switch (type) {
     case 'PLACE_NUMBER':
@@ -457,15 +462,29 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           return;
         }
         
-        if (game.status !== 'IN_PROGRESS') {
-          console.log(`[WS] FORFEIT ignored: match ${matchId} not in progress (status: ${game.status})`);
+        // CRITICAL: Set forfeitingUserId IMMEDIATELY, before checking status
+        // This ensures getFinalResults() knows about the forfeit even if timer ends game first
+        game.forfeitingUserId = userId;
+        console.log(`[WS] FORFEIT: Set forfeitingUserId=${userId} for match ${matchId}`);
+        
+        // Allow forfeit for IN_PROGRESS games OR games that JUST completed
+        // (handles race where timer ended game right before forfeit message processed)
+        if (game.status !== 'IN_PROGRESS' && game.status !== 'COMPLETED') {
+          console.log(`[WS] FORFEIT ignored: match ${matchId} status is ${game.status}`);
+          game.forfeitingUserId = undefined; // Reset
           return;
+        }
+        
+        // If already completed, we need to re-process the result with forfeit
+        const wasAlreadyCompleted = game.status === 'COMPLETED';
+        if (wasAlreadyCompleted) {
+          console.log(`[WS] FORFEIT received for already-completed game ${matchId}, will re-broadcast corrected result`);
         }
         
         // CRITICAL: Mark forfeit intent IMMEDIATELY to prevent race condition
         // The timer interval checks this flag before ending the game normally
         game.forfeitPending = true;
-        
+
         // Stop the timer immediately to prevent any more ticks
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
@@ -473,17 +492,12 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           console.log(`[WS] Stopped timer interval immediately on FORFEIT`);
         }
 
-        const userProfile = await PlayerProfileModel.findByUserId(userId);
-        if (!userProfile) {
-          console.error(`❌ Player profile not found for user ${userId}`);
-          game.forfeitPending = false;  // Reset if we can't proceed
-          return;
-        }
+        // Use cached playerId - NO DB LOOKUP needed!
+        // This is critical for avoiding race conditions
+        console.log(`[WS] FORFEIT from userId=${userId} playerId=${playerId} in match ${matchId}`);
 
-        console.log(`[WS] FORFEIT from userId=${userId} playerId=${userProfile.id} in match ${matchId}`);
-        
         // Mark forfeit in game state - this sets forfeitingPlayerId and forfeitWinnerId
-        GameStateManager.forfeit(matchId, userProfile.id);
+        GameStateManager.forfeit(matchId, playerId);
         
         // Verify forfeit state was set correctly
         const gameAfterForfeit = GameStateManager.getGame(matchId);
@@ -491,13 +505,33 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           console.log(`[WS] After forfeit: forfeitingPlayerId=${gameAfterForfeit.forfeitingPlayerId}, forfeitWinnerId=${gameAfterForfeit.forfeitWinnerId}`);
         }
         
-        await endGame(matchId);
+        // If game was already completed, we need to re-broadcast the corrected result
+        if (wasAlreadyCompleted) {
+          console.log(`[WS] Re-broadcasting corrected result for match ${matchId} after late forfeit`);
+          // Re-broadcast GAME_END with correct forfeit result
+          const results = GameStateManager.getFinalResults(matchId);
+          if (results) {
+            broadcastToMatch(matchId, {
+              type: 'GAME_END',
+              winner: results.winnerId,
+              resultCode: results.resultCode,
+              player1: results.player1,
+              player2: results.player2,
+              forfeit: true,
+              corrected: true, // Flag to indicate this is a correction
+            });
+            console.log(`[WS] Sent corrected GAME_END for match ${matchId}: winner=${results.winnerId}`);
+          }
+        } else {
+          await endGame(matchId);
+        }
       } catch (error) {
         console.error(`❌ Error handling FORFEIT:`, error);
-        // Try to clean up forfeitPending flag on error
+        // Try to clean up forfeit flags on error
         const game = GameStateManager.getGame(matchId);
         if (game) {
           game.forfeitPending = false;
+          game.forfeitingUserId = undefined;
         }
       }
       break;

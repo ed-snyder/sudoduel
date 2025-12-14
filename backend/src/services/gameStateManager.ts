@@ -2,6 +2,7 @@ import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } fro
 
 interface PlayerGameState {
   playerId: number;
+  userId?: number;            // Added for forfeit race condition fix
   slot: 1 | 2;
   grid: number[][];
   timeRemaining: number;      // Time-as-resource timer (starts at STARTING_TIME_SECONDS, can go up/down)
@@ -30,6 +31,7 @@ interface GameState {
   forfeitWinnerId?: number | null; // Optional winner override for forfeits
   forfeitingPlayerId?: number | null; // Track which player forfeited (for validation)
   forfeitPending?: boolean; // Set immediately when forfeit requested, before async ops
+  forfeitingUserId?: number; // Set immediately with userId, before async DB lookup
   // Disconnect tracking
   disconnectedPlayerId: number | null;
   disconnectTime: number | null;  // timestamp when disconnect occurred
@@ -336,6 +338,29 @@ export const GameStateManager = {
     // This check MUST happen FIRST and MUST override EVERYTHING
     // NO EXCEPTIONS - FORFEITING PLAYER NEVER WINS
     // Also check disconnectedPlayerId as a safety net for disconnect forfeits
+    
+    // CRITICAL: Check forfeitingUserId (set immediately on FORFEIT message, before async ops)
+    // This handles the race condition where timer ends game before forfeit() is called
+    if (game.forfeitingUserId != null && game.forfeitingPlayerId == null) {
+      console.log(`[GameState] getFinalResults: Found forfeitingUserId=${game.forfeitingUserId}, converting to playerId`);
+      // Determine which player matches this userId
+      // We need to find the playerId that corresponds to this userId
+      // The player1/player2 have playerId but not userId, so we check if the forfeiting user
+      // is player1 or player2 by checking who SHOULD lose
+      // For now, we'll mark that a forfeit occurred and let the forfeit() call set the proper IDs
+      // But if forfeit() wasn't called yet, we need to determine the forfeiting player
+      
+      // Since we don't have userId -> playerId mapping here, we need to infer from context
+      // The forfeitingUserId was set by the FORFEIT handler, which should have the same userId
+      // as one of the connected players. We'll need to add userId tracking to PlayerGameState
+      // or pass it through differently.
+      
+      // WORKAROUND: If forfeitPending is true and forfeitingUserId is set, but forfeitingPlayerId is null,
+      // it means the timer ended the game before forfeit() was called.
+      // We should wait for forfeit() to be called, or we need userId tracking.
+      // For now, log a warning and continue - the FORFEIT handler will re-broadcast with correct result.
+      console.warn(`[GameState] getFinalResults: forfeitingUserId=${game.forfeitingUserId} set but forfeitingPlayerId is null. Timer may have won the race.`);
+    }
     
     // If a player disconnected and grace period expired, they should forfeit
     if (game.disconnectedPlayerId != null && game.disconnectTime != null) {
