@@ -138,6 +138,12 @@ export const GameStateManager = {
       // Only tick timers for non-paused players
       // Bot matches: player2.playerId is -1 (null from DB becomes -1)
       const isBotMatch = Number(game.player2.playerId) === -1;
+      
+      // Debug logging for disconnect state
+      if (game.pausedPlayerId !== null) {
+        console.log(`[GameState] Timer tick with disconnect active: pausedPlayerId=${game.pausedPlayerId}, p1(${game.player1.playerId})=${game.player1.timeRemaining}s, p2(${game.player2.playerId})=${game.player2.timeRemaining}s`);
+      }
+      
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0 && game.player1.playerId !== game.pausedPlayerId) {
         game.player1.timeRemaining--;
         if (game.player1.timeRemaining <= 0) {
@@ -874,18 +880,23 @@ export const GameStateManager = {
     game.disconnectedPlayerId = disconnectedPlayerId;
     game.disconnectTime = Date.now();
 
-    // Pause the OTHER player's timer (the one still connected)
-    const connectedPlayer = game.player1.playerId === disconnectedPlayerId 
-      ? game.player2 
+    // FIXED: Pause the CONNECTED player's timer (they shouldn't be penalized while waiting)
+    // The DISCONNECTED player's timer continues as a penalty for disconnecting
+    const connectedPlayer = game.player1.playerId === disconnectedPlayerId
+      ? game.player2
       : game.player1;
+    
+    // Set pausedPlayerId to the CONNECTED player so their timer is paused
     game.pausedPlayerId = connectedPlayer.playerId;
+    
+    console.log(`[GameState] Disconnect: disconnectedPlayerId=${disconnectedPlayerId}, pausedPlayerId=${game.pausedPlayerId} (connected player's timer paused)`);
 
     // Start grace period timer (15 seconds)
     game.gracePeriodTimer = setTimeout(() => {
       this.handleGraceExpired(matchId, onGraceExpired);
     }, 15000);
 
-    console.log(`[GameState] Player ${disconnectedPlayerId} disconnected in match ${matchId}, grace period started`);
+    console.log(`[GameState] Player ${disconnectedPlayerId} disconnected in match ${matchId}, grace period started. Connected player ${connectedPlayer.playerId}'s timer is paused.`);
   },
 
   // Call when disconnected player reconnects
