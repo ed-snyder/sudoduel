@@ -115,6 +115,7 @@ function SudokuGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const lastProcessedMoveRef = useRef<string | null>(null);
   const feedbackTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const touchHandledRef = useRef<boolean>(false); // Prevent double-firing of touch + click
   
   // Track animation state - start as true, reset when animateIn changes
   const [gridAnimationComplete, setGridAnimationComplete] = useState(true);
@@ -386,6 +387,11 @@ function SudokuGrid({
               <button
                 key={cellKey}
                 onClick={() => {
+                  // Skip if touch already handled this interaction
+                  if (touchHandledRef.current) {
+                    touchHandledRef.current = false;
+                    return;
+                  }
                   if (!lockedOut) {
                     onCellClick(rowIndex, colIndex);
                   }
@@ -394,6 +400,7 @@ function SudokuGrid({
                   // Prevent the 300ms touch delay on mobile by handling touch immediately
                   if (!lockedOut) {
                     e.preventDefault();
+                    touchHandledRef.current = true;
                     onCellClick(rowIndex, colIndex);
                   }
                 }}

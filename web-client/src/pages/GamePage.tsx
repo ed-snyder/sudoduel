@@ -137,6 +137,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const warmUpDoneRef = useRef(false);
   const lastCellPlacementRef = useRef(0);
+  const numberPadTouchHandledRef = useRef<boolean>(false); // Prevent double-firing of touch + click
   
   // Load emotes - premium users get their custom emotes, free users get defaults
   useEffect(() => {
@@ -2448,11 +2449,19 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             return (
               <button
                 key={num}
-                onClick={() => handleNumberClick(num)}
+                onClick={() => {
+                  // Skip if touch already handled this interaction
+                  if (numberPadTouchHandledRef.current) {
+                    numberPadTouchHandledRef.current = false;
+                    return;
+                  }
+                  handleNumberClick(num);
+                }}
                 onTouchStart={(e) => {
                   // Prevent the 300ms touch delay on mobile by handling touch immediately
                   if (gameStatus === 'playing' && !myState.is_locked && !depleted) {
                     e.preventDefault();
+                    numberPadTouchHandledRef.current = true;
                     handleNumberClick(num);
                   }
                 }}
