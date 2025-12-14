@@ -346,41 +346,44 @@ export const GameStateManager = {
     
     if (game.forfeitingPlayerId != null) {
       // The forfeiting player ALWAYS loses, opponent ALWAYS wins
-      const forfeitingId = game.forfeitingPlayerId;
+      // CRITICAL: Coerce all IDs to numbers to avoid type mismatch
+      const forfeitingId = Number(game.forfeitingPlayerId);
+      const player1Id = Number(p1.playerId);
+      const player2Id = Number(p2.playerId);
       
       console.log(`[GameState] getFinalResults FORFEIT DEBUG:`);
-      console.log(`  - forfeitingPlayerId: ${forfeitingId}`);
-      console.log(`  - p1.playerId: ${p1.playerId}`);
-      console.log(`  - p2.playerId: ${p2.playerId}`);
+      console.log(`  - forfeitingPlayerId: ${forfeitingId} (type: ${typeof game.forfeitingPlayerId})`);
+      console.log(`  - p1.playerId: ${player1Id}`);
+      console.log(`  - p2.playerId: ${player2Id}`);
       
       // CRITICAL: IGNORE forfeitWinnerId if forfeitingPlayerId is set
       // Always determine winner based on forfeitingPlayerId to ensure correctness
       // Determine winner: ALWAYS the opponent of the forfeiting player
-      if (forfeitingId === p1.playerId) {
-        winnerId = p2.playerId;
+      if (forfeitingId === player1Id) {
+        winnerId = player2Id;
         resultCode = 2;
-        console.log(`  - Forfeiter is player1, so player2 (${p2.playerId}) WINS`);
-      } else if (forfeitingId === p2.playerId) {
-        winnerId = p1.playerId;
+        console.log(`  - Forfeiter is player1, so player2 (${player2Id}) WINS`);
+      } else if (forfeitingId === player2Id) {
+        winnerId = player1Id;
         resultCode = 1;
-        console.log(`  - Forfeiter is player2, so player1 (${p1.playerId}) WINS`);
+        console.log(`  - Forfeiter is player2, so player1 (${player1Id}) WINS`);
       } else {
         // Fallback: forfeitingId doesn't match either player (shouldn't happen)
-        console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match either player!`);
-          // Last resort: determine opponent by process of elimination
-          winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-          resultCode = winnerId === p1.playerId ? 1 : 2;
+        console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match player1(${player1Id}) or player2(${player2Id})!`);
+        // Last resort: determine opponent by process of elimination
+        winnerId = forfeitingId === player1Id ? player2Id : player1Id;
+        resultCode = winnerId === player1Id ? 1 : 2;
       }
       
       // CRITICAL VALIDATION: Ensure winnerId is NEVER the forfeiting player
       if (winnerId === forfeitingId) {
         console.error(`[GameState] CRITICAL ERROR: winnerId matches forfeitingId! Forcing correction...`);
-        winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
-        resultCode = winnerId === p1.playerId ? 1 : 2;
+        winnerId = forfeitingId === player1Id ? player2Id : player1Id;
+        resultCode = winnerId === player1Id ? 1 : 2;
       }
       
       // Additional validation: If forfeitWinnerId is set but doesn't match our determined winner, log warning
-      if (game.forfeitWinnerId != null && game.forfeitWinnerId !== winnerId) {
+      if (game.forfeitWinnerId != null && Number(game.forfeitWinnerId) !== winnerId) {
         console.warn(`[GameState] WARNING: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match determined winner (${winnerId}). Using determined winner.`);
       }
       
@@ -849,23 +852,28 @@ export const GameStateManager = {
     const p2 = game.player2;
     
     console.log(`[GameState] handleGraceExpired DEBUG:`);
-    console.log(`  - disconnectedPlayerId (forfeiter): ${forfeitingPlayerId}`);
-    console.log(`  - player1.playerId: ${p1.playerId}`);
-    console.log(`  - player2.playerId: ${p2.playerId}`);
+    console.log(`  - disconnectedPlayerId (forfeiter): ${forfeitingPlayerId} (type: ${typeof forfeitingPlayerId})`);
+    console.log(`  - player1.playerId: ${p1.playerId} (type: ${typeof p1.playerId})`);
+    console.log(`  - player2.playerId: ${p2.playerId} (type: ${typeof p2.playerId})`);
+    
+    // CRITICAL: Coerce to numbers to avoid type mismatch (string vs number)
+    const forfeiterId = Number(forfeitingPlayerId);
+    const player1Id = Number(p1.playerId);
+    const player2Id = Number(p2.playerId);
     
     // Determine winner: ALWAYS the opponent of disconnected player
-    const winnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+    const winnerId = forfeiterId === player1Id ? player2Id : player1Id;
     
-    console.log(`  - forfeitingPlayerId === p1.playerId: ${forfeitingPlayerId === p1.playerId}`);
+    console.log(`  - forfeiterId === player1Id: ${forfeiterId === player1Id}`);
     console.log(`  - WINNER should be: ${winnerId}`);
-    console.log(`  - LOSER (forfeiter) is: ${forfeitingPlayerId}`);
+    console.log(`  - LOSER (forfeiter) is: ${forfeiterId}`);
     
-    // Set forfeit state directly on game object
-    game.forfeitingPlayerId = forfeitingPlayerId;
+    // Set forfeit state directly on game object (use coerced numbers)
+    game.forfeitingPlayerId = forfeiterId;
     game.forfeitWinnerId = winnerId;
     
     // Mark forfeiting player as locked
-    const forfeiter = forfeitingPlayerId === p1.playerId ? p1 : p2;
+    const forfeiter = forfeiterId === player1Id ? p1 : p2;
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
     
