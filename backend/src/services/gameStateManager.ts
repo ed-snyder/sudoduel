@@ -635,13 +635,19 @@ export const GameStateManager = {
    * Forfeit handling must be done separately via getFinalResults().
    */
   checkVictoryConditions(game: GameState): boolean {
+    // CRITICAL: If someone is disconnected, do NOT end game normally
+    // Wait for grace period - disconnected player will forfeit
+    if (game.disconnectedPlayerId !== null) {
+      return false;
+    }
+    
     // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
     // Forfeit must be handled separately to ensure forfeiting player always loses
     if (game.forfeitingPlayerId != null) {
       console.log(`[GameState] checkVictoryConditions: Forfeit detected, returning false to prevent normal game end`);
       return false;
     }
-    
+
     const p1 = game.player1;
     const p2 = game.player2;
 
@@ -828,19 +834,43 @@ export const GameStateManager = {
     const game = gameStates.get(matchId);
     if (!game || !game.disconnectedPlayerId) return;
 
-    console.log(`[GameState] Grace period expired for match ${matchId}, forfeiting player ${game.disconnectedPlayerId}`);
+    const forfeitingPlayerId = game.disconnectedPlayerId;
+    console.log(`[GameState] Grace period expired for match ${matchId}, player ${forfeitingPlayerId} forfeits (disconnect)`);
 
-    // Auto-forfeit the disconnected player
-    this.forfeit(matchId, game.disconnectedPlayerId);
+    // CRITICAL: Set forfeit state DIRECTLY - do NOT rely on forfeit() which has status checks
+    // The disconnected player ALWAYS loses, opponent ALWAYS wins - NO EXCEPTIONS
+    const p1 = game.player1;
+    const p2 = game.player2;
     
-    // Clear disconnect state
+    // Determine winner: ALWAYS the opponent of disconnected player
+    const winnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+    
+    // Set forfeit state directly on game object
+    game.forfeitingPlayerId = forfeitingPlayerId;
+    game.forfeitWinnerId = winnerId;
+    
+    // Mark forfeiting player as locked
+    const forfeiter = forfeitingPlayerId === p1.playerId ? p1 : p2;
+    forfeiter.isLocked = true;
+    forfeiter.timeRemaining = 0;
+    
+    // Stop the timer to prevent any more ticks
+    if (game.timerInterval) {
+      clearInterval(game.timerInterval);
+      game.timerInterval = null;
+    }
+    
+    console.log(`[GameState] Forfeit state set: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+
+    // Clear disconnect state AFTER setting forfeit state
+    game.disconnectedPlayerId = null;
     game.disconnectTime = null;
     if (game.gracePeriodTimer) {
       clearTimeout(game.gracePeriodTimer);
       game.gracePeriodTimer = null;
     }
 
-    // Trigger endGame via callback
+    // Trigger endGame - getFinalResults() will see forfeitingPlayerId and use it
     onGraceExpired(matchId);
   },
 };
