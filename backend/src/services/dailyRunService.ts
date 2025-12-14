@@ -14,8 +14,8 @@ function getDailyPuzzleId(date: string): number {
     hash = ((hash << 5) - hash) + date.charCodeAt(i);
     hash = hash & hash;
   }
-  // Puzzles have IDs 1-500
-  return (Math.abs(hash) % 500) + 1;
+  // Puzzles have IDs 1011-1510 (500 puzzles)
+  return (Math.abs(hash) % 500) + 1011;
 }
 
 export const DailyRunService = {
@@ -31,10 +31,10 @@ export const DailyRunService = {
     );
     
     if (result.rows.length === 0) {
-      // Fallback to puzzle ID 1
+      // Fallback to first available puzzle
       const fallback = await query(
         `SELECT id, initial_grid, solution_grid, difficulty 
-         FROM puzzles WHERE id = 1`
+         FROM puzzles ORDER BY id LIMIT 1`
       );
       return fallback.rows[0];
     }

@@ -87,7 +87,9 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
       setGameStatus('loading');
       setError('');
       
+      console.log('[DailyRun] Fetching puzzle...');
       const response = await dailyAPI.getPuzzle();
+      console.log('[DailyRun] Response:', response);
       
       // Check if already completed today
       if (response.already_completed && response.previous_result) {
@@ -123,6 +125,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
       
       startTimer();
     } catch (err: any) {
+      console.error('[DailyRun] Error loading puzzle:', err);
       setError(err.message || 'Failed to load puzzle');
       setGameStatus('loading');
     }
