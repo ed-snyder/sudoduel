@@ -283,6 +283,7 @@ export const setupWebSocketServer = (server: Server) => {
           MatchmakingService.clearMatch(matchId);
         } else if (wasInProgress) {
           // Start disconnect handling
+          console.log(`[WS] DISCONNECT DEBUG: Player ${profile.id} disconnected, they will LOSE if they don't reconnect`);
           GameStateManager.handleDisconnect(matchId, profile.id, async (matchId) => {
             await endGame(matchId);
           });

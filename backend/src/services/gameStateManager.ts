@@ -348,15 +348,22 @@ export const GameStateManager = {
       // The forfeiting player ALWAYS loses, opponent ALWAYS wins
       const forfeitingId = game.forfeitingPlayerId;
       
+      console.log(`[GameState] getFinalResults FORFEIT DEBUG:`);
+      console.log(`  - forfeitingPlayerId: ${forfeitingId}`);
+      console.log(`  - p1.playerId: ${p1.playerId}`);
+      console.log(`  - p2.playerId: ${p2.playerId}`);
+      
       // CRITICAL: IGNORE forfeitWinnerId if forfeitingPlayerId is set
       // Always determine winner based on forfeitingPlayerId to ensure correctness
       // Determine winner: ALWAYS the opponent of the forfeiting player
       if (forfeitingId === p1.playerId) {
         winnerId = p2.playerId;
         resultCode = 2;
+        console.log(`  - Forfeiter is player1, so player2 (${p2.playerId}) WINS`);
       } else if (forfeitingId === p2.playerId) {
         winnerId = p1.playerId;
         resultCode = 1;
+        console.log(`  - Forfeiter is player2, so player1 (${p1.playerId}) WINS`);
       } else {
         // Fallback: forfeitingId doesn't match either player (shouldn't happen)
         console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match either player!`);
@@ -377,7 +384,7 @@ export const GameStateManager = {
         console.warn(`[GameState] WARNING: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match determined winner (${winnerId}). Using determined winner.`);
       }
       
-      console.log(`[GameState] FORFEIT RESULT: player ${forfeitingId} forfeited, player ${winnerId} wins (resultCode=${resultCode})`);
+      console.log(`[GameState] FORFEIT FINAL RESULT: forfeiter=${forfeitingId} LOSES, winner=${winnerId} WINS (resultCode=${resultCode})`);
       
       // Return immediately - forfeit overrides EVERYTHING
       return {
@@ -835,15 +842,23 @@ export const GameStateManager = {
     if (!game || !game.disconnectedPlayerId) return;
 
     const forfeitingPlayerId = game.disconnectedPlayerId;
-    console.log(`[GameState] Grace period expired for match ${matchId}, player ${forfeitingPlayerId} forfeits (disconnect)`);
-
+    
     // CRITICAL: Set forfeit state DIRECTLY - do NOT rely on forfeit() which has status checks
     // The disconnected player ALWAYS loses, opponent ALWAYS wins - NO EXCEPTIONS
     const p1 = game.player1;
     const p2 = game.player2;
     
+    console.log(`[GameState] handleGraceExpired DEBUG:`);
+    console.log(`  - disconnectedPlayerId (forfeiter): ${forfeitingPlayerId}`);
+    console.log(`  - player1.playerId: ${p1.playerId}`);
+    console.log(`  - player2.playerId: ${p2.playerId}`);
+    
     // Determine winner: ALWAYS the opponent of disconnected player
     const winnerId = forfeitingPlayerId === p1.playerId ? p2.playerId : p1.playerId;
+    
+    console.log(`  - forfeitingPlayerId === p1.playerId: ${forfeitingPlayerId === p1.playerId}`);
+    console.log(`  - WINNER should be: ${winnerId}`);
+    console.log(`  - LOSER (forfeiter) is: ${forfeitingPlayerId}`);
     
     // Set forfeit state directly on game object
     game.forfeitingPlayerId = forfeitingPlayerId;
@@ -860,7 +875,7 @@ export const GameStateManager = {
       game.timerInterval = null;
     }
     
-    console.log(`[GameState] Forfeit state set: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
+    console.log(`[GameState] Forfeit state FINAL: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
 
     // Clear disconnect state AFTER setting forfeit state
     game.disconnectedPlayerId = null;
