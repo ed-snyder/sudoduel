@@ -24,6 +24,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   const [gameStatus, setGameStatus] = useState<'loading' | 'playing' | 'complete' | 'already_done'>('loading');
   const [_cellsCompleted, setCellsCompleted] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [error, setError] = useState('');
   
   // Timer state - COUNTS UP in milliseconds
   const [elapsedTimeMs, setElapsedTimeMs] = useState(0);
@@ -523,9 +524,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
     }
   }, [lastMoveResult]);
   
-  const [error, setError] = useState('');
-  
-  if (gameStatus === 'loading') {
+  if (gameStatus === 'loading' && !error) {
     return (
       <div className="min-h-screen bg-void flex items-center justify-center">
         <div className="text-center">
