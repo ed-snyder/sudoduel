@@ -4,6 +4,8 @@ import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
 import BackgroundEffects from '../components/BackgroundEffects';
 import { dailyAPI } from '../services/api';
+import type { DailyLeaderboardEntry } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { log } from '../utils/logger';
 
 interface DailyRunPageProps {
@@ -11,6 +13,7 @@ interface DailyRunPageProps {
 }
 
 export default function DailyRunPage({ onExit }: DailyRunPageProps) {
+  const { user } = useAuth();
   const { playCorrect, playIncorrect, initAudio } = useSoundEffects();
   const { error: hapticError, impact } = useHaptics();
   
@@ -44,7 +47,13 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   const [completedCells, setCompletedCells] = useState<Set<string>>(new Set());
   const [erroredCells, setErroredCells] = useState<Set<string>>(new Set());
   const [lastScoredCell, setLastScoredCell] = useState<{ row: number; col: number } | null>(null);
-  const [showMicroShake, setShowMicroShake] = useState(false);
+  
+  // Leaderboard state
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<DailyLeaderboardEntry[]>([]);
+  
+  // Countdown to next challenge
+  const [nextChallengeCountdown, setNextChallengeCountdown] = useState('');
   
   // Notes state
   const [notesMode, setNotesMode] = useState(false);
@@ -62,6 +71,32 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   useEffect(() => {
     initAudio();
   }, [initAudio]);
+  
+  // Countdown timer to midnight UTC
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const tomorrow = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        0, 0, 0, 0
+      ));
+      const diff = tomorrow.getTime() - now.getTime();
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setNextChallengeCountdown(
+        `${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`
+      );
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
   
   // Load puzzle on mount
   useEffect(() => {
@@ -166,12 +201,6 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
     // 4. Cell pop animation
     setLastScoredCell({ row, col });
     setTimeout(() => setLastScoredCell(null), 300);
-    
-    // 5. Screen shake after 5 correct guesses
-    if (streak >= 5) {
-      setShowMicroShake(true);
-      setTimeout(() => setShowMicroShake(false), 150);
-    }
   }, [playCorrect, impact]);
   
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -559,7 +588,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   }
   
   return (
-    <div className={`min-h-screen bg-void flex flex-col relative overflow-hidden ${showMicroShake ? 'animate-micro-shake' : ''}`}>
+    <div className="min-h-screen bg-void flex flex-col relative overflow-hidden">
       <BackgroundEffects />
       
       {/* Header */}
@@ -576,7 +605,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
           </button>
           
           <div className="text-center">
-            <div className="text-xs text-muted font-body uppercase tracking-wider">Daily Run</div>
+            <div className="text-xs text-muted font-body uppercase tracking-wider">Daily Challenge</div>
             <div 
               className="text-2xl font-mono font-bold text-player"
               style={{ textShadow: '0 0 15px rgba(0, 255, 255, 0.5)' }}
@@ -585,7 +614,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
             </div>
             {penaltyTimeMs > 0 && (
               <div className="text-xs text-error font-mono">
-                +{Math.floor(penaltyTimeMs / 1000)}s penalties
+                +{Math.floor(penaltyTimeMs / 1000)}s total time penalty
               </div>
             )}
           </div>
@@ -728,7 +757,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
               className="text-4xl sm:text-5xl font-display font-black text-success"
               style={{ textShadow: '0 0 30px rgba(0, 255, 136, 0.5)' }}
             >
-              DAILY RUN COMPLETE!
+              DAILY CHALLENGE COMPLETE!
             </h1>
             
             <div 
@@ -749,14 +778,95 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
               </div>
             )}
             
-            <p className="text-muted">New puzzle at midnight UTC</p>
+            <p className="text-muted">
+              New Challenge in <span className="text-player font-mono">{nextChallengeCountdown}</span>
+            </p>
             
-            <button
-              onClick={onExit}
-              className="px-8 py-3 bg-surface border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/10 transition-colors"
-            >
-              Back to Lobby
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const data = await dailyAPI.getLeaderboard();
+                    setLeaderboardData(data.top50);
+                    setShowLeaderboard(true);
+                  } catch (err) {
+                    console.error('Failed to load leaderboard:', err);
+                  }
+                }}
+                className="px-8 py-3 bg-secondary/20 border-2 border-secondary text-secondary rounded-lg font-display font-bold hover:bg-secondary/30 transition-colors"
+              >
+                View Leaderboard
+              </button>
+              <button
+                onClick={onExit}
+                className="px-8 py-3 bg-surface border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/10 transition-colors"
+              >
+                Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Leaderboard Modal */}
+      {showLeaderboard && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-void/95">
+          <div 
+            className="bg-surface border-2 border-secondary rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
+            style={{ boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)' }}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-grid-line flex justify-between items-center">
+              <h2 className="text-xl font-display font-bold text-secondary">Today's Leaderboard</h2>
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="p-2 text-muted hover:text-secondary transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Your Result */}
+            {finalResult && (
+              <div className="p-4 bg-player/10 border-b border-grid-line">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <span className="text-player font-mono font-bold">#{finalResult.rank}</span>
+                    <span className="text-white font-display">{user?.display_name || 'You'}</span>
+                  </div>
+                  <span className="text-player font-mono">{formatTime(finalResult.time_ms)}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Scrollable Leaderboard */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {leaderboardData.map((entry) => (
+                <div 
+                  key={entry.rank}
+                  className={`flex justify-between items-center p-3 rounded-lg ${
+                    entry.is_you ? 'bg-player/20 border border-player' : 'bg-elevated'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`font-mono font-bold w-8 ${
+                      entry.rank <= 3 ? 'text-secondary' : 'text-muted'
+                    }`}>
+                      #{entry.rank}
+                    </span>
+                    <span className={entry.is_you ? 'text-player font-bold' : 'text-white'}>
+                      {entry.display_name}
+                    </span>
+                  </div>
+                  <span className="text-player font-mono">{formatTime(entry.time_ms)}</span>
+                </div>
+              ))}
+              {leaderboardData.length === 0 && (
+                <div className="text-center text-muted py-8">No results yet today</div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -783,14 +893,32 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
               You placed <span className="text-player font-black">#{previousResult.rank}</span>
             </div>
             
-            <p className="text-muted">New puzzle available at midnight UTC</p>
+            <p className="text-muted">
+              New Challenge in <span className="text-player font-mono">{nextChallengeCountdown}</span>
+            </p>
             
-            <button
-              onClick={onExit}
-              className="px-8 py-3 bg-surface border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/10 transition-colors"
-            >
-              Back to Lobby
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const data = await dailyAPI.getLeaderboard();
+                    setLeaderboardData(data.top50);
+                    setShowLeaderboard(true);
+                  } catch (err) {
+                    console.error('Failed to load leaderboard:', err);
+                  }
+                }}
+                className="px-8 py-3 bg-secondary/20 border-2 border-secondary text-secondary rounded-lg font-display font-bold hover:bg-secondary/30 transition-colors"
+              >
+                View Leaderboard
+              </button>
+              <button
+                onClick={onExit}
+                className="px-8 py-3 bg-surface border-2 border-player text-player rounded-lg font-display font-bold hover:bg-player/10 transition-colors"
+              >
+                Back to Lobby
+              </button>
+            </div>
           </div>
         </div>
       )}

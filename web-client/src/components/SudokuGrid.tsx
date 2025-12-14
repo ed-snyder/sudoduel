@@ -257,7 +257,7 @@ function SudokuGrid({
     if (correct) {
       // Limit feedback array size to prevent memory growth
       setFloatingFeedbacks((prev) => {
-        const newFeedback = { id: feedbackId, row, col, text: '+5s!', correct: true, streak: currentStreak };
+        const newFeedback = { id: feedbackId, row, col, text: '+1!', correct: true, streak: currentStreak };
         const updated = [...prev, newFeedback];
         // Keep only last 10 feedbacks max
         return updated.slice(-10);

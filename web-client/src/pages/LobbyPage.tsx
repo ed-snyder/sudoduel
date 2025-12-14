@@ -54,6 +54,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
   const [matchRequestActionLoading, setMatchRequestActionLoading] = useState(false);
   const [rankData, setRankData] = useState<UserRank | null>(null);
   const [rankLoading, setRankLoading] = useState(true);
+  const [nextChallengeCountdown, setNextChallengeCountdown] = useState('');
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
@@ -63,6 +64,32 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
     { key: 'hard', label: 'Hard', available: false },
     { key: 'ultra', label: 'Ultra', available: false },
   ];
+
+  // Countdown timer to midnight UTC for Daily Challenge
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const tomorrow = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        0, 0, 0, 0
+      ));
+      const diff = tomorrow.getTime() - now.getTime();
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setNextChallengeCountdown(
+        `${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`
+      );
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
 
   const stopPolling = () => {
@@ -438,8 +465,14 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
         ) : (
           <>
             <div className="w-full max-w-sm mb-6">
+              {/* Next Challenge Countdown */}
+              <div className="text-center mb-3">
+                <span className="text-muted text-sm font-body">Next Challenge: </span>
+                <span className="text-player font-mono text-sm">{nextChallengeCountdown}</span>
+              </div>
+              
               {isPremium ? (
-                /* Premium users: Solo Mode centered, no upgrade button */
+                /* Premium users: Daily Challenge centered, no upgrade button */
                 <button
                   onClick={() => onStartSoloMode?.()}
                   className="w-full py-3 px-4 rounded-xl font-body font-semibold text-base transition-all active:scale-[0.98]"
@@ -449,10 +482,10 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                     color: '#00FFFF',
                   }}
                 >
-                  Daily Run
+                  Daily Challenge
                 </button>
               ) : (
-                /* Free users: Upgrade + Solo Mode side by side */
+                /* Free users: Upgrade + Daily Challenge side by side */
                 <div className="flex gap-3">
                   <button
                     onClick={openUpgradeModal}
@@ -477,7 +510,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
                       color: '#00FFFF',
                     }}
                   >
-                    Daily Run
+                    Daily Challenge
                   </button>
                 </div>
               )}
