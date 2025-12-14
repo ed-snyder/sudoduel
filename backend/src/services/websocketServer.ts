@@ -454,77 +454,46 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
       break;
     case 'FORFEIT':
       try {
-        // CRITICAL: Check game status and mark forfeit IMMEDIATELY, before any awaits
-        // This wins the race against the timer interval
         const game = GameStateManager.getGame(matchId);
         if (!game) {
           console.log(`[WS] FORFEIT ignored: game doesn't exist for match ${matchId}`);
           return;
         }
         
-        // CRITICAL: Set forfeitingUserId IMMEDIATELY, before checking status
-        // This ensures getFinalResults() knows about the forfeit even if timer ends game first
-        game.forfeitingUserId = userId;
-        console.log(`[WS] FORFEIT: Set forfeitingUserId=${userId} for match ${matchId}`);
+        // CRITICAL: Set ALL forfeit state IMMEDIATELY, SYNCHRONOUSLY, BEFORE any checks
+        // This ensures getFinalResults() will see the forfeit even if timer wins the race
+        // The forfeiting player ALWAYS loses, opponent ALWAYS wins - NO EXCEPTIONS
+        const opponentPlayerId = playerId === game.player1.playerId 
+          ? game.player2.playerId 
+          : game.player1.playerId;
         
-        // Allow forfeit for IN_PROGRESS games OR games that JUST completed
-        // (handles race where timer ended game right before forfeit message processed)
-        if (game.status !== 'IN_PROGRESS' && game.status !== 'COMPLETED') {
-          console.log(`[WS] FORFEIT ignored: match ${matchId} status is ${game.status}`);
-          game.forfeitingUserId = undefined; // Reset
-          return;
-        }
-        
-        // If already completed, we need to re-process the result with forfeit
-        const wasAlreadyCompleted = game.status === 'COMPLETED';
-        if (wasAlreadyCompleted) {
-          console.log(`[WS] FORFEIT received for already-completed game ${matchId}, will re-broadcast corrected result`);
-        }
-        
-        // CRITICAL: Mark forfeit intent IMMEDIATELY to prevent race condition
-        // The timer interval checks this flag before ending the game normally
+        game.forfeitingPlayerId = playerId;
+        game.forfeitWinnerId = opponentPlayerId;
         game.forfeitPending = true;
-
-        // Stop the timer immediately to prevent any more ticks
+        
+        console.log(`[WS] FORFEIT: Set forfeit state IMMEDIATELY - forfeitingPlayerId=${playerId}, forfeitWinnerId=${opponentPlayerId}`);
+        
+        // Stop timer immediately to prevent any more ticks
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
           game.timerInterval = null;
-          console.log(`[WS] Stopped timer interval immediately on FORFEIT`);
-        }
-
-        // Use cached playerId - NO DB LOOKUP needed!
-        // This is critical for avoiding race conditions
-        console.log(`[WS] FORFEIT from userId=${userId} playerId=${playerId} in match ${matchId}`);
-
-        // Mark forfeit in game state - this sets forfeitingPlayerId and forfeitWinnerId
-        GameStateManager.forfeit(matchId, playerId);
-        
-        // Verify forfeit state was set correctly
-        const gameAfterForfeit = GameStateManager.getGame(matchId);
-        if (gameAfterForfeit) {
-          console.log(`[WS] After forfeit: forfeitingPlayerId=${gameAfterForfeit.forfeitingPlayerId}, forfeitWinnerId=${gameAfterForfeit.forfeitWinnerId}`);
+          console.log(`[WS] FORFEIT: Stopped timer interval`);
         }
         
-        // If game was already completed, the endGame() function is likely still running
-        // in its 300ms delay window and will pick up the forfeit state we just set.
-        // We don't need to do anything else - just log that the forfeit was recorded.
-        if (wasAlreadyCompleted) {
-          console.log(`[WS] Forfeit state set for already-completed match ${matchId}. endGame() will pick it up.`);
-          console.log(`[WS] forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
-          // Don't call endGame() again - it's either running or already finished
-          // If it already finished, the result is already saved (this is a true late forfeit)
-          // But with the 300ms delay, this should be rare
-        } else {
+        // Mark forfeiting player as locked out
+        const forfeiter = playerId === game.player1.playerId ? game.player1 : game.player2;
+        forfeiter.isLocked = true;
+        forfeiter.timeRemaining = 0;
+        
+        // Only call endGame if not already completed
+        // (If timer already called endGame, it will pick up our forfeit state)
+        if (game.status !== 'COMPLETED') {
           await endGame(matchId);
+        } else {
+          console.log(`[WS] FORFEIT: Game already COMPLETED, forfeit state is set for any pending getFinalResults() call`);
         }
       } catch (error) {
         console.error(`❌ Error handling FORFEIT:`, error);
-        // Try to clean up forfeit flags on error
-        const game = GameStateManager.getGame(matchId);
-        if (game) {
-          game.forfeitPending = false;
-          game.forfeitingUserId = undefined;
-        }
       }
       break;
     case 'PING':
