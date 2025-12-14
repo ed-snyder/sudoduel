@@ -1384,8 +1384,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   // const handleBackClick = () => { ... }
 
   const handleForfeit = () => {
-    if (wsRef.current && gameStatus === 'playing') {
+    // Send FORFEIT even if game just ended - backend will handle late forfeits
+    // This handles the race condition where game ends while forfeit modal is open
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log('[GamePage] Sending FORFEIT message');
       wsRef.current.send(JSON.stringify({ type: 'FORFEIT' }));
+    } else {
+      console.log('[GamePage] Cannot send FORFEIT - WebSocket not open');
     }
     setShowForfeitModal(false);
   };
