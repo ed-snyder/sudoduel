@@ -117,13 +117,17 @@ export function useSoundEffects(volumeMultiplier: number = 1.0) {
     }
   }, [initAudio]);
 
-  // Preload critical sounds on mount
+  // Preload critical sounds after a delay to not block startup
   useEffect(() => {
-    const criticalSounds: SoundName[] = [
-      'cellTap', 'correct', 'incorrect', 'countdown', 
-      'rowComplete', 'toolbarButton', 'victory', 'defeat'
-    ];
-    criticalSounds.forEach(loadSound);
+    const timeoutId = setTimeout(() => {
+      const criticalSounds: SoundName[] = [
+        'cellTap', 'correct', 'incorrect', 'countdown', 
+        'rowComplete', 'toolbarButton', 'victory'
+      ];
+      criticalSounds.forEach(loadSound);
+    }, 1000); // Defer 1 second
+    
+    return () => clearTimeout(timeoutId);
   }, [loadSound]);
 
   // Play a sound with optional pitch and volume adjustments

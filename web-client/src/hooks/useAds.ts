@@ -28,9 +28,13 @@ export function useAds(): UseAdsReturn {
     return localStorage.getItem(STORAGE_KEYS.HAS_WON) === 'true';
   });
 
-  // Initialize ad service on mount
+  // Initialize ad service on mount - deferred to not block startup
   useEffect(() => {
-    adService.initialize();
+    const timeoutId = setTimeout(() => {
+      adService.initialize();
+    }, 3000); // Defer 3 seconds - ads aren't needed immediately
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Grace period: No ads until first win OR 10 games played

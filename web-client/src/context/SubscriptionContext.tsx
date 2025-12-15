@@ -45,7 +45,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       purchaseService.initialize();
-    }, 2000);
+    }, 3000); // Increased from 2000
     return () => clearTimeout(timeoutId);
   }, []);
 
