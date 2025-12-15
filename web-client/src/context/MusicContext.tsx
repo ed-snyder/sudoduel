@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useEffect, useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
+import { App } from '@capacitor/app';
 
 type MusicTrack = 'menu' | 'game' | null;
 
@@ -163,6 +164,35 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+    };
+  }, []);
+
+  // Pause music when app goes to background to prevent Control Center appearance
+  useEffect(() => {
+    let listener: any;
+    
+    const setupListener = async () => {
+      listener = await App.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive && globalAudio && !globalAudio.paused) {
+          // App went to background - pause music
+          console.log('[Music] App backgrounded, pausing music');
+          globalAudio.pause();
+        } else if (isActive && globalAudio && globalCurrentTrack) {
+          // App became active - resume music if we have a track
+          console.log('[Music] App foregrounded, resuming music');
+          globalAudio.play().catch(err => {
+            console.warn('[Music] Failed to resume:', err);
+          });
+        }
+      });
+    };
+    
+    setupListener();
+    
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
     };
   }, []);
 
