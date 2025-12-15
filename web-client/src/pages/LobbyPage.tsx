@@ -53,6 +53,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
   const [incomingMatchRequest, setIncomingMatchRequest] = useState<MatchRequest | null>(null);
   const [matchRequestActionLoading, setMatchRequestActionLoading] = useState(false);
+  const [pendingFriendRequestCount, setPendingFriendRequestCount] = useState(0);
   const [rankData, setRankData] = useState<UserRank | null>(null);
   const [rankLoading, setRankLoading] = useState(true);
   const [nextChallengeCountdown, setNextChallengeCountdown] = useState('');
@@ -174,7 +175,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
     setSearching(false);
   };
 
-  // Poll for incoming friend match requests
+  // Poll for incoming friend match requests and pending friend requests
   useEffect(() => {
     const checkForMatchRequests = async () => {
       try {
@@ -189,12 +190,25 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
       }
     };
 
+    const checkForFriendRequests = async () => {
+      try {
+        const response = await friendsAPI.getPendingRequestsReceived();
+        setPendingFriendRequestCount(response.requests?.length || 0);
+      } catch (err) {
+        console.error('Failed to check friend requests:', err);
+      }
+    };
+
     // Defer initial check to not block first paint
     const initialDelay = setTimeout(() => {
       checkForMatchRequests();
+      checkForFriendRequests();
     }, 1500);
 
-    const interval = setInterval(checkForMatchRequests, 2500);
+    const interval = setInterval(() => {
+      checkForMatchRequests();
+      checkForFriendRequests();
+    }, 5000);
 
     return () => {
       clearTimeout(initialDelay);
@@ -277,7 +291,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
         {/* Friends Button */}
         <button
           onClick={() => setShowFriendsList(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-player/10"
+          className="relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-player/10"
           style={{
             background: 'rgba(30,15,45,0.5)',
             border: '1px solid rgba(139,0,255,0.3)',
@@ -287,6 +301,14 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           <span className="text-sm font-body text-secondary">Friends</span>
+          {pendingFriendRequestCount > 0 && (
+            <span 
+              className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center px-1.5 text-xs font-bold text-white rounded-full"
+              style={{ background: '#FF3B30' }}
+            >
+              {pendingFriendRequestCount > 9 ? '9+' : pendingFriendRequestCount}
+            </span>
+          )}
         </button>
 
         {/* Emotes Button - Magenta border with shimmer */}
@@ -590,7 +612,13 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
         <Suspense fallback={<ModalLoader />}>
           <FriendsListModal
             isOpen={showFriendsList}
-            onClose={() => setShowFriendsList(false)}
+            onClose={() => {
+              setShowFriendsList(false);
+              // Refresh pending friend request count after modal closes
+              friendsAPI.getPendingRequestsReceived()
+                .then(response => setPendingFriendRequestCount(response.requests?.length || 0))
+                .catch(() => {});
+            }}
             onMatchFound={onMatchFound}
           />
         </Suspense>
