@@ -412,9 +412,9 @@ function scheduleNextMove(
     }
   }
 
-  // Apply ±15% variance (very tight for consistent, fast gameplay)
-  delaySeconds = delaySeconds * (0.85 + Math.random() * 0.3);
-  const delayMs = Math.max(150, Math.round(delaySeconds * 1000)); // Minimum 0.15 seconds
+  // Apply ±10% variance (very tight for consistent, fast gameplay)
+  delaySeconds = delaySeconds * (0.9 + Math.random() * 0.2);
+  const delayMs = Math.max(100, Math.round(delaySeconds * 1000)); // Minimum 0.1 seconds
   
   // Debug logging for high-rated bots
   if (state.botRating >= 1500) {
