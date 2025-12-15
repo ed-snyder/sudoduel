@@ -412,17 +412,55 @@ export const MatchmakingService = {
 
     console.log(`🤖 Spawning bot ${bot.displayName} (rating: ${Math.round(bot.rating)}) for player ${humanPlayerId}`);
 
-    // Use existing createMatch - bot is a real player
-    const match = await this.createMatch(humanPlayerId, bot.playerId);
+    // Create match with is_bot_match flag set in database
+    const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
+    if (!puzzle) {
+      throw new Error('No puzzle available');
+    }
+
+    // Create match with is_bot_match = true
+    const matchResult = await query(
+      `INSERT INTO matches (ladder_id, puzzle_id, status, is_bot_match, is_ranked)
+       VALUES ($1, $2, 'PENDING', true, true)
+       RETURNING *`,
+      [DEFAULT_LADDER_ID, puzzle.id]
+    );
+    const match = matchResult.rows[0];
+
+    // Get ratings for both players
+    const rating1 = await PlayerRatingModel.findByPlayerAndLadder(humanPlayerId, DEFAULT_LADDER_ID);
+    const rating2 = await PlayerRatingModel.findByPlayerAndLadder(bot.playerId, DEFAULT_LADDER_ID);
+
+    // Add human player to match
+    await MatchModel.addPlayer(
+      match.id,
+      humanPlayerId,
+      1,
+      rating1?.rating || 1500,
+      rating1?.rd || 350,
+      rating1?.volatility || 0.06
+    );
+
+    // Add bot player to match
+    await MatchModel.addPlayer(
+      match.id,
+      bot.playerId,
+      2,
+      rating2?.rating || 1500,
+      rating2?.rd || 350,
+      rating2?.volatility || 0.06
+    );
 
     playerMatches.set(humanPlayerId, match.id);
     await MatchmakingQueueModel.dequeue(humanPlayerId, DEFAULT_LADDER_ID);
 
+    // Store bot match info for WebSocket handler
     botMatches.set(match.id, {
       botPlayerId: bot.playerId,
       botRating: bot.rating,
     });
 
+    console.log(`✅ Bot match ${match.id} created for player ${humanPlayerId} vs bot ${bot.playerId}`);
     return match;
   },
 };

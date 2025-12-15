@@ -79,6 +79,7 @@ export const setupWebSocketServer = (server: Server) => {
       const isBotMatch = (match as any).is_bot_match === true || botMatchInfo !== undefined;
       if (isBotMatch) {
         botMatches.set(matchId, true);
+        console.log(`🤖 Bot match detected: matchId=${matchId}, is_bot_match=${(match as any).is_bot_match}, botMatchInfo=${!!botMatchInfo}`);
       }
 
       const players = await MatchModel.getPlayers(matchId);
@@ -130,9 +131,27 @@ export const setupWebSocketServer = (server: Server) => {
         const slot1 = players.find(p => p.slot === 1)!;
         const slot2 = players.find(p => p.slot === 2)!;
 
-        // For bot matches, use a special bot player ID (negative number to avoid conflicts)
-        const player1Id = slot1.player_id ?? -1; // Bot gets ID -1
-        const player2Id = slot2.player_id ?? -1;
+        // For bot matches, identify which player is the bot
+        // Queue-based bots have real player_ids, legacy bots have NULL player_id
+        let player1Id: number;
+        let player2Id: number;
+        
+        if (isBotMatch) {
+          const botMatch = getBotMatchInfo(matchId);
+          if (botMatch) {
+            // Queue-based bot: bot has real player_id
+            player1Id = slot1.player_id!;
+            player2Id = slot2.player_id!;
+          } else {
+            // Legacy bot match: bot has NULL player_id
+            player1Id = slot1.player_id ?? -1;
+            player2Id = slot2.player_id ?? -1;
+          }
+        } else {
+          // Regular match: both are real players
+          player1Id = slot1.player_id!;
+          player2Id = slot2.player_id!;
+        }
 
         game = GameStateManager.createGame(
           matchId,
@@ -209,7 +228,11 @@ export const setupWebSocketServer = (server: Server) => {
 
       // For bot matches, start with 1 client; for regular matches, need 2 clients
       const clientsNeeded = isBotMatch ? 1 : 2;
-      if (clients.get(matchId)!.size >= clientsNeeded && game.status === 'WAITING') {
+      const currentClients = clients.get(matchId)!.size;
+      console.log(`🎮 Game start check: matchId=${matchId}, isBotMatch=${isBotMatch}, clientsNeeded=${clientsNeeded}, currentClients=${currentClients}, gameStatus=${game.status}`);
+      
+      if (currentClients >= clientsNeeded && game.status === 'WAITING') {
+        console.log(`✅ Starting game: matchId=${matchId}, isBotMatch=${isBotMatch}`);
         // Mark game as starting (prevents re-triggering)
         (game as any).status = 'STARTING';
         
@@ -273,10 +296,12 @@ export const setupWebSocketServer = (server: Server) => {
         }, 3000);
       }
 
+      // Send GAME_STATE - use 'STARTING' if game is starting, otherwise use actual status
+      const statusToSend = (game as any).status === 'STARTING' ? 'WAITING' : game.status;
       ws.send(JSON.stringify({
         type: 'GAME_STATE',
         data: {
-          status: game.status,
+          status: statusToSend,
           your_slot: playerSlot.slot,
           your_name: profile.display_name,
           opponent_name: opponentName,
