@@ -7,11 +7,10 @@ import { query } from '../config/database';
 import { createBotPlayer, getBotDisplayName, getBotDisplayRating } from './botService';
 
 const DEFAULT_LADDER_ID = 1;
-// For MVP, use a very wide rating window so players always find a match,
-// even if their ratings have diverged significantly.
-// With small player base, ratings can diverge 1000+ points, so use 2000 window
-// to ensure matches are always possible. Tighten this as player base grows.
-const RATING_WINDOW = 2000;
+// Rating window is now handled by bands in MatchmakingQueueModel:
+// ±50, ±100, ±200, ±300, ±500, ±750, ±1000
+// This constant is kept for backwards compatibility and as a max window hint.
+const RATING_WINDOW = 1000;
 
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId

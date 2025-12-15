@@ -10,6 +10,9 @@ export interface QueueEntry {
   region: string | null;
 }
 
+// Rating bands to search in order (closest first)
+const RATING_BANDS = [50, 100, 200, 300, 500, 750, 1000];
+
 export const MatchmakingQueueModel = {
   // Add player to queue
   async enqueue(
@@ -37,18 +40,18 @@ export const MatchmakingQueueModel = {
     );
   },
 
-  // Find opponent within rating range (excluding blocked users)
+  // Find opponent - searches in expanding rating bands (closest rating first)
   async findOpponent(
     playerId: number,
     ladderId: number,
     rating: number,
-    ratingWindow: number,
+    maxRatingWindow: number, // Kept for backwards compatibility, but logic uses RATING_BANDS
     userId?: number // Optional: user_id to check blocked users
   ): Promise<QueueEntry | null> {
-    // Build query with blocked users exclusion if userId is provided
+    // Build blocked users clause
     let blockedUsersClause = '';
-    const queryParams: any[] = [ladderId, playerId, rating - ratingWindow, rating + ratingWindow];
-    
+    const baseParams: any[] = [ladderId, playerId];
+
     if (userId) {
       // Exclude players that userId has blocked
       // AND exclude players who have blocked userId
@@ -63,20 +66,44 @@ export const MatchmakingQueueModel = {
             SELECT id FROM player_profiles WHERE user_id = $5
           )
         )`;
-      queryParams.push(userId);
     }
-    
-    const result = await query(
-      `SELECT mq.* FROM matchmaking_queue mq
-       WHERE mq.ladder_id = $1
-       AND mq.player_id != $2
-       AND mq.rating_snapshot BETWEEN $3 AND $4
-       ${blockedUsersClause}
-       ORDER BY mq.enqueued_at ASC
-       LIMIT 1`,
-      queryParams
-    );
-    return result.rows[0] || null;
+
+    // Search through rating bands, closest first
+    for (const band of RATING_BANDS) {
+      // Respect optional maxRatingWindow if it's set smaller than our band
+      if (maxRatingWindow && band > maxRatingWindow) {
+        continue;
+      }
+
+      const minRating = rating - band;
+      const maxRating = rating + band;
+
+      const queryParams = userId
+        ? [...baseParams, minRating, maxRating, userId]
+        : [...baseParams, minRating, maxRating];
+
+      const result = await query(
+        `SELECT mq.* FROM matchmaking_queue mq
+         WHERE mq.ladder_id = $1
+         AND mq.player_id != $2
+         AND mq.rating_snapshot BETWEEN $3 AND $4
+         ${blockedUsersClause}
+         ORDER BY ABS(mq.rating_snapshot - ${rating}) ASC, mq.enqueued_at ASC
+         LIMIT 1`,
+        queryParams
+      );
+
+      if (result.rows[0]) {
+        console.log(
+          `🎯 Found opponent in ±${band} band: rating ${result.rows[0].rating_snapshot} (searching player: ${rating})`
+        );
+        return result.rows[0];
+      }
+    }
+
+    // No opponent found in any band
+    console.log(`❌ No opponent found for rating ${rating} in any band`);
+    return null;
   },
 
   // Check if player is in queue
