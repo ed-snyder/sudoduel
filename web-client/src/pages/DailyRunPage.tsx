@@ -563,7 +563,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   const formatTime = (ms: number) => {
     // Check if this is a forfeit time
     if (ms >= FORFEIT_TIME) {
-      return 'Forfeited';
+      return 'Forfeit';
     }
     const totalSeconds = Math.floor(ms / 1000);
     const mins = Math.floor(totalSeconds / 60);
