@@ -34,9 +34,9 @@ interface GoogleAuthPlugin {
   signOut(): Promise<void>;
 }
 
-interface AppleSignInPlugin {
-  authorize(options: { scopes: string }): Promise<AppleSignInResponse>;
-}
+// Use 'any' for Apple Sign In plugin due to version differences in type definitions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AppleSignInPlugin = any;
 
 class OAuthService {
   private googleAuthPlugin: GoogleAuthPlugin | null = null;
