@@ -63,12 +63,18 @@ class OAuthService {
       const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
       this.googleAuthPlugin = GoogleAuth;
       
+      // Use platform-specific client ID
+      // iOS needs the iOS client ID, Android uses the Web client ID
+      const clientId = Capacitor.getPlatform() === 'ios'
+        ? '72563526926-nh5tm55d20j5thaedfh6e6ec8gal045m.apps.googleusercontent.com'  // iOS client ID
+        : '72563526926-vp0psa0jvljn9oe8l9r58cdn17uv3ik2.apps.googleusercontent.com'; // Web client ID (for Android)
+      
       await this.googleAuthPlugin.initialize({
-        clientId: '72563526926-vp0psa0jvljn9oe8l9r58cdn17uv3ik2.apps.googleusercontent.com',
+        clientId,
         scopes: ['profile', 'email'],
         grantOfflineAccess: true,
       });
-      console.log('[OAuthService] Google Auth initialized');
+      console.log('[OAuthService] Google Auth initialized with client:', Capacitor.getPlatform());
     } catch (error) {
       console.error('[OAuthService] Failed to initialize Google Auth:', error);
     }
