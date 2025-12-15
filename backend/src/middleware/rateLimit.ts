@@ -9,13 +9,15 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Strict limit for auth endpoints - 10 attempts per 15 minutes
+// Strict limit for auth endpoints - 20 attempts per 15 minutes
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: 20,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for guest auth so users can quickly try the app
+  skip: (req) => req.path === '/guest',
 });
 
 // Matchmaking limit - 20 joins per 5 minutes (prevents queue spam)
