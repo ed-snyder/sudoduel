@@ -423,7 +423,9 @@ function scheduleNextMove(
   }
 
   // Schedule the move
+  console.log(`🤖 [MATCH ${matchId}] Scheduling bot move: delay=${delayMs}ms (${(delayMs/1000).toFixed(2)}s), rating=${Math.round(state.botRating)}, baseTime=${baseTime.toFixed(2)}s`);
   const timer = setTimeout(() => {
+    console.log(`🤖 [MATCH ${matchId}] Bot move timer fired, executing move`);
     makeBotMove(matchId, onBotMove, onGameEnd);
   }, delayMs);
 
@@ -438,6 +440,8 @@ function makeBotMove(
   onBotMove: (matchId: number, botPlayerId: number, row: number, col: number, value: number) => void,
   onGameEnd: () => void
 ): void {
+  const startTime = Date.now();
+  console.log(`🤖 [MATCH ${matchId}] makeBotMove called at ${startTime}`);
   const state = botMatchStates.get(matchId);
   if (!state) return;
 
