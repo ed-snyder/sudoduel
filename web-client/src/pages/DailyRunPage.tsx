@@ -8,6 +8,9 @@ import type { DailyLeaderboardEntry } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { log } from '../utils/logger';
 
+// Forfeit time constant (99:99.9 in milliseconds)
+const FORFEIT_TIME = 5999900;
+
 interface DailyRunPageProps {
   onExit: () => void;
 }
@@ -539,20 +542,18 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
     }
   };
   
-  // Handle forfeit - submit with max time (99:99.9 = 5999900ms)
+  // Handle forfeit - submit with max time
   const handleForfeit = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
     
-    const forfeitTime = 5999900; // 99:99.9 in milliseconds
-    
     try {
-      const result = await dailyAPI.submitResult(forfeitTime);
+      const result = await dailyAPI.submitResult(FORFEIT_TIME);
       setFinalResult(result);
       setGameStatus('complete');
     } catch (err) {
       console.error('Failed to submit forfeit:', err);
       // Still exit even if submission fails
-      setFinalResult({ rank: 0, total_players: 0, time_ms: forfeitTime });
+      setFinalResult({ rank: 0, total_players: 0, time_ms: FORFEIT_TIME });
       setGameStatus('complete');
     }
     
@@ -560,6 +561,10 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   };
   
   const formatTime = (ms: number) => {
+    // Check if this is a forfeit time
+    if (ms >= FORFEIT_TIME) {
+      return 'Forfeited';
+    }
     const totalSeconds = Math.floor(ms / 1000);
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
