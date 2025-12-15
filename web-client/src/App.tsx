@@ -8,14 +8,27 @@ import GamePage from './pages/GamePage';
 import DailyRunPage from './pages/DailyRunPage';
 import TutorialFlow from './components/TutorialFlow';
 import UpgradeModal from './components/UpgradeModal';
+import DisplayNameSetup from './components/DisplayNameSetup';
+import GuestBanner from './components/GuestBanner';
+import SecureAccountModal from './components/SecureAccountModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { adService } from './services/adService';
 import { playerAPI } from './services/api';
 
 function AppContent() {
-  const { user, loading, justSignedUp, clearJustSignedUp, refreshUser } = useAuth();
+  const { 
+    user, 
+    loading, 
+    justSignedUp, 
+    clearJustSignedUp, 
+    refreshUser,
+    needsDisplayName,
+    clearNeedsDisplayName,
+    isGuest,
+  } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
   const [dailyRun, setDailyRun] = useState(false);
+  const [showSecureModal, setShowSecureModal] = useState(false);
 
   // Initialize ads - deferred to not block initial render
   useEffect(() => {
@@ -130,6 +143,11 @@ function AppContent() {
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
   };
 
+  // Handle display name setup completion
+  const handleDisplayNameComplete = () => {
+    clearNeedsDisplayName();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-void flex items-center justify-center">
@@ -143,8 +161,18 @@ function AppContent() {
     return <LoginPage />;
   }
 
+  // New user needs to pick a display name first
+  if (needsDisplayName) {
+    return (
+      <DisplayNameSetup 
+        onComplete={handleDisplayNameComplete}
+        suggestedName={user.display_name}
+      />
+    );
+  }
+
   // JUST signed up - show tutorial BEFORE lobby
-  if (justSignedUp) {
+  if (justSignedUp && !user.tutorial_completed) {
     return (
       <TutorialFlow 
         onComplete={handleTutorialComplete}
@@ -172,8 +200,19 @@ function AppContent() {
     );
   }
 
-  // Default - show lobby
-  return <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setDailyRun(true)} />;
+  // Default - show lobby with guest banner if applicable
+  return (
+    <>
+      {isGuest && (
+        <GuestBanner onSecureAccount={() => setShowSecureModal(true)} />
+      )}
+      <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setDailyRun(true)} />
+      <SecureAccountModal 
+        isOpen={showSecureModal}
+        onClose={() => setShowSecureModal(false)}
+      />
+    </>
+  );
 }
 
 export default function App() {

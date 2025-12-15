@@ -4,4 +4,5 @@
     <string name="title_activity_main">Sudoduel</string>
     <string name="package_name">com.sudoduel.app</string>
     <string name="custom_url_scheme">com.sudoduel.app</string>
+    <string name="server_client_id">72563526926-vp0psa0jvljn9oe8l9r58cdn17uv3ik2.apps.googleusercontent.com</string>
 </resources>

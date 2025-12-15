@@ -1,17 +1,12 @@
-// Script to UPDATE production puzzles with the correct 500-easy puzzles (30 missing cells)
+// Script to UPDATE production puzzles with the correct 500-easy puzzles (25 missing cells)
 // Run with: DATABASE_URL=<railway_db_url> npx tsx backend/scripts/update-production-500-easy.ts
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-// Get __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface PuzzleSeed {
   initial: string;
@@ -67,10 +62,10 @@ async function updatePuzzles() {
     }
 
     console.log(`✅ Found ${puzzles.length} puzzles in seeds file`);
-    console.log(`   First puzzle has ${countMissingCells(puzzles[0].initial)} missing cells (should be 30)\n`);
+    console.log(`   First puzzle has ${countMissingCells(puzzles[0].initial)} missing cells (should be 25)\n`);
 
-    if (countMissingCells(puzzles[0].initial) !== 30) {
-      console.error('❌ WARNING: First puzzle does not have 30 missing cells!');
+    if (countMissingCells(puzzles[0].initial) !== 25) {
+      console.error('❌ WARNING: First puzzle does not have 25 missing cells!');
       console.error('   The seeds file may be incorrect.');
       process.exit(1);
     }
@@ -102,7 +97,7 @@ async function updatePuzzles() {
     }
 
     // Update each puzzle
-    console.log('📝 Updating puzzles with correct grids (30 missing cells)...');
+    console.log('📝 Updating puzzles with correct grids (25 missing cells)...');
     let updated = 0;
     
     for (let i = 0; i < puzzles.length; i++) {
@@ -137,7 +132,7 @@ async function updatePuzzles() {
     
     console.log('   Sample of updated puzzles:');
     verifyResult.rows.forEach(row => {
-      const status = parseInt(row.missing_cells) === 30 ? '✅' : '❌';
+      const status = parseInt(row.missing_cells) === 25 ? '✅' : '❌';
       console.log(`   ${status} Puzzle ID ${row.id}: ${row.missing_cells} missing cells`);
     });
 
@@ -146,18 +141,18 @@ async function updatePuzzles() {
       SELECT COUNT(*) as correct_count 
       FROM puzzles 
       WHERE ladder_id = 1 
-      AND LENGTH(initial_grid) - LENGTH(REPLACE(initial_grid, '0', '')) = 30
+      AND LENGTH(initial_grid) - LENGTH(REPLACE(initial_grid, '0', '')) = 25
     `);
     
     const correctCount = parseInt(finalCheck.rows[0].correct_count);
-    console.log(`\n   ${correctCount}/500 puzzles now have exactly 30 missing cells`);
+    console.log(`\n   ${correctCount}/500 puzzles now have exactly 25 missing cells`);
 
     client.release();
     await pool.end();
 
     if (correctCount === 500) {
       console.log('\n✨ Successfully updated all puzzles!');
-      console.log('   All 500 puzzles now have 30 missing cells (51 clues).');
+      console.log('   All 500 puzzles now have 25 missing cells (56 clues).');
     } else {
       console.log('\n⚠️  Some puzzles may not have been updated correctly.');
     }

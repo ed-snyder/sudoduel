@@ -1,62 +1,112 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/authService';
-import { validateUsername } from '../utils/usernameValidator';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { query } from '../config/database';
 
 const router = Router();
 
-// POST /api/auth/signup
-router.post('/signup', async (req: Request, res: Response) => {
+// ===========================================
+// OAUTH + GUEST AUTHENTICATION ROUTES
+// ===========================================
+
+// POST /api/auth/guest - Create a new guest account
+router.post('/guest', async (_req: Request, res: Response) => {
   try {
-    const { email, password, display_name } = req.body;
-
-    // Validation
-    if (!email || !password || !display_name) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
-    // Validate display name (critical for Apple App Store compliance)
-    if (!display_name || typeof display_name !== 'string') {
-      return res.status(400).json({ error: 'Display name is required' });
-    }
-    
-    const usernameValidation = validateUsername(display_name);
-    if (!usernameValidation.valid) {
-      return res.status(400).json({ error: usernameValidation.error || 'Invalid display name' });
-    }
-
-    const result = await AuthService.signup(email, password, display_name.trim());
-    
+    const result = await AuthService.guestSignIn();
     res.status(201).json(result);
   } catch (error: any) {
-    console.error('Signup error:', error);
-    res.status(400).json({ error: error.message });
+    console.error('Guest sign-in error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+// POST /api/auth/google - Sign in with Google
+router.post('/google', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { idToken } = req.body;
 
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Missing email or password' });
+    if (!idToken) {
+      return res.status(400).json({ error: 'Missing idToken' });
     }
 
-    const result = await AuthService.login(email, password);
-    
+    const result = await AuthService.googleSignIn(idToken);
     res.json(result);
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('Google sign-in error:', error);
     res.status(401).json({ error: error.message });
   }
 });
+
+// POST /api/auth/apple - Sign in with Apple
+router.post('/apple', async (req: Request, res: Response) => {
+  try {
+    const { identityToken, user } = req.body;
+
+    if (!identityToken) {
+      return res.status(400).json({ error: 'Missing identityToken' });
+    }
+
+    const result = await AuthService.appleSignIn(identityToken, user);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Apple sign-in error:', error);
+    res.status(401).json({ error: error.message });
+  }
+});
+
+// ===========================================
+// GUEST ACCOUNT LINKING ROUTES
+// ===========================================
+
+// POST /api/auth/guest/link-google - Link Google account to guest
+router.post('/guest/link-google', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ error: 'Missing idToken' });
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const result = await AuthService.linkGoogleToGuest(req.userId, idToken);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Link Google error:', error);
+    // Return 400 for linking conflicts, 401 for auth errors
+    const status = error.message.includes('already') ? 400 : 401;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/guest/link-apple - Link Apple account to guest
+router.post('/guest/link-apple', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { identityToken, user } = req.body;
+
+    if (!identityToken) {
+      return res.status(400).json({ error: 'Missing identityToken' });
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const result = await AuthService.linkAppleToGuest(req.userId, identityToken, user);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Link Apple error:', error);
+    // Return 400 for linking conflicts, 401 for auth errors
+    const status = error.message.includes('already') ? 400 : 401;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+// ===========================================
+// ACCOUNT MANAGEMENT
+// ===========================================
 
 // DELETE /api/auth/account - Permanently delete user account
 router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -145,5 +195,17 @@ router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response
     res.status(500).json({ error: error.message || 'Failed to delete account' });
   }
 });
+
+// ===========================================
+// LEGACY ROUTES - REMOVED FOR OAUTH MIGRATION
+// ===========================================
+// POST /signup and POST /login have been removed.
+// Authentication is now handled via:
+// - POST /guest (anonymous play)
+// - POST /google (Google OAuth)
+// - POST /apple (Apple OAuth)
+// - POST /guest/link-google (upgrade guest account)
+// - POST /guest/link-apple (upgrade guest account)
+// ===========================================
 
 export default router;

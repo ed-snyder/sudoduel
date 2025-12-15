@@ -194,14 +194,50 @@ export const playerAPI = {
 // AUTH API
 // =====================================================
 
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: number;
+    email: string | null;
+    display_name: string;
+  };
+  isNewUser: boolean;
+  isGuest: boolean;
+}
+
+export interface LinkResponse {
+  success: boolean;
+  user: {
+    id: number;
+    email: string | null;
+    is_guest: boolean;
+  };
+}
+
 export const authAPI = {
-  signup: (email: string, password: string, displayName: string) =>
-    api.post('/api/auth/signup', { email, password, display_name: displayName }),
+  // Guest sign-in
+  guest: () => 
+    api.post('/api/auth/guest', {}) as Promise<AuthResponse>,
 
-  login: (email: string, password: string) =>
-    api.post('/api/auth/login', { email, password }),
+  // Google OAuth sign-in
+  googleSignIn: (idToken: string) =>
+    api.post('/api/auth/google', { idToken }) as Promise<AuthResponse>,
 
-  deleteAccount: () => api.delete('/api/auth/account') as Promise<{ success: boolean; message: string }>,
+  // Apple OAuth sign-in
+  appleSignIn: (identityToken: string, user?: { email?: string; fullName?: { givenName?: string; familyName?: string } }) =>
+    api.post('/api/auth/apple', { identityToken, user }) as Promise<AuthResponse>,
+
+  // Link Google account to guest
+  linkGoogle: (idToken: string) =>
+    api.post('/api/auth/guest/link-google', { idToken }) as Promise<LinkResponse>,
+
+  // Link Apple account to guest
+  linkApple: (identityToken: string, user?: { email?: string; fullName?: { givenName?: string; familyName?: string } }) =>
+    api.post('/api/auth/guest/link-apple', { identityToken, user }) as Promise<LinkResponse>,
+
+  // Delete account
+  deleteAccount: () => 
+    api.delete('/api/auth/account') as Promise<{ success: boolean; message: string }>,
 };
 
 // =====================================================

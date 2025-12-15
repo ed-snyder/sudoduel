@@ -66,6 +66,13 @@ export const PlayerService = {
         DEFAULT_LADDER_ID
       );
 
+      // Get user's is_guest status
+      const userResult = await query(
+        'SELECT is_guest FROM users WHERE id = $1',
+        [userId]
+      );
+      const isGuest = userResult.rows[0]?.is_guest ?? false;
+
       return {
         id: profile.id,
         display_name: profile.display_name,
@@ -76,6 +83,7 @@ export const PlayerService = {
         games_played: rating?.games_played || 0,
         tutorial_completed: profile.tutorial_completed || false,
         is_premium: profile.is_premium || false,
+        is_guest: isGuest,
       };
     });
   },
