@@ -78,7 +78,7 @@ export default function SecureAccountModal({ isOpen, onClose }: SecureAccountMod
   const isLoading = loading !== null;
 
   return (
-    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-void/95 flex items-center justify-center z-50 p-4 animate-fade-in">
       <div 
         className="bg-surface border border-grid-line rounded-xl p-6 max-w-sm w-full shadow-2xl animate-scale-in"
         style={{ boxShadow: '0 0 40px rgba(0,255,136,0.1)' }}

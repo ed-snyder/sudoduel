@@ -36,7 +36,7 @@ export default function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-end justify-center z-50 p-4 pb-20 animate-fade-in">
+    <div className="fixed inset-0 bg-void/95 flex items-end justify-center z-50 p-4 pb-20 animate-fade-in">
       <div 
         className="bg-surface border border-grid-line rounded-xl w-full max-w-sm shadow-2xl animate-scale-in"
         style={{ 

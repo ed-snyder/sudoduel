@@ -186,7 +186,7 @@ export default function PlayerInfoModal({ isOpen, onClose, onOpenStats, onOpenHi
       onClick={handleClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       {/* Modal */}
       <div 

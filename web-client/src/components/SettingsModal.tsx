@@ -142,7 +142,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       onClick={handleClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       {/* Modal */}
       <div 
@@ -386,7 +386,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-void/95 backdrop-blur-sm"
+            className="absolute inset-0 bg-void/95"
             onClick={() => {
               setShowDeleteConfirm(false);
               setDeleteConfirmText('');

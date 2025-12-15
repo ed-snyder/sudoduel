@@ -269,7 +269,7 @@ const TutorialOverlayComponent = memo(function TutorialOverlayComponent({
       onClick={onTap}
     >
       {/* Dimmed backdrop */}
-      <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" style={{ willChange: 'opacity' }} />
+      <div className="absolute inset-0 bg-void/95" style={{ willChange: 'opacity' }} />
       
       {/* Highlight box (if provided) */}
       {highlightBox && (

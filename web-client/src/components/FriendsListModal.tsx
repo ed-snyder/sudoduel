@@ -296,7 +296,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-void/95" />
         
         <div 
           className="relative bg-surface border border-grid-line rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
@@ -346,7 +346,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
     
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-void/95" />
         
         <div 
           className="relative bg-surface border-2 border-player rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
@@ -415,7 +415,7 @@ export default function FriendsListModal({ isOpen, onClose, onMatchFound }: Frie
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       <div 
         className="relative bg-surface border border-grid-line rounded-xl w-full max-w-sm overflow-hidden animate-scale-in max-h-[80vh] flex flex-col"

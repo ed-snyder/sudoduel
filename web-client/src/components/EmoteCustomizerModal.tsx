@@ -97,7 +97,7 @@ export default function EmoteCustomizerModal({ isOpen, onClose, isPremium = fals
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       {/* Modal */}
       <div 

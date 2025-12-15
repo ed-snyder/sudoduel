@@ -97,7 +97,7 @@ export default function StatsModal({ isOpen, onClose }: StatsModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-void/95 flex items-center justify-center z-50 p-4 animate-fade-in">
       <div 
         className="bg-surface border-2 border-opponent rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-scale-in"
         style={{ 

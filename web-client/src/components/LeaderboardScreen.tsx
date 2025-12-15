@@ -58,7 +58,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 z-40 bg-void/80 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-void/95"
         onClick={onClose}
       />
       

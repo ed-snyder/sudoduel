@@ -106,7 +106,7 @@ export default function UpgradeModal() {
       onClick={closeUpgradeModal}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-void/95 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       {/* Modal */}
       <div 

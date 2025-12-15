@@ -1235,7 +1235,7 @@ export default function ResultScreen({
                   {showEmotePicker && (
                     <div 
                       className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50
-                                 bg-surface/95 backdrop-blur-md rounded-xl p-3
+                                 bg-surface rounded-xl p-3
                                  border-2 border-purple/50"
                       style={{
                         boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)',
@@ -1358,7 +1358,7 @@ export default function ResultScreen({
           onClick={() => setShowOpponentModal(false)}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-void/95" />
           
           {/* Modal */}
           <div 

@@ -71,7 +71,7 @@ export default function ReportModal({
       onClick={handleBackdropClick}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-void/90 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-void/95" />
       
       {/* Modal */}
       <div 
