@@ -447,6 +447,7 @@ function SudokuGrid({
                           WebkitUserSelect: 'none',
                           userSelect: 'none',
                           pointerEvents: 'none',
+                          transform: 'translateY(-4%)',
                           ...(shouldAnimateNumber && animationDelay !== null ? {
                             animationDelay: `${animationDelay}s`,
                             animationFillMode: 'forwards',
