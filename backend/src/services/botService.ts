@@ -243,25 +243,30 @@ export function selectMove(
 
   if (emptyCells.length === 0) return null;
 
+  // ALWAYS prioritize forced moves (1 candidate) - highest intelligence move
+  // Forced moves are ALWAYS correct (no mistakes on obvious moves)
+  const forcedMoves = emptyCells.filter(c => c.candidates === 1);
+  if (forcedMoves.length > 0) {
+    // Always pick forced moves correctly if available (highest priority, regardless of optimalChance)
+    const forcedCell = forcedMoves[Math.floor(Math.random() * forcedMoves.length)];
+    return {
+      row: forcedCell.row,
+      col: forcedCell.col,
+      value: solutionGrid[forcedCell.row][forcedCell.col] // Always correct for forced moves
+    };
+  }
+
+  // Sort by candidate count (fewest first)
+  emptyCells.sort((a, b) => a.candidates - b.candidates);
+  const minCandidates = emptyCells[0].candidates;
+  
   // Decide: optimal (fewest candidates) or random
   let selectedCell: { row: number; col: number };
   
   if (Math.random() < optimalChance) {
-    // Optimal: pick cell with fewest candidates
-    emptyCells.sort((a, b) => a.candidates - b.candidates);
-    const minCandidates = emptyCells[0].candidates;
-    
-    // For high intelligence: prioritize cells with 1 candidate (forced moves)
-    // Then 2 candidates, then 3, etc.
-    const forcedMoves = emptyCells.filter(c => c.candidates === 1);
-    if (forcedMoves.length > 0) {
-      // Always pick forced moves if available (highest priority)
-      selectedCell = forcedMoves[Math.floor(Math.random() * forcedMoves.length)];
-    } else {
-      // Pick from cells with fewest candidates
-      const optimalCells = emptyCells.filter(c => c.candidates === minCandidates);
-      selectedCell = optimalCells[Math.floor(Math.random() * optimalCells.length)];
-    }
+    // Optimal: pick from cells with fewest candidates
+    const optimalCells = emptyCells.filter(c => c.candidates === minCandidates);
+    selectedCell = optimalCells[Math.floor(Math.random() * optimalCells.length)];
   } else {
     // Random: pick any empty cell (only happens rarely for lower-rated bots)
     selectedCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
@@ -270,8 +275,13 @@ export function selectMove(
   const { row, col } = selectedCell;
   const correctValue = solutionGrid[row][col];
 
-  // Decide: mistake or correct
-  if (Math.random() < mistakeRate) {
+  // Decide: mistake or correct (but never make mistakes on cells with 2 candidates for high-rated bots)
+  const cellCandidates = emptyCells.find(c => c.row === row && c.col === col)?.candidates || 9;
+  
+  // High-rated bots (1500+) should never make mistakes on cells with 2 or fewer candidates
+  const shouldMakeMistake = cellCandidates > 2 && Math.random() < mistakeRate;
+  
+  if (shouldMakeMistake) {
     // Make a mistake: pick wrong value (1-9, excluding correct)
     const wrongValues = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(v => v !== correctValue);
     const wrongValue = wrongValues[Math.floor(Math.random() * wrongValues.length)];
