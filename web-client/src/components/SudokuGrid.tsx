@@ -19,6 +19,8 @@ interface SudokuGridProps {
   erroredCells?: Set<string>;
   animateIn?: boolean; // NEW: Whether to play draw-in animation
   countdownPhase?: 'hidden' | 'countdown' | 'go' | 'complete'; // NEW: Track countdown phase
+  // Text to show for correct cell feedback (e.g. "+1!" or "+5s!")
+  correctFeedbackText?: string;
 }
 
 interface FloatingFeedback {
@@ -93,6 +95,7 @@ function SudokuGrid({
   erroredCells = new Set(),
   animateIn = false,
   countdownPhase = 'complete',
+  correctFeedbackText = '+1!',
 }: SudokuGridProps) {
 
   // Pre-initialize error audio context on first user interaction
@@ -258,7 +261,7 @@ function SudokuGrid({
     if (correct) {
       // Limit feedback array size to prevent memory growth
       setFloatingFeedbacks((prev) => {
-        const newFeedback = { id: feedbackId, row, col, text: '+1!', correct: true, streak: currentStreak };
+        const newFeedback = { id: feedbackId, row, col, text: correctFeedbackText, correct: true, streak: currentStreak };
         const updated = [...prev, newFeedback];
         // Keep only last 10 feedbacks max
         return updated.slice(-10);

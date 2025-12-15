@@ -2442,6 +2442,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 almostCompleteCells={almostCompleteCells}
                 currentStreak={myStreakRef.current}
                 erroredCells={erroredCells}
+                correctFeedbackText="+5s!"
               />
             </div>
           )}
