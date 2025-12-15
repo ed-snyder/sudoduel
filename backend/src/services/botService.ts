@@ -26,35 +26,36 @@ const LEGACY_BOT_CONFIG = {
 
 /**
  * Calculate base time per move based on rating
- * Rating 1000 → 6s, Rating 1500 → 2s, Rating 1800 → 0.5s
- * Much faster for competitive gameplay
+ * Rating 1000 → 3s, Rating 1500 → 0.8s, Rating 1800 → 0.2s
+ * Much faster for competitive gameplay - bots above 1000 are very fast
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
   // Exponential formula: much faster at higher ratings
-  // Base: 6s at 1000, scales down to 0.5s at 1800
+  // Base: 3s at 1000, scales down to 0.2s at 1800
   const normalized = (r - 1000) / 800; // 0 to 1
-  const baseTime = 6 * Math.pow(1/12, normalized); // Exponential decay: 6 * (1/12)^normalized
-  return Math.max(0.5, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 0.5s
+  const baseTime = 3 * Math.pow(1/15, normalized); // Exponential decay: 3 * (1/15)^normalized
+  return Math.max(0.2, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 0.2s
 }
 
 /**
  * Calculate mistake rate based on rating
- * Rating 1000 → 30%, Rating 1500 → 12%, Rating 1800 → 2%
+ * Rating 1000 → 15%, Rating 1500 → 3%, Rating 1800 → 0.5%
+ * Much lower mistake rates for smarter bots above 1000
  */
 function calculateMistakeRate(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  return Math.max(0.02, Math.min(0.30, 0.30 - (r - 1000) * 0.00035));
+  return Math.max(0.005, Math.min(0.15, 0.15 - (r - 1000) * 0.00018125));
 }
 
 /**
  * Calculate optimal cell selection chance based on rating
- * Rating 1000 → 30%, Rating 1500 → 75%, Rating 1800 → 98%
- * Higher optimal selection for harder opponents
+ * Rating 1000 → 60%, Rating 1500 → 90%, Rating 1800 → 99%
+ * Much higher optimal selection - bots above 1000 are very intelligent
  */
 function calculateOptimalChance(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  return Math.max(0.30, Math.min(0.98, 0.30 + (r - 1000) * 0.00085));
+  return Math.max(0.60, Math.min(0.99, 0.60 + (r - 1000) * 0.0004875));
 }
 
 // ============================================================
@@ -249,10 +250,20 @@ export function selectMove(
     // Optimal: pick cell with fewest candidates
     emptyCells.sort((a, b) => a.candidates - b.candidates);
     const minCandidates = emptyCells[0].candidates;
-    const optimalCells = emptyCells.filter(c => c.candidates === minCandidates);
-    selectedCell = optimalCells[Math.floor(Math.random() * optimalCells.length)];
+    
+    // For high intelligence: prioritize cells with 1 candidate (forced moves)
+    // Then 2 candidates, then 3, etc.
+    const forcedMoves = emptyCells.filter(c => c.candidates === 1);
+    if (forcedMoves.length > 0) {
+      // Always pick forced moves if available (highest priority)
+      selectedCell = forcedMoves[Math.floor(Math.random() * forcedMoves.length)];
+    } else {
+      // Pick from cells with fewest candidates
+      const optimalCells = emptyCells.filter(c => c.candidates === minCandidates);
+      selectedCell = optimalCells[Math.floor(Math.random() * optimalCells.length)];
+    }
   } else {
-    // Random: pick any empty cell
+    // Random: pick any empty cell (only happens rarely for lower-rated bots)
     selectedCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
   }
 
@@ -359,7 +370,7 @@ function scheduleNextMove(
   const streakState = botStreaks.get(matchId);
   if (streakState) {
       if (streakState.isHotStreak && streakState.streakMovesRemaining > 0) {
-        delaySeconds = baseTime * 0.4; // 40% of base time (very fast hot streaks)
+        delaySeconds = baseTime * 0.3; // 30% of base time (extremely fast hot streaks)
       streakState.streakMovesRemaining--;
       if (streakState.streakMovesRemaining === 0) {
         streakState.isHotStreak = false;
@@ -372,23 +383,23 @@ function scheduleNextMove(
       }
     } else {
       // Check for new streak
-      if (Math.random() < 0.20) {
-        // Hot streak: 20% chance (increased for more frequent fast moves)
+      if (Math.random() < 0.25) {
+        // Hot streak: 25% chance (more frequent fast moves for competitive bots)
         streakState.isHotStreak = true;
         streakState.streakMovesRemaining = 3 + Math.floor(Math.random() * 3); // 3-5 moves
-        delaySeconds = baseTime * 0.4; // 40% of base time (very fast hot streaks)
-      } else if (Math.random() < 0.05) {
-        // Cold streak: 5% chance (reduced - bots should be fast)
+        delaySeconds = baseTime * 0.3; // 30% of base time (extremely fast hot streaks)
+      } else if (Math.random() < 0.03) {
+        // Cold streak: 3% chance (very rare - bots should be fast)
         streakState.isColdStreak = true;
         streakState.streakMovesRemaining = 2 + Math.floor(Math.random() * 2); // 2-3 moves
-        delaySeconds = baseTime * 1.3; // Reduced from 1.5x
+        delaySeconds = baseTime * 1.2; // Reduced from 1.3x
       }
     }
   }
 
-  // Apply ±20% variance (tighter for more consistent, faster gameplay)
-  delaySeconds = delaySeconds * (0.8 + Math.random() * 0.4);
-  const delayMs = Math.max(300, Math.round(delaySeconds * 1000)); // Minimum 0.3 seconds
+  // Apply ±15% variance (very tight for consistent, fast gameplay)
+  delaySeconds = delaySeconds * (0.85 + Math.random() * 0.3);
+  const delayMs = Math.max(150, Math.round(delaySeconds * 1000)); // Minimum 0.15 seconds
 
   // Schedule the move
   const timer = setTimeout(() => {
