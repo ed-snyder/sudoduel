@@ -26,16 +26,16 @@ const LEGACY_BOT_CONFIG = {
 
 /**
  * Calculate base time per move based on rating
- * Rating 1000 → 1.5s, Rating 1500 → 0.4s, Rating 1800 → 0.1s
+ * Rating 1000 → 0.8s, Rating 1500 → 0.2s, Rating 1800 → 0.05s
  * Much faster for competitive gameplay - bots above 1000 are very fast
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
   // Exponential formula: much faster at higher ratings
-  // Base: 1.5s at 1000, scales down to 0.1s at 1800
+  // Base: 0.8s at 1000, scales down to 0.05s at 1800
   const normalized = (r - 1000) / 800; // 0 to 1
-  const baseTime = 1.5 * Math.pow(1/15, normalized); // Exponential decay: 1.5 * (1/15)^normalized
-  return Math.max(0.1, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 0.1s
+  const baseTime = 0.8 * Math.pow(1/16, normalized); // Exponential decay: 0.8 * (1/16)^normalized
+  return Math.max(0.05, Math.round(baseTime * 100) / 100); // Round to 0.01s, min 0.05s
 }
 
 /**
@@ -166,7 +166,8 @@ export function startBotLoop(
   onBotMove: (matchId: number, botPlayerId: number, row: number, col: number, value: number) => void,
   onGameEnd: () => void
 ): void {
-  console.log(`🤖 Starting bot loop for match ${matchId}, bot ${botPlayerId} (rating: ${Math.round(botRating)})`);
+  const baseTime = calculateBaseTime(botRating);
+  console.log(`🤖 Starting bot loop for match ${matchId}, bot ${botPlayerId} (rating: ${Math.round(botRating)}, baseTime: ${baseTime.toFixed(2)}s)`);
 
   // Initialize bot state
   botMatchStates.set(matchId, {
@@ -412,9 +413,9 @@ function scheduleNextMove(
     }
   }
 
-  // Apply ±10% variance (very tight for consistent, fast gameplay)
-  delaySeconds = delaySeconds * (0.9 + Math.random() * 0.2);
-  const delayMs = Math.max(100, Math.round(delaySeconds * 1000)); // Minimum 0.1 seconds
+  // Apply ±5% variance (very tight for consistent, fast gameplay)
+  delaySeconds = delaySeconds * (0.95 + Math.random() * 0.1);
+  const delayMs = Math.max(50, Math.round(delaySeconds * 1000)); // Minimum 0.05 seconds
   
   // Debug logging for high-rated bots
   if (state.botRating >= 1500) {
