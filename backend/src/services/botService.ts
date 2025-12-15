@@ -26,11 +26,16 @@ const LEGACY_BOT_CONFIG = {
 
 /**
  * Calculate base time per move based on rating
- * Rating 1000 → 28s, Rating 1500 → 12s, Rating 1800 → 3s
+ * Rating 1000 → 12s, Rating 1500 → 4s, Rating 1800 → 1s
+ * Uses exponential curve for faster scaling at higher ratings
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  return Math.max(3, 28 - (r - 1000) * 0.03125);
+  // Exponential formula: faster at higher ratings
+  // Base: 12s at 1000, scales down to 1s at 1800
+  const normalized = (r - 1000) / 800; // 0 to 1
+  const baseTime = 12 * Math.pow(1/12, normalized); // Exponential decay: 12 * (1/12)^normalized
+  return Math.max(1, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 1s
 }
 
 /**
@@ -352,8 +357,8 @@ function scheduleNextMove(
   // Apply streak modifiers
   const streakState = botStreaks.get(matchId);
   if (streakState) {
-    if (streakState.isHotStreak && streakState.streakMovesRemaining > 0) {
-      delaySeconds = baseTime * 0.6; // 60% of base time
+      if (streakState.isHotStreak && streakState.streakMovesRemaining > 0) {
+        delaySeconds = baseTime * 0.5; // 50% of base time (faster hot streaks)
       streakState.streakMovesRemaining--;
       if (streakState.streakMovesRemaining === 0) {
         streakState.isHotStreak = false;
@@ -370,7 +375,7 @@ function scheduleNextMove(
         // Hot streak: 15% chance
         streakState.isHotStreak = true;
         streakState.streakMovesRemaining = 3 + Math.floor(Math.random() * 3); // 3-5 moves
-        delaySeconds = baseTime * 0.6;
+        delaySeconds = baseTime * 0.5; // 50% of base time (faster hot streaks)
       } else if (Math.random() < 0.10) {
         // Cold streak: 10% chance
         streakState.isColdStreak = true;
@@ -380,9 +385,9 @@ function scheduleNextMove(
     }
   }
 
-  // Apply ±40% variance
-  delaySeconds = delaySeconds * (0.6 + Math.random() * 0.8);
-  const delayMs = Math.max(1000, Math.round(delaySeconds * 1000)); // Minimum 1 second
+  // Apply ±30% variance (reduced from ±40% for more consistent speed)
+  delaySeconds = delaySeconds * (0.7 + Math.random() * 0.6);
+  const delayMs = Math.max(500, Math.round(delaySeconds * 1000)); // Minimum 0.5 seconds
 
   // Schedule the move
   const timer = setTimeout(() => {
