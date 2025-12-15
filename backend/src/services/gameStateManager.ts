@@ -131,7 +131,7 @@ export const GameStateManager = {
       }
 
       // Normal gameplay - decrement timers for non-locked, non-solved players
-      const isBotMatch = Number(game.player2.playerId) === -1;
+      const isBotMatch = Number(game.player2.playerId) === -1 || Number(game.player1.playerId) === -1;
       
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
         game.player1.timeRemaining--;
@@ -148,6 +148,20 @@ export const GameStateManager = {
         if (game.player2.timeRemaining <= 0) {
           game.player2.isLocked = true;
         }
+      }
+
+      // Special case: Sudobot matches – if BOTH timers have reached 0, auto-end as a human victory.
+      if (isBotMatch && game.player1.timeRemaining <= 0 && game.player2.timeRemaining <= 0) {
+        console.log(
+          `🤖 Bot match ${game.matchId}: BOTH timers reached 0, forcing game end (human victory rule)`
+        );
+        // Let getFinalResults decide the winner (human) based on this state.
+        if (game.timerInterval) {
+          clearInterval(game.timerInterval);
+          game.timerInterval = null;
+        }
+        onTimeout(matchId);
+        return;
       }
 
       // Check if game should end (both locked or one solved)
@@ -473,24 +487,34 @@ export const GameStateManager = {
                           (game.disconnectedPlayerId != null && game.disconnectTime != null && (Date.now() - game.disconnectTime >= 15000));
     
     if (!hasAnyForfeit) {
-    // Win condition 1: Puzzle solved
-    if (p1.isSolved && !p2.isSolved) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.isSolved && !p1.isSolved) {
-      winnerId = p2.playerId;
-      resultCode = 2;
-    } 
-    // Win condition 2-4: Score comparison (higher score wins, draw if equal)
-    else if (p1.score > p2.score) {
-      winnerId = p1.playerId;
-      resultCode = 1;
-    } else if (p2.score > p1.score) {
-      winnerId = p2.playerId;
-      resultCode = 2;
-    } else {
-      // Equal scores = draw
-      resultCode = 3;
+      const isBotMatch = Number(p1.playerId) === -1 || Number(p2.playerId) === -1;
+      // Special case: Sudobot match where BOTH timers have reached 0 → human wins, even if scores are tied or behind.
+      if (isBotMatch && p1.timeRemaining <= 0 && p2.timeRemaining <= 0) {
+        const humanPlayer = Number(p1.playerId) === -1 ? p2 : p1;
+        winnerId = humanPlayer.playerId;
+        resultCode = humanPlayer === p1 ? 1 : 2;
+        console.log(
+          `[GameState] Bot match timeout: both timers 0, forcing human victory (winnerId=${winnerId}, resultCode=${resultCode})`
+        );
+      }
+      // Win condition 1: Puzzle solved
+      else if (p1.isSolved && !p2.isSolved) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.isSolved && !p1.isSolved) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } 
+      // Win condition 2-4: Score comparison (higher score wins, draw if equal)
+      else if (p1.score > p2.score) {
+        winnerId = p1.playerId;
+        resultCode = 1;
+      } else if (p2.score > p1.score) {
+        winnerId = p2.playerId;
+        resultCode = 2;
+      } else {
+        // Equal scores = draw
+        resultCode = 3;
       }
     } else {
       // Forfeit occurred but wasn't caught above - this shouldn't happen, but handle it
