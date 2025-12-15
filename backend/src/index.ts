@@ -14,7 +14,6 @@ import dailyRoutes from './routes/daily';
 import { setupWebSocketServer } from './services/websocketServer';
 import { warmupDatabase } from './config/database';
 import { cache } from './services/cacheService';
-import { apiLimiter, authLimiter, matchmakingLimiter } from './middleware/rateLimit';
 import './config/database';
 
 dotenv.config();
@@ -70,11 +69,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// Rate limiting (BEFORE routes)
-app.use('/api/auth', authLimiter);
-app.use('/api/matchmaking', matchmakingLimiter);
-app.use('/api', apiLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
