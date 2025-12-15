@@ -923,7 +923,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         break;
 
       case 'MOVE_RESULT':
-        const { player_id, slot, row, col, value, correct, player_state, game_ended, timer_update } = message.data;
+        const { player_id, slot, row, col, value, correct, player_state, opponent_state, game_ended, timer_update } = message.data;
         const myPlayerId = user?.id;
 
         // Prefer authoritative identity by player_id (player_profiles.id) from backend
@@ -990,6 +990,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               newSet.delete(cellKey);
               return newSet;
             });
+          }
+          
+          // Update opponent state if provided (so opponent sees their own updates when player moves)
+          if (opponent_state) {
+            setOpponentState(opponent_state);
           }
         } else {
           // Update opponent state only (not their grid - we can't see it!)

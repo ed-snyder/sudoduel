@@ -4,7 +4,7 @@ import { MatchmakingQueueModel } from '../models/MatchmakingQueue';
 import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
 import { query } from '../config/database';
-import { createBotPlayer, getBotDisplayName, getBotDisplayRating } from './botService';
+import { createBotPlayer, getBotDisplayName, getBotDisplayRating, findBotNearRating } from './botService';
 
 const DEFAULT_LADDER_ID = 1;
 // Rating window is now handled by bands in MatchmakingQueueModel:
@@ -12,8 +12,17 @@ const DEFAULT_LADDER_ID = 1;
 // This constant is kept for backwards compatibility and as a max window hint.
 const RATING_WINDOW = 1000;
 
+// Bot spawn delay: spawn bot after 12 seconds in queue
+const BOT_SPAWN_DELAY_MS = 12000;
+
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId
+
+// Queue timers: track 12-second timers for bot spawning
+const queueTimers = new Map<number, NodeJS.Timeout>(); // playerId -> timer
+
+// Bot matches: track which matches are bot matches and bot info
+const botMatches = new Map<number, { botPlayerId: number; botRating: number }>(); // matchId -> bot info
 
 // Helper function to check if this is the player's first match ever
 async function isFirstMatch(playerId: number): Promise<boolean> {
@@ -145,6 +154,12 @@ export const MatchmakingService = {
       console.log(`✅ Match found while processing: ${matchId}`);
       // Remove from queue since we're matched
       await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+      // Cancel bot spawn timer if it exists
+      const timer = queueTimers.get(profile.id);
+      if (timer) {
+        clearTimeout(timer);
+        queueTimers.delete(profile.id);
+      }
       return { status: 'matched', match_id: matchId };
     }
 
@@ -165,6 +180,12 @@ export const MatchmakingService = {
         // Opponent already matched, join their match
         playerMatches.set(profile.id, matchId);
         await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
+        // Cancel bot spawn timer if it exists
+        const timer = queueTimers.get(profile.id);
+        if (timer) {
+          clearTimeout(timer);
+          queueTimers.delete(profile.id);
+        }
         return { status: 'matched', match_id: matchId };
       }
 
@@ -180,8 +201,34 @@ export const MatchmakingService = {
       await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
       await MatchmakingQueueModel.dequeue(opponentAfterEnqueue.player_id, DEFAULT_LADDER_ID);
       
+      // Cancel bot spawn timer if it exists
+      const timer = queueTimers.get(profile.id);
+      if (timer) {
+        clearTimeout(timer);
+        queueTimers.delete(profile.id);
+      }
+      
       return { status: 'matched', match_id: match.id };
     }
+
+    // No human opponent found - start 12-second timer to spawn bot
+    console.log(`⏱️ Starting ${BOT_SPAWN_DELAY_MS}ms timer for bot spawn (player ${profile.id})`);
+    const botTimer = setTimeout(async () => {
+      // Check if player still in queue and doesn't have a match
+      const stillInQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
+      const hasMatch = playerMatches.has(profile.id);
+      
+      if (stillInQueue && !hasMatch) {
+        console.log(`🤖 Timer expired, spawning bot for player ${profile.id}`);
+        await this.spawnBotOpponent(profile.id, playerRating);
+      } else {
+        console.log(`⏱️ Timer expired but player ${profile.id} no longer needs bot (inQueue=${stillInQueue}, hasMatch=${hasMatch})`);
+      }
+      
+      queueTimers.delete(profile.id);
+    }, BOT_SPAWN_DELAY_MS);
+    
+    queueTimers.set(profile.id, botTimer);
 
     return { status: 'queued', message: 'Waiting for opponent...' };
   },
@@ -194,6 +241,13 @@ export const MatchmakingService = {
 
     await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
     playerMatches.delete(profile.id);
+    
+    // Cancel bot spawn timer if it exists
+    const timer = queueTimers.get(profile.id);
+    if (timer) {
+      clearTimeout(timer);
+      queueTimers.delete(profile.id);
+    }
     
     return { status: 'left_queue' };
   },
@@ -347,4 +401,37 @@ export const MatchmakingService = {
     console.log(`✅ Bot match ${match.id} created for player ${playerId}`);
     return match;
   },
+
+  // Spawn a bot opponent after 12 seconds in queue
+  async spawnBotOpponent(humanPlayerId: number, humanRating: number) {
+    const bot = await findBotNearRating(humanRating);
+    if (!bot) {
+      console.error(`❌ No bot found for rating ${humanRating}`);
+      return null;
+    }
+
+    console.log(`🤖 Spawning bot ${bot.displayName} (rating: ${Math.round(bot.rating)}) for player ${humanPlayerId}`);
+
+    // Use existing createMatch - bot is a real player
+    const match = await this.createMatch(humanPlayerId, bot.playerId);
+
+    playerMatches.set(humanPlayerId, match.id);
+    await MatchmakingQueueModel.dequeue(humanPlayerId, DEFAULT_LADDER_ID);
+
+    botMatches.set(match.id, {
+      botPlayerId: bot.playerId,
+      botRating: bot.rating,
+    });
+
+    return match;
+  },
 };
+
+// Export helper functions for websocket server
+export function getBotMatchInfo(matchId: number) {
+  return botMatches.get(matchId);
+}
+
+export function clearBotMatchInfo(matchId: number) {
+  botMatches.delete(matchId);
+}
