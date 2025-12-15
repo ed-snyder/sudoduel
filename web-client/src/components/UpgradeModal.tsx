@@ -14,12 +14,18 @@ export default function UpgradeModal() {
   // Initialize purchase service and load prices when modal opens
   useEffect(() => {
     if (isUpgradeModalOpen) {
+      // FIXED: Reset processing states when modal opens
+      setIsProcessing(false);
+      setIsRestoring(false);
       setError(null);
       setIsLoading(true);
       
       const loadProducts = async () => {
         try {
           await purchaseService.initialize();
+          
+          // FIXED: Reset any stuck purchase state
+          purchaseService.resetPurchaseState();
           
           const monthly = purchaseService.getProduct(PRODUCT_IDS.MONTHLY);
           const yearly = purchaseService.getProduct(PRODUCT_IDS.YEARLY);

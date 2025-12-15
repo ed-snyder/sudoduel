@@ -236,15 +236,24 @@ class PurchaseServiceImpl {
           })
           .catch((err: any) => {
             console.log('[PurchaseService] order() rejected:', err);
-            // Don't resolve here - the finished callback will handle it
-            // unless it's a real error (user cancelled, etc)
-            if (err && globalPurchaseResolver === resolve) {
-              const errorMsg = err.message || String(err);
-              if (errorMsg.includes('cancel') || errorMsg.includes('Cancel')) {
-                clearTimeout(timeoutId);
-                globalPurchaseResolver = null;
-                pendingProductId = null;
+            
+            // FIXED: Always resolve on rejection, not just for "cancel"
+            const errorMsg = err?.message || String(err) || '';
+            
+            clearTimeout(timeoutId);
+            if (globalPurchaseResolver === resolve) {
+              globalPurchaseResolver = null;
+              pendingProductId = null;
+              
+              const lowerMsg = errorMsg.toLowerCase();
+              if (lowerMsg.includes('cancel') || 
+                  lowerMsg.includes('cancelled') ||
+                  lowerMsg.includes('user')) {
                 resolve({ success: false, error: 'Purchase cancelled.' });
+              } else if (lowerMsg.includes('payment')) {
+                resolve({ success: false, error: 'Payment failed. Please try again.' });
+              } else {
+                resolve({ success: false, error: errorMsg || 'Purchase failed. Please try again.' });
               }
             }
           });
@@ -292,6 +301,12 @@ class PurchaseServiceImpl {
     const monthly = this.rawProducts.get(PRODUCT_IDS.MONTHLY);
     const yearly = this.rawProducts.get(PRODUCT_IDS.YEARLY);
     return monthly?.owned === true || yearly?.owned === true;
+  }
+
+  resetPurchaseState(): void {
+    console.log('[PurchaseService] Resetting purchase state');
+    globalPurchaseResolver = null;
+    pendingProductId = null;
   }
 }
 
