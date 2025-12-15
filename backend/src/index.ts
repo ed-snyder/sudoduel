@@ -14,12 +14,16 @@ import dailyRoutes from './routes/daily';
 import { setupWebSocketServer } from './services/websocketServer';
 import { warmupDatabase } from './config/database';
 import { cache } from './services/cacheService';
+import { apiLimiter, authLimiter, matchmakingLimiter } from './middleware/rateLimit';
 import './config/database';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy (for production behind load balancer)
+app.set('trust proxy', 1);
 
 // CORS configuration
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -66,6 +70,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Rate limiting (BEFORE routes)
+app.use('/api/auth', authLimiter);
+app.use('/api/matchmaking', matchmakingLimiter);
+app.use('/api', apiLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
