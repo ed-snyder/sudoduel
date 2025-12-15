@@ -29,15 +29,34 @@ export const UserModel = {
   // Create a guest user
   async createGuest(guestId: string): Promise<User> {
     const email = `guest_${guestId}@sudoduel.local`;
-    const username = `Guest_${guestId.substring(0, 6)}`;
+    let username = `Guest_${guestId.substring(0, 6)}`;
+    let attempts = 0;
+    const maxAttempts = 10;
     
-    const result = await query(
-      `INSERT INTO users (email, username, is_guest, auth_provider)
-       VALUES ($1, $2, true, 'guest')
-       RETURNING *`,
-      [email, username]
-    );
-    return result.rows[0];
+    while (attempts < maxAttempts) {
+      try {
+        const result = await query(
+          `INSERT INTO users (email, username, is_guest, auth_provider)
+           VALUES ($1, $2, true, 'guest')
+           RETURNING *`,
+          [email, username]
+        );
+        return result.rows[0];
+      } catch (error: any) {
+        // Check if it's a duplicate username error
+        if (error.code === '23505' && error.constraint === 'users_username_key') {
+          // Generate a new username with random suffix
+          const randomSuffix = Math.floor(Math.random() * 10000);
+          username = `Guest_${randomSuffix}`;
+          attempts++;
+        } else {
+          // Re-throw other errors
+          throw error;
+        }
+      }
+    }
+    
+    throw new Error('Failed to generate unique guest username after multiple attempts');
   },
 
   // Create a user via OAuth provider
@@ -50,13 +69,36 @@ export const UserModel = {
     const googleId = provider === 'google' ? providerId : null;
     const appleId = provider === 'apple' ? providerId : null;
     
-    const result = await query(
-      `INSERT INTO users (email, username, google_id, apple_id, auth_provider, is_guest)
-       VALUES ($1, $2, $3, $4, $5, false)
-       RETURNING *`,
-      [email, displayName, googleId, appleId, provider]
-    );
-    return result.rows[0];
+    // Generate a unique username - try displayName first, then add random suffix if taken
+    let username = displayName;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const result = await query(
+          `INSERT INTO users (email, username, google_id, apple_id, auth_provider, is_guest)
+           VALUES ($1, $2, $3, $4, $5, false)
+           RETURNING *`,
+          [email, username, googleId, appleId, provider]
+        );
+        return result.rows[0];
+      } catch (error: any) {
+        // Check if it's a duplicate username error
+        if (error.code === '23505' && error.constraint === 'users_username_key') {
+          // Generate a new username with random suffix
+          const randomSuffix = Math.floor(Math.random() * 10000);
+          username = `${displayName.slice(0, 10)}${randomSuffix}`;
+          attempts++;
+        } else {
+          // Re-throw other errors
+          throw error;
+        }
+      }
+    }
+    
+    // If we've exhausted attempts, throw an error
+    throw new Error('Failed to generate unique username after multiple attempts');
   },
 
   // Find user by email
