@@ -472,12 +472,16 @@ function makeBotMove(
   );
 
   if (move) {
-    console.log(`🤖 Bot ${state.botPlayerId} making move: row=${move.row}, col=${move.col}, value=${move.value}`);
+    const totalTime = Date.now() - startTime;
+    console.log(`🤖 Bot making move in match ${matchId}: row=${move.row}, col=${move.col}, value=${move.value}, isMistake=${move.value !== game.solutionGrid[move.row][move.col]}, totalTime=${totalTime}ms`);
     onBotMove(matchId, state.botPlayerId, move.row, move.col, move.value);
+    
+    // Schedule next move
+    scheduleNextMove(matchId, onBotMove, onGameEnd);
+  } else {
+    console.log(`🤖 [MATCH ${matchId}] No valid move found for bot`);
+    stopBotLoop(matchId);
   }
-
-  // Schedule next move
-  scheduleNextMove(matchId, onBotMove, onGameEnd);
 }
 
 // ============================================================
