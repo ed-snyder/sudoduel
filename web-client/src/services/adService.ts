@@ -14,9 +14,8 @@ const AD_CONFIG = {
   },
 };
 
-// TODO: Revert after AdMob account is approved (24-48 hours)
-// const USE_TEST_ADS = import.meta.env.DEV || import.meta.env.MODE === 'development';
-const USE_TEST_ADS = true;
+// Use test ads only in development mode
+const USE_TEST_ADS = import.meta.env.DEV;
 
 interface AdService {
   initialize: () => Promise<void>;
