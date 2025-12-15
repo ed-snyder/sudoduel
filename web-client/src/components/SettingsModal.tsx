@@ -248,6 +248,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             >
               Terms of Service ↗
             </a>
+            
+            <a
+              href="mailto:support@axolabs.io"
+              className="block w-full py-3 px-4 rounded-xl font-body text-sm text-secondary text-left transition-all active:scale-[0.98]"
+              style={{ background: 'rgba(26, 6, 64, 0.4)' }}
+            >
+              Contact: support@axolabs.io
+            </a>
           </div>
 
           {/* About */}
