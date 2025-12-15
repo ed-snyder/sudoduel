@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { GameStateManager } from './gameStateManager';
 import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
@@ -182,16 +183,17 @@ export const setupWebSocketServer = (server: Server) => {
                             (isBotMatch && ((opponentRow as any).is_bot || !opponentRow.player_id));
 
       if (isOpponentBot) {
-        // Bot opponent
+        // Bot opponent - generate random name each match for variety
         if (botMatch) {
-          // Queue-based bot: get info from bot match
-          const botProfile = await PlayerProfileModel.findById(botMatch.botPlayerId);
+          // Queue-based bot: generate random Guest-style name
+          const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
+          opponentName = `Guest_${randomId}`;
           const botRating = await PlayerRatingModel.findByPlayerAndLadder(botMatch.botPlayerId, 1);
-          opponentName = botProfile?.display_name || 'Bot';
           opponentRatingValue = botRating?.rating || botMatch.botRating;
         } else {
-          // Legacy bot match
-          opponentName = getBotDisplayName();
+          // Legacy bot match - also generate random name
+          const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
+          opponentName = `Guest_${randomId}`;
           opponentRatingValue = getBotDisplayRating();
         }
         opponentIsPremium = false;

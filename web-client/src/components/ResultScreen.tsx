@@ -956,14 +956,6 @@ export default function ResultScreen({
           </span>
         </div>
 
-        {/* Bot match message - shown for first-time players after beating the tutorial bot */}
-        {isBotMatch && didWin && (
-          <div className="text-center mb-4" style={{ position: 'relative', zIndex: 40 }}>
-            <p className="text-secondary text-base font-body">
-              Great job! You&apos;re ready for real opponents. 🎮
-            </p>
-          </div>
-        )}
 
         {/* Score comparison with equal-sized name boxes */}
         <div className="flex items-center justify-between w-full px-0 mb-6" style={{ position: 'relative', zIndex: 40 }}>
