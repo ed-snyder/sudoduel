@@ -90,24 +90,6 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
         <div className="w-8" /> {/* Spacer for centering */}
       </div>
 
-      {/* Season Info Banner */}
-      <div className="px-4 py-3 bg-surface/50 border-b border-grid-line">
-        <div className="flex justify-between text-sm">
-          <div>
-            <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Season: </span>
-            <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Coming Soon</span>
-          </div>
-          <div>
-            <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>League: </span>
-            <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Coming Soon</span>
-          </div>
-        </div>
-        <div className="text-sm mt-1">
-          <span className="text-muted" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>Time Remaining: </span>
-          <span className="text-secondary italic" style={{ fontFamily: "'Industry', 'Orbitron', sans-serif" }}>N/A</span>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (

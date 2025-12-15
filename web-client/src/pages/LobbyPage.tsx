@@ -379,11 +379,6 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
               }`}
             >
               {diff.label}
-              {!diff.available && (
-                <span className="absolute -top-2 -right-2 text-xs px-1.5 py-0.5 bg-elevated border border-grid-line text-muted rounded font-mono">
-                  Soon
-                </span>
-              )}
         </button>
           ))}
         </div>
@@ -398,7 +393,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted font-display text-sm">League</span>
-            <span className="text-secondary font-display text-sm italic">Coming soon to Sudoduel+</span>
+            <span className="text-muted font-display text-sm">—</span>
           </div>
           <button
             onClick={() => {
