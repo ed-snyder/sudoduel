@@ -26,16 +26,16 @@ const LEGACY_BOT_CONFIG = {
 
 /**
  * Calculate base time per move based on rating
- * Rating 1000 → 3s, Rating 1500 → 0.8s, Rating 1800 → 0.2s
+ * Rating 1000 → 1.5s, Rating 1500 → 0.4s, Rating 1800 → 0.1s
  * Much faster for competitive gameplay - bots above 1000 are very fast
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
   // Exponential formula: much faster at higher ratings
-  // Base: 3s at 1000, scales down to 0.2s at 1800
+  // Base: 1.5s at 1000, scales down to 0.1s at 1800
   const normalized = (r - 1000) / 800; // 0 to 1
-  const baseTime = 3 * Math.pow(1/15, normalized); // Exponential decay: 3 * (1/15)^normalized
-  return Math.max(0.2, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 0.2s
+  const baseTime = 1.5 * Math.pow(1/15, normalized); // Exponential decay: 1.5 * (1/15)^normalized
+  return Math.max(0.1, Math.round(baseTime * 10) / 10); // Round to 0.1s, min 0.1s
 }
 
 /**
@@ -375,6 +375,11 @@ function scheduleNextMove(
   // Calculate delay with streak modifiers and variance
   const baseTime = calculateBaseTime(state.botRating);
   let delaySeconds = baseTime;
+  
+  // Debug logging for timing issues
+  if (state.botRating >= 1500) {
+    console.log(`🤖 Bot timing: rating=${Math.round(state.botRating)}, baseTime=${baseTime.toFixed(2)}s`);
+  }
 
   // Apply streak modifiers
   const streakState = botStreaks.get(matchId);
@@ -410,6 +415,11 @@ function scheduleNextMove(
   // Apply ±15% variance (very tight for consistent, fast gameplay)
   delaySeconds = delaySeconds * (0.85 + Math.random() * 0.3);
   const delayMs = Math.max(150, Math.round(delaySeconds * 1000)); // Minimum 0.15 seconds
+  
+  // Debug logging for high-rated bots
+  if (state.botRating >= 1500) {
+    console.log(`🤖 Bot delay: ${delayMs}ms (${(delayMs/1000).toFixed(2)}s) for rating ${Math.round(state.botRating)}`);
+  }
 
   // Schedule the move
   const timer = setTimeout(() => {
