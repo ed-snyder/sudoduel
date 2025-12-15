@@ -451,14 +451,16 @@ export const MatchmakingService = {
       rating2?.volatility || 0.06
     );
 
-    playerMatches.set(humanPlayerId, match.id);
-    await MatchmakingQueueModel.dequeue(humanPlayerId, DEFAULT_LADDER_ID);
-
-    // Store bot match info for WebSocket handler
+    // CRITICAL: Store bot match info BEFORE setting playerMatches
+    // This prevents a race condition where the client connects before bot info is available
     botMatches.set(match.id, {
       botPlayerId: bot.playerId,
       botRating: bot.rating,
     });
+
+    // Now set playerMatches - this triggers the client to connect
+    playerMatches.set(humanPlayerId, match.id);
+    await MatchmakingQueueModel.dequeue(humanPlayerId, DEFAULT_LADDER_ID);
 
     console.log(`✅ Bot match ${match.id} created for player ${humanPlayerId} vs bot ${bot.playerId}`);
     return match;

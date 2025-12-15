@@ -13,6 +13,7 @@ import { MatchmakingService } from './matchmakingService';
 import { cache, CacheKeys } from './cacheService';
 import { HeadToHeadModel } from '../models/HeadToHead';
 import { TIME_BONUS_CORRECT, TIME_PENALTY_INCORRECT, STARTING_TIME_SECONDS } from '../constants';
+import { query } from '../config/database';
 import { 
   initBotState, 
   cleanupBotState, 
@@ -184,17 +185,22 @@ export const setupWebSocketServer = (server: Server) => {
 
       if (isOpponentBot) {
         // Bot opponent - generate random name each match for variety
+        const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
+        opponentName = `Guest_${randomId}`;
+        
         if (botMatch) {
-          // Queue-based bot: generate random Guest-style name
-          const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
-          opponentName = `Guest_${randomId}`;
-          const botRating = await PlayerRatingModel.findByPlayerAndLadder(botMatch.botPlayerId, 1);
-          opponentRatingValue = botRating?.rating || botMatch.botRating;
+          // Queue-based bot: use the botRating from botMatch
+          opponentRatingValue = botMatch.botRating;
+          console.log(`🤖 Bot opponent: name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}, botPlayerId=${botMatch.botPlayerId}`);
+        } else if (opponentRow.player_id) {
+          // Queue-based bot but missing info - get rating from DB
+          const botRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
+          opponentRatingValue = botRating?.rating || 1500;
+          console.log(`🤖 Bot opponent (from DB): name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}, botPlayerId=${opponentRow.player_id}`);
         } else {
-          // Legacy bot match - also generate random name
-          const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
-          opponentName = `Guest_${randomId}`;
+          // Legacy first-match bot (no player_id)
           opponentRatingValue = getBotDisplayRating();
+          console.log(`🤖 Legacy bot opponent: name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}`);
         }
         opponentIsPremium = false;
       } else {
@@ -279,7 +285,35 @@ export const setupWebSocketServer = (server: Server) => {
 
           // Start bot move loop for bot matches
           if (isBotMatch) {
-            const botMatch = getBotMatchInfo(matchId);
+            let botMatch = getBotMatchInfo(matchId);
+            
+            // If botMatchInfo is missing but this is a queue-based bot match,
+            // try to reconstruct bot info from match players and player_profiles
+            if (!botMatch && (match as any).is_bot_match === true) {
+              console.log(`🤖 Bot match info missing for match ${matchId}, reconstructing from DB...`);
+              
+              // Query match_players joined with player_profiles to find the bot
+              const botResult = await query(
+                `SELECT mp.player_id, pp.is_bot, pr.rating
+                 FROM match_players mp
+                 JOIN player_profiles pp ON pp.id = mp.player_id
+                 JOIN player_ratings pr ON pr.player_id = mp.player_id AND pr.ladder_id = 1
+                 WHERE mp.match_id = $1 AND pp.is_bot = TRUE`,
+                [matchId]
+              );
+              
+              if (botResult.rows.length > 0) {
+                const botRow = botResult.rows[0];
+                botMatch = {
+                  botPlayerId: botRow.player_id,
+                  botRating: botRow.rating,
+                };
+                console.log(`🤖 Reconstructed bot info: playerId=${botRow.player_id}, rating=${Math.round(botRow.rating)}`);
+              } else {
+                console.log(`🤖 No bot player found in match ${matchId}, using legacy bot`);
+              }
+            }
+            
             if (botMatch) {
               // Queue-based bot match: use new bot system
               console.log(`🤖 Starting queue-based bot loop for match ${matchId}`);
@@ -292,6 +326,7 @@ export const setupWebSocketServer = (server: Server) => {
               );
             } else {
               // Legacy first-match bot: use old bot system
+              console.log(`🤖 Using legacy bot loop for match ${matchId} (first-match bot)`);
               startBotMoveLoop(matchId);
             }
           }
@@ -1128,6 +1163,19 @@ async function endGame(matchId: number) {
         reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
       }
 
+      // Get bot's actual rating for display (if available)
+      const botMatchInfo = getBotMatchInfo(matchId);
+      let botRatingForDisplay = getBotDisplayRating(); // Default to legacy
+      if (botMatchInfo) {
+        botRatingForDisplay = botMatchInfo.botRating;
+      } else if (player2Data?.player_id) {
+        // Try to get from DB
+        const botRating = await PlayerRatingModel.findByPlayerAndLadder(player2Data.player_id, 1);
+        if (botRating) {
+          botRatingForDisplay = botRating.rating;
+        }
+      }
+
       // Broadcast GAME_END for bot match
       broadcastToMatch(matchId, {
         type: 'GAME_END',
@@ -1148,8 +1196,8 @@ async function endGame(matchId: number) {
           },
           player2: {
             ...results.player2,
-            rating_before: getBotDisplayRating(),
-            rating_after: getBotDisplayRating(),
+            rating_before: Math.round(botRatingForDisplay),
+            rating_after: Math.round(botRatingForDisplay),
             rating_change: 0,
           },
         },

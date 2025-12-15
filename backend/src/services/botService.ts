@@ -92,10 +92,12 @@ export interface BotInfo {
 }
 
 /**
- * Find a bot within ±50 rating of target, fallback to closest
+ * Find a bot within ±50 rating of target, fallback to wider search
  */
 export async function findBotNearRating(targetRating: number): Promise<BotInfo | null> {
-  // First try: find bot within ±50 rating
+  console.log(`🤖 Finding bot near rating ${Math.round(targetRating)}...`);
+  
+  // First try: find bots within ±50 rating, then randomize selection
   let result = await query(
     `SELECT pp.id as player_id, pp.display_name, pr.rating, pr.rd, pr.volatility
      FROM player_profiles pp
@@ -103,13 +105,13 @@ export async function findBotNearRating(targetRating: number): Promise<BotInfo |
      WHERE pp.is_bot = TRUE
        AND pr.ladder_id = 1
        AND pr.rating BETWEEN $1 AND $2
-     ORDER BY ABS(pr.rating - $3) ASC
-     LIMIT 1`,
-    [targetRating - 50, targetRating + 50, targetRating]
+     ORDER BY RANDOM()`,
+    [targetRating - 50, targetRating + 50]
   );
 
   if (result.rows.length > 0) {
-    const bot = result.rows[0];
+    const bot = result.rows[0]; // Already randomized by ORDER BY RANDOM()
+    console.log(`🤖 Selected bot from ${result.rows.length} available bots (rating range ${Math.round(targetRating - 50)}-${Math.round(targetRating + 50)}): bot ${bot.player_id} "${bot.display_name}" with rating ${Math.round(bot.rating)}`);
     return {
       playerId: bot.player_id,
       displayName: bot.display_name,
@@ -119,20 +121,21 @@ export async function findBotNearRating(targetRating: number): Promise<BotInfo |
     };
   }
 
-  // Fallback: find closest bot
+  // Second try: widen to ±200 rating
   result = await query(
     `SELECT pp.id as player_id, pp.display_name, pr.rating, pr.rd, pr.volatility
      FROM player_profiles pp
      JOIN player_ratings pr ON pr.player_id = pp.id
      WHERE pp.is_bot = TRUE
        AND pr.ladder_id = 1
-     ORDER BY ABS(pr.rating - $1) ASC
-     LIMIT 1`,
-    [targetRating]
+       AND pr.rating BETWEEN $1 AND $2
+     ORDER BY RANDOM()`,
+    [targetRating - 200, targetRating + 200]
   );
 
   if (result.rows.length > 0) {
     const bot = result.rows[0];
+    console.log(`🤖 Selected bot from ${result.rows.length} bots (wider range ${Math.round(targetRating - 200)}-${Math.round(targetRating + 200)}): bot ${bot.player_id} "${bot.display_name}" with rating ${Math.round(bot.rating)}`);
     return {
       playerId: bot.player_id,
       displayName: bot.display_name,
@@ -142,6 +145,31 @@ export async function findBotNearRating(targetRating: number): Promise<BotInfo |
     };
   }
 
+  // Fallback: find ANY bot, randomized
+  result = await query(
+    `SELECT pp.id as player_id, pp.display_name, pr.rating, pr.rd, pr.volatility
+     FROM player_profiles pp
+     JOIN player_ratings pr ON pr.player_id = pp.id
+     WHERE pp.is_bot = TRUE
+       AND pr.ladder_id = 1
+     ORDER BY RANDOM()
+     LIMIT 1`,
+    []
+  );
+
+  if (result.rows.length > 0) {
+    const bot = result.rows[0];
+    console.log(`🤖 Selected random bot (fallback): bot ${bot.player_id} "${bot.display_name}" with rating ${Math.round(bot.rating)}`);
+    return {
+      playerId: bot.player_id,
+      displayName: bot.display_name,
+      rating: bot.rating,
+      rd: bot.rd,
+      volatility: bot.volatility,
+    };
+  }
+
+  console.error(`❌ No bots found in database!`);
   return null;
 }
 
