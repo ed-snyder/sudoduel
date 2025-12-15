@@ -25,6 +25,7 @@ let sourceNode: MediaElementAudioSourceNode | null = null;
 let gainNode: GainNode | null = null;
 let globalAudio: HTMLAudioElement | null = null;
 let globalCurrentTrack: MusicTrack = null;
+let globalCurrentSrc: string | null = null;
 
 // Initialize or get AudioContext
 const getAudioContext = (): AudioContext => {
@@ -56,12 +57,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
     globalAudio = null;
     globalCurrentTrack = null;
+    globalCurrentSrc = null;
     setCurrentTrack(null);
   }, []);
 
   const playTrack = useCallback((track: MusicTrack, src: string) => {
-    // Don't restart if same track is already playing
-    if (globalCurrentTrack === track && globalAudio && !globalAudio.paused) {
+    // Don't restart if same track and same source are already playing
+    if (globalCurrentTrack === track && globalCurrentSrc === src && globalAudio && !globalAudio.paused) {
       return;
     }
 
@@ -106,6 +108,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     gainNode = gain;
     globalAudio = audio;
     globalCurrentTrack = track;
+    globalCurrentSrc = src;
     
     // Start playback
     audio.play().catch(err => {
@@ -116,7 +119,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playGameMusic = useCallback(() => {
-    playTrack('game', '/sounds/music/in-game.mp3');
+    const tracks = [
+      '/sounds/music/in-game.mp3',
+      '/sounds/music/in-game-2.mp3',  // Add your new file
+    ];
+    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+    playTrack('game', randomTrack);
   }, [playTrack]);
 
   const fadeOut = useCallback((duration: number = 1000) => {
