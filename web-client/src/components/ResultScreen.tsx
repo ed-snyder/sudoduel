@@ -158,7 +158,7 @@ export default function ResultScreen({
   const { isPremium, openUpgradeModal } = useSubscription();
   const { vibrate, victory: hapticVictory, bigWin: hapticBigWin } = useHaptics();
   const { recordGamePlayed, isInGracePeriod } = useAds();
-  const { playJoinQueue, playSearching, stopSearching, playMatchFound, playVictory, playDefeat } = useSoundEffects();
+  const { playJoinQueue, playSearching, stopSearching, playMatchFound, playVictory } = useSoundEffects();
   const { stopMusic } = useMusic();
 
   // NO music on results screen - music starts when player navigates back to lobby
@@ -174,11 +174,8 @@ export default function ResultScreen({
     } else if (didWin) {
       console.log('[ResultScreen] Playing victory sound');
       playVictory();
-    } else {
-      console.log('[ResultScreen] Playing defeat sound');
-      playDefeat();
     }
-  }, [isDraw, didWin, playVictory, playDefeat]);
+  }, [isDraw, didWin, playVictory]);
 
   // Determine result type for ad logic
   const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';

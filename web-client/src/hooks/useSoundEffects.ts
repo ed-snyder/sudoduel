@@ -21,7 +21,6 @@ const SOUNDS = {
   
   // Results
   victory: '/sounds/results/victory.mp3',
-  defeat: '/sounds/results/defeat.mp3',
   
   // UI
   buttonTap: '/sounds/ui/button-tap.mp3',
@@ -267,10 +266,6 @@ export function useSoundEffects(volumeMultiplier: number = 1.0) {
   const playVictory = useCallback(() => {
     playSound('victory');
   }, [playSound]);
-  
-  const playDefeat = useCallback(() => {
-    playSound('defeat');
-  }, [playSound]);
 
   // === UI SOUNDS ===
   
@@ -324,7 +319,6 @@ export function useSoundEffects(volumeMultiplier: number = 1.0) {
     
     // Results
     playVictory,
-    playDefeat,
     
     // UI
     playButtonTap,
