@@ -213,11 +213,18 @@ export const setupWebSocketServer = (server: Server) => {
           await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
           
           const now = Date.now();
+          // Calculate when gameplay should actually start (after client countdown animation)
+          // Client countdown is 4800ms, add 200ms network buffer for synchronization
+          const COUNTDOWN_ANIMATION_MS = 4800;
+          const NETWORK_BUFFER_MS = 200;
+          const playAtTimestamp = now + COUNTDOWN_ANIMATION_MS + NETWORK_BUFFER_MS;
+          
           broadcastToMatch(matchId, {
             type: 'GAME_START',
             data: {
               server_timestamp: now,
               game_start_time: now,
+              play_at_timestamp: playAtTimestamp, // Synchronized start time
               initial_grid: currentGame.player1.grid,
               solution_grid: currentGame.solutionGrid,
               player1_time_remaining: currentGame.player1.timeRemaining,

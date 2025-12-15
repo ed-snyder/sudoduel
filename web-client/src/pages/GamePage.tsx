@@ -284,6 +284,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [countdownPhase, setCountdownPhase] = useState<CountdownPhase>('hidden');
   const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
   const [showGameCountdown, setShowGameCountdown] = useState(false);
+  const [playAtLocalTime, setPlayAtLocalTime] = useState<number | null>(null);
   const [gridAnimateIn, setGridAnimateIn] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   
@@ -705,6 +706,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const handleCountdownComplete = useCallback(() => {
     log.countdown('Complete');
     setShowGameCountdown(false);
+    setPlayAtLocalTime(null); // Clear synchronized time after countdown complete
     setGridAnimateIn(false);
     setCountdownPhase('complete');
     playGameMusic(); // Start game music when countdown completes
@@ -788,6 +790,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             setControlsVisible(true);
             setGridAnimateIn(false);
             setShowGameCountdown(false);
+            setPlayAtLocalTime(null);
             setCountdownPhase('complete');
           } else if (message.data.status === 'WAITING') {
             setGameStatus('waiting');
@@ -892,6 +895,17 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         const serverTime = message.data.server_timestamp;
         if (serverTime) {
           serverTimeOffsetRef.current = serverTime - clientNow;
+        }
+        
+        // Calculate synchronized play start time in local clock
+        // Server sends play_at_timestamp (server time when gameplay should start)
+        // Convert to local time by subtracting the offset
+        if (message.data.play_at_timestamp) {
+          const localPlayTime = message.data.play_at_timestamp - serverTimeOffsetRef.current;
+          console.log(`[Sync] Server play_at: ${message.data.play_at_timestamp}, Local play_at: ${localPlayTime}, Now: ${clientNow}, Wait: ${localPlayTime - clientNow}ms`);
+          setPlayAtLocalTime(localPlayTime);
+        } else {
+          setPlayAtLocalTime(null);
         }
         
         // Set initial time from server (authoritative)
@@ -1969,6 +1983,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         onCountdownNumberChange={handleCountdownNumberChange}
         onComplete={handleCountdownComplete}
         isActive={showGameCountdown}
+        playAtLocalTime={playAtLocalTime}
       />
 
       {/* Game End Overlay - Shows GAME OVER! or TIME'S UP! - Shows immediately, ad appears after text */}
