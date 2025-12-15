@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies for TypeScript build)
-RUN npm ci
+RUN npm install
 
 # Copy backend files
 COPY tsconfig.json ./
