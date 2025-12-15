@@ -21,6 +21,7 @@ const LeaderboardScreen = lazy(() => import('../components/LeaderboardScreen'));
 interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
   onStartSoloMode?: () => void;
+  onSecureAccount?: () => void;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
@@ -34,8 +35,8 @@ function ModalLoader() {
   );
 }
 
-export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPageProps) {
-  const { user, token } = useAuth();
+export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccount }: LobbyPageProps) {
+  const { user, token, isGuest } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects(0.8);
   const { stopMusic } = useMusic();
@@ -328,16 +329,34 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode }: LobbyPagePr
             boxShadow: '0 0 15px rgba(0,255,255,0.1)',
           }}
         >
-          <div className="text-left">
-            <div 
-              className="font-heading font-bold text-xl text-player group-hover:text-white transition-colors"
-              style={{ textShadow: '0 0 10px rgba(0,255,255,0.3)' }}
-            >
-              {user?.display_name || 'Player'}
+          <div className="text-left flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <div 
+                className="font-heading font-bold text-xl text-player group-hover:text-white transition-colors truncate"
+                style={{ textShadow: '0 0 10px rgba(0,255,255,0.3)' }}
+              >
+                {user?.display_name || 'Player'}
+              </div>
+              {isGuest && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSecureAccount?.();
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-400/80 hover:text-amber-300 border border-amber-500/30 hover:border-amber-400/50 rounded-full transition-all hover:bg-amber-500/10"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M12 8v4"/>
+                    <path d="M12 16h.01"/>
+                  </svg>
+                  <span className="font-body">Guest</span>
+                </button>
+              )}
             </div>
             <div className="text-xs text-muted font-body">Tap to view profile, match history, and statistics</div>
           </div>
-          <svg className="w-5 h-5 text-muted group-hover:text-player transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-muted group-hover:text-player transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>

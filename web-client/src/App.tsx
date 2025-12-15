@@ -9,7 +9,7 @@ import DailyRunPage from './pages/DailyRunPage';
 import TutorialFlow from './components/TutorialFlow';
 import UpgradeModal from './components/UpgradeModal';
 import DisplayNameSetup from './components/DisplayNameSetup';
-import GuestBanner from './components/GuestBanner';
+// GuestBanner removed - inline guest indicator now in LobbyPage
 import SecureAccountModal from './components/SecureAccountModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { adService } from './services/adService';
@@ -24,7 +24,6 @@ function AppContent() {
     refreshUser,
     needsDisplayName,
     clearNeedsDisplayName,
-    isGuest,
   } = useAuth();
   const [matchId, setMatchId] = useState<number | null>(null);
   const [dailyRun, setDailyRun] = useState(false);
@@ -200,13 +199,14 @@ function AppContent() {
     );
   }
 
-  // Default - show lobby with guest banner if applicable
+  // Default - show lobby
   return (
     <>
-      {isGuest && (
-        <GuestBanner onSecureAccount={() => setShowSecureModal(true)} />
-      )}
-      <LobbyPage onMatchFound={setMatchId} onStartSoloMode={() => setDailyRun(true)} />
+      <LobbyPage 
+        onMatchFound={setMatchId} 
+        onStartSoloMode={() => setDailyRun(true)}
+        onSecureAccount={() => setShowSecureModal(true)}
+      />
       <SecureAccountModal 
         isOpen={showSecureModal}
         onClose={() => setShowSecureModal(false)}
