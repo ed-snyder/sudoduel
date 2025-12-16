@@ -433,7 +433,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
                 // Premium: Show actual rank
                 rankLoading ? (
                   <span className="text-primary font-display font-black">...</span>
-                ) : rankData ? (
+                ) : rankData && rankData.rank != null ? (
                   <div className="text-right">
                     <span className="text-primary font-display font-black">
                       #{rankData.rank.toLocaleString()}
