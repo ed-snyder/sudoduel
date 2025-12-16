@@ -125,47 +125,77 @@ class PurchaseServiceImpl {
           // Method 1: Application receipt from store (most reliable for iOS)
           if (this.store.applicationReceipt) {
             receiptData = this.store.applicationReceipt;
-            console.log('[PurchaseService] Got receipt from store.applicationReceipt');
+            console.log('[PurchaseService] Got receipt from store.applicationReceipt, length:', receiptData?.length);
           }
           
-          // Method 2: latestReceipt on the receipt object (seen in logs!)
+          // Method 2: latestReceipt - could be string or object
           if (!receiptData && receipt.latestReceipt) {
-            receiptData = receipt.latestReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.latestReceipt');
+            const lr = receipt.latestReceipt;
+            console.log('[PurchaseService] latestReceipt type:', typeof lr);
+            if (typeof lr === 'string') {
+              receiptData = lr;
+              console.log('[PurchaseService] Got receipt from receipt.latestReceipt (string), length:', receiptData.length);
+            } else if (typeof lr === 'object') {
+              // Try common properties on the latestReceipt object
+              receiptData = lr.appStoreReceipt || lr.receipt || lr.rawReceipt || lr.base64 || lr.data;
+              if (receiptData) {
+                console.log('[PurchaseService] Got receipt from receipt.latestReceipt object, length:', receiptData.length);
+              } else {
+                console.log('[PurchaseService] latestReceipt is object with keys:', Object.keys(lr));
+              }
+            }
           }
           
           // Method 3: From sourceReceipt
           if (!receiptData && receipt.sourceReceipt?.appStoreReceipt) {
             receiptData = receipt.sourceReceipt.appStoreReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.sourceReceipt.appStoreReceipt');
+            console.log('[PurchaseService] Got receipt from receipt.sourceReceipt.appStoreReceipt, length:', receiptData?.length);
           }
           
           // Method 4: From the receipt's native data  
           if (!receiptData && receipt.nativeData?.appStoreReceipt) {
             receiptData = receipt.nativeData.appStoreReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.nativeData.appStoreReceipt');
+            console.log('[PurchaseService] Got receipt from receipt.nativeData.appStoreReceipt, length:', receiptData?.length);
           }
           
           // Method 5: From raw
           if (!receiptData && receipt.raw?.appStoreReceipt) {
             receiptData = receipt.raw.appStoreReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.raw.appStoreReceipt');
+            console.log('[PurchaseService] Got receipt from receipt.raw.appStoreReceipt, length:', receiptData?.length);
           }
           
           // Method 6: Direct property
           if (!receiptData && receipt.appStoreReceipt) {
             receiptData = receipt.appStoreReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.appStoreReceipt');
+            console.log('[PurchaseService] Got receipt from receipt.appStoreReceipt, length:', receiptData?.length);
           }
           
-          if (receiptData) {
+          // Method 7: Try nativeTransactions
+          if (!receiptData && receipt.nativeTransactions?.length > 0) {
+            const firstTx = receipt.nativeTransactions[0];
+            receiptData = firstTx?.appStoreReceipt || firstTx?.receipt;
+            if (receiptData) {
+              console.log('[PurchaseService] Got receipt from nativeTransactions, length:', receiptData.length);
+            }
+          }
+          
+          // Validate that receiptData is actually a string
+          if (receiptData && typeof receiptData === 'string' && receiptData.length > 100) {
             pendingReceipt = receiptData;
             console.log('[PurchaseService] Receipt captured! Length:', receiptData.length);
           } else {
-            console.log('[PurchaseService] No receipt found. Receipt object keys:', Object.keys(receipt || {}));
-            console.log('[PurchaseService] store.applicationReceipt:', this.store.applicationReceipt ? 'present' : 'missing');
-            // Log the actual values for debugging
+            console.log('[PurchaseService] No valid receipt found.');
+            console.log('[PurchaseService] Receipt object keys:', Object.keys(receipt || {}));
+            console.log('[PurchaseService] store.applicationReceipt:', this.store.applicationReceipt ? `present (${typeof this.store.applicationReceipt})` : 'missing');
             console.log('[PurchaseService] receipt.latestReceipt:', receipt.latestReceipt ? `present (${typeof receipt.latestReceipt})` : 'missing');
+            // Deep log latestReceipt if it's an object
+            if (receipt.latestReceipt && typeof receipt.latestReceipt === 'object') {
+              console.log('[PurchaseService] latestReceipt keys:', Object.keys(receipt.latestReceipt));
+            }
+            // Deep log sourceReceipt
+            if (receipt.sourceReceipt) {
+              console.log('[PurchaseService] sourceReceipt keys:', Object.keys(receipt.sourceReceipt));
+            }
           }
           
           receipt.finish();
