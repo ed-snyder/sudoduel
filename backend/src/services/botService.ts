@@ -27,19 +27,19 @@ const LEGACY_BOT_CONFIG = {
 /**
  * Calculate base time per move based on rating
  * Uses a linear scale for human-like timing:
- * - Rating 1000 → 9 seconds (beginner, slow and methodical)
- * - Rating 1200 → 7.2 seconds
- * - Rating 1400 → 5.4 seconds  
- * - Rating 1500 → 4.5 seconds (average player)
- * - Rating 1600 → 3.6 seconds (good player)
- * - Rating 1800 → 2 seconds (expert, fast but still human-like)
+ * - Rating 1000 → 12 seconds (beginner, slow and methodical)
+ * - Rating 1200 → 10 seconds
+ * - Rating 1400 → 8 seconds  
+ * - Rating 1500 → 7 seconds (average player)
+ * - Rating 1600 → 6 seconds (good player)
+ * - Rating 1800 → 4 seconds (expert, fast but still human-like)
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  // Linear formula: 9s at 1000, 2s at 1800
-  // Decrease of 7s over 800 rating points = 0.00875s per rating point
-  const baseTime = 9 - (r - 1000) * 0.00875;
-  return Math.max(2, baseTime);
+  // Linear formula: 12s at 1000, 4s at 1800
+  // Decrease of 8s over 800 rating points = 0.01s per rating point
+  const baseTime = 12 - (r - 1000) * 0.01;
+  return Math.max(4, baseTime);
 }
 
 /**
@@ -198,6 +198,10 @@ export async function isBot(playerId: number): Promise<boolean> {
   return result.rows[0]?.is_bot === true;
 }
 
+// Initial delay before bot starts making moves (3-5 seconds)
+const BOT_INITIAL_DELAY_MIN = 3000;
+const BOT_INITIAL_DELAY_MAX = 5000;
+
 /**
  * Start the bot's move loop for a match
  */
@@ -232,8 +236,17 @@ export function startBotLoop(
     streakMovesRemaining: 0,
   });
 
-  // Start the move loop
-  scheduleNextMove(matchId, onBotMove, onGameEnd);
+  // Add initial delay before first move (3-5 seconds)
+  // This prevents bot from scoring immediately when the game starts
+  const initialDelay = BOT_INITIAL_DELAY_MIN + Math.random() * (BOT_INITIAL_DELAY_MAX - BOT_INITIAL_DELAY_MIN);
+  console.log(`🤖 Bot will start playing after ${(initialDelay/1000).toFixed(1)}s initial delay`);
+  
+  const initialTimer = setTimeout(() => {
+    // Start the move loop after initial delay
+    scheduleNextMove(matchId, onBotMove, onGameEnd);
+  }, initialDelay);
+  
+  activeBots.set(matchId, initialTimer);
 }
 
 /**

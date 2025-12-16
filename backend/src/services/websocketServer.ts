@@ -887,9 +887,10 @@ function startBotMoveLoop(matchId: number) {
     }
   };
 
-  // Start first bot move after initial delay
-  const firstMoveDelay = getBotMoveDelay();
-  const timer = setTimeout(runBotMove, firstMoveDelay);
+  // Start first bot move after initial delay (3-5 seconds to not score immediately)
+  const initialDelay = 3000 + Math.random() * 2000; // 3-5 seconds
+  console.log(`🤖 Legacy bot will start after ${(initialDelay/1000).toFixed(1)}s delay`);
+  const timer = setTimeout(runBotMove, initialDelay);
   setBotMoveTimer(matchId, timer);
 }
 
