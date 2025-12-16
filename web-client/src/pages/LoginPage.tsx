@@ -55,11 +55,10 @@ function LandingPage() {
         {/* Description */}
         <div className="w-full max-w-md mb-8 text-center">
           <p className="text-primary font-body text-base leading-relaxed mb-4">
-            Challenge players worldwide in real-time Sudoku battles. 
-            Race to solve puzzles, earn rating points, and climb the global leaderboard.
+            Sudoduel is a competitive, head-to-head Sudoku experience that transforms the classic puzzle into an adrenaline-fueled multiplayer game. Challenge players worldwide in real-time. Race to solve puzzles and climb the leaderboard.
           </p>
-          <p className="text-secondary font-body text-sm">
-            Fast-paced • Skill-based • Ranked matchmaking
+          <p className="text-secondary font-body text-xs leading-relaxed">
+            Forget everything about leisurely Sudoku. Sudoduel pits players against real opponents in a race against the clock and each other. Both players receive an identical puzzle grid and compete to decide the fastest and most accurate. Every cell completed is visible to both players in real-time. Every mistake costs dearly. Sudoduel has a leaderboard system, where players can view public rankings and ratings. Players can also send friend and rematch requests. Players communicate in-game via a customizable emote system.
           </p>
         </div>
 
@@ -93,6 +92,24 @@ function LandingPage() {
           </div>
         </div>
 
+        {/* Known Issues */}
+        <div className="w-full max-w-md mb-8">
+          <p className="text-muted font-body text-sm text-center mb-4 uppercase tracking-widest">
+            Known Issues
+          </p>
+          <div 
+            className="rounded-xl p-4 space-y-2"
+            style={{ 
+              background: 'rgba(45, 15, 30, 0.6)',
+              border: '1px solid rgba(255, 51, 102, 0.3)'
+            }}
+          >
+            <p className="text-secondary font-body text-xs">
+              • None at the moment! Report issues on Discord or via email.
+            </p>
+          </div>
+        </div>
+
         {/* Roadmap */}
         <div className="w-full max-w-md mb-8">
           <p className="text-muted font-body text-sm text-center mb-4 uppercase tracking-widest">
@@ -109,6 +126,7 @@ function LandingPage() {
             <RoadmapItem done label="Ranked Matchmaking & Leaderboards" />
             <RoadmapItem done label="Friends System & Private Matches" />
             <RoadmapItem label="Web Browser Version" />
+            <RoadmapItem label="More Difficulty Levels & Rankings (Medium, Hard, Expert, etc.)" />
             <RoadmapItem label="Tournaments & Seasons" />
             <RoadmapItem label="Team Battles" />
           </div>
@@ -136,13 +154,24 @@ function LandingPage() {
             </a>
             
             {/* Contact Email */}
-            <a
-              href="mailto:hello@sudoduel.com"
-              className="flex items-center justify-center gap-2 px-6 py-3 text-muted font-body text-sm hover:text-primary transition-colors"
-            >
-              <EmailIcon />
-              <span>hello@sudoduel.com</span>
-            </a>
+            <div className="flex items-center justify-center gap-3 px-6 py-3">
+              <a
+                href="mailto:support@axolabs.io"
+                className="flex items-center gap-2 text-muted font-body text-sm hover:text-primary transition-colors"
+              >
+                <EmailIcon />
+                <span>support@axolabs.io</span>
+              </a>
+              <span className="text-muted/50">•</span>
+              <a
+                href="https://www.axolabs.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-player font-body text-sm hover:text-player/80 transition-colors"
+              >
+                axolabs.io
+              </a>
+            </div>
           </div>
         </div>
 
