@@ -12,6 +12,7 @@ import DisplayNameSetup from './components/DisplayNameSetup';
 // GuestBanner removed - inline guest indicator now in LobbyPage
 import SecureAccountModal from './components/SecureAccountModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { adService } from './services/adService';
 import { playerAPI } from './services/api';
 
@@ -28,6 +29,15 @@ function AppContent() {
   const [matchId, setMatchId] = useState<number | null>(null);
   const [dailyRun, setDailyRun] = useState(false);
   const [showSecureModal, setShowSecureModal] = useState(false);
+
+  // Hide splash screen when app is ready
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hide().catch(() => {
+        // Ignore - may not be available on web
+      });
+    }
+  }, [loading]);
 
   // Initialize ads - deferred to not block initial render
   useEffect(() => {
