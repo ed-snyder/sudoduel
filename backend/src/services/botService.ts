@@ -27,19 +27,24 @@ const LEGACY_BOT_CONFIG = {
 /**
  * Calculate base time per move based on rating
  * Uses a linear scale for human-like timing:
- * - Rating 1000 → 12 seconds (beginner, slow and methodical)
- * - Rating 1200 → 10 seconds
- * - Rating 1400 → 8 seconds  
- * - Rating 1500 → 7 seconds (average player)
- * - Rating 1600 → 6 seconds (good player)
- * - Rating 1800 → 4 seconds (expert, fast but still human-like)
+ * - Rating 1000 → 9 seconds (beginner, slow and methodical)
+ * - Rating 1200 → 7.2 seconds
+ * - Rating 1400 → 5.4 seconds  
+ * - Rating 1500 → 6.5 seconds (slowed down by 2s)
+ * - Rating 1600 → 5.6 seconds (slowed down by 2s)
+ * - Rating 1800 → 4 seconds (slowed down by 2s)
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  // Linear formula: 12s at 1000, 4s at 1800
-  // Decrease of 8s over 800 rating points = 0.01s per rating point
-  const baseTime = 12 - (r - 1000) * 0.01;
-  return Math.max(4, baseTime);
+  // Original formula: 9s at 1000, 2s at 1800
+  const originalBaseTime = 9 - (r - 1000) * 0.00875;
+  
+  // For ratings above 1400, add 2 seconds to slow them down
+  if (r > 1400) {
+    return Math.max(4, originalBaseTime + 2);
+  }
+  
+  return Math.max(2, originalBaseTime);
 }
 
 /**
