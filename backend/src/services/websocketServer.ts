@@ -1109,9 +1109,13 @@ async function endGame(matchId: number) {
     console.log(`👤 Player 1 data:`, player1Data?.player_id);
     console.log(`👤 Player 2 data:`, player2Data?.player_id);
 
-    // For bot matches, player2 has NULL player_id, so we handle it differently
+    // For bot matches, check if it's a queue-based bot (ranked) or legacy first-match bot (unranked)
     if (isBotMatch) {
-      console.log(`🤖 Bot match - simplified endGame processing`);
+      const botMatchInfo = getBotMatchInfo(matchId);
+      const isQueueBasedBot = player2Data?.player_id != null; // Queue-based bots have real player_id
+      const isBotMatchRanked = isRanked && isQueueBasedBot;
+      
+      console.log(`🤖 Bot match processing: isQueueBasedBot=${isQueueBasedBot}, isBotMatchRanked=${isBotMatchRanked}`);
       
       if (!player1Data) {
         console.log(`❌ Missing human player data, exiting`);
@@ -1124,7 +1128,61 @@ async function endGame(matchId: number) {
         return;
       }
 
-      // Update human player stats only (no rating changes for bot matches)
+      let newRatings: {
+        player1: { rating: number; rd: number; volatility: number };
+        player2: { rating: number; rd: number; volatility: number };
+      };
+      let botRatingForDisplay = getBotDisplayRating();
+
+      if (isBotMatchRanked && player2Data?.player_id) {
+        // Queue-based bot: update both ratings using Glicko-2
+        const rating2 = await PlayerRatingModel.findByPlayerAndLadder(player2Data.player_id, 1);
+        if (!rating2) {
+          console.error(`❌ Bot player rating not found`);
+          return;
+        }
+
+        botRatingForDisplay = rating2.rating;
+
+        let outcome: number;
+        if (results.winnerId === results.player1.playerId) {
+          outcome = 1; // Human wins
+        } else if (results.winnerId === results.player2.playerId) {
+          outcome = 0; // Bot wins
+        } else {
+          outcome = 0.5; // Draw
+        }
+
+        console.log(`🎲 Bot match outcome: ${outcome === 1 ? 'Human wins' : outcome === 0 ? 'Bot wins' : 'Draw'}`);
+
+        newRatings = await RatingService.updateRatings(
+          rating1.id,
+          rating1.rating,
+          rating1.rd,
+          rating1.volatility,
+          rating1.last_update_at,
+          rating2.id,
+          rating2.rating,
+          rating2.rd,
+          rating2.volatility,
+          rating2.last_update_at,
+          outcome
+        );
+
+        console.log(`📊 Rating changes: human ${Math.round(rating1.rating)} → ${Math.round(newRatings.player1.rating)}, bot ${Math.round(rating2.rating)} → ${Math.round(newRatings.player2.rating)}`);
+      } else {
+        // Legacy first-match bot: no rating changes
+        newRatings = {
+          player1: { rating: rating1.rating, rd: rating1.rd, volatility: rating1.volatility },
+          player2: { rating: botRatingForDisplay, rd: 350, volatility: 0.06 },
+        };
+        
+        if (botMatchInfo) {
+          botRatingForDisplay = botMatchInfo.botRating;
+        }
+      }
+
+      // Update human player stats
       await MatchModel.updatePlayerStats(matchId, player1Data.player_id, {
         cellsCompleted: results.player1.cellsCompleted,
         livesUsed: 0,
@@ -1133,12 +1191,30 @@ async function endGame(matchId: number) {
         timeSpentSeconds: 0,
         finalState: results.player1.finalState,
         isWinner: results.player1.isWinner,
-        ratingAfter: rating1.rating, // No rating change
-        rdAfter: rating1.rd,
-        volatilityAfter: rating1.volatility,
+        ratingAfter: newRatings.player1.rating,
+        rdAfter: newRatings.player1.rd,
+        volatilityAfter: newRatings.player1.volatility,
         timeAtFinish: results.player1.timeRemaining ?? null,
         longestCellStreak: results.player1.longestCellStreak ?? 0,
       });
+
+      // Update bot player stats if it's a real bot player
+      if (isBotMatchRanked && player2Data?.player_id) {
+        await MatchModel.updatePlayerStats(matchId, player2Data.player_id, {
+          cellsCompleted: results.player2.cellsCompleted,
+          livesUsed: 0,
+          livesRemaining: 0,
+          mistakes: results.player2.mistakes,
+          timeSpentSeconds: 0,
+          finalState: results.player2.finalState,
+          isWinner: results.player2.isWinner,
+          ratingAfter: newRatings.player2.rating,
+          rdAfter: newRatings.player2.rd,
+          volatilityAfter: newRatings.player2.volatility,
+          timeAtFinish: results.player2.timeRemaining ?? null,
+          longestCellStreak: results.player2.longestCellStreak ?? 0,
+        });
+      }
 
       // Clear matchmaking cache
       MatchmakingService.clearMatch(matchId);
@@ -1163,26 +1239,13 @@ async function endGame(matchId: number) {
         reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
       }
 
-      // Get bot's actual rating for display (if available)
-      const botMatchInfo = getBotMatchInfo(matchId);
-      let botRatingForDisplay = getBotDisplayRating(); // Default to legacy
-      if (botMatchInfo) {
-        botRatingForDisplay = botMatchInfo.botRating;
-      } else if (player2Data?.player_id) {
-        // Try to get from DB
-        const botRating = await PlayerRatingModel.findByPlayerAndLadder(player2Data.player_id, 1);
-        if (botRating) {
-          botRatingForDisplay = botRating.rating;
-        }
-      }
-
       // Broadcast GAME_END for bot match
       broadcastToMatch(matchId, {
         type: 'GAME_END',
         data: {
           winner_slot: winnerSlot,
           reason,
-          is_ranked: false,
+          is_ranked: isBotMatchRanked,
           is_bot_match: true,
           final_scores: {
             player1: results.player1.score,
@@ -1191,19 +1254,19 @@ async function endGame(matchId: number) {
           player1: {
             ...results.player1,
             rating_before: rating1.rating,
-            rating_after: rating1.rating, // No change
-            rating_change: 0,
+            rating_after: newRatings.player1.rating,
+            rating_change: newRatings.player1.rating - rating1.rating,
           },
           player2: {
             ...results.player2,
             rating_before: Math.round(botRatingForDisplay),
-            rating_after: Math.round(botRatingForDisplay),
-            rating_change: 0,
+            rating_after: Math.round(newRatings.player2.rating),
+            rating_change: isBotMatchRanked ? newRatings.player2.rating - botRatingForDisplay : 0,
           },
         },
       });
 
-      console.log(`📤 GAME_END message broadcasted for bot match`);
+      console.log(`📤 GAME_END message broadcasted for bot match (ranked=${isBotMatchRanked})`);
 
       setTimeout(() => {
         GameStateManager.removeGame(matchId);

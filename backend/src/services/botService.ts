@@ -27,49 +27,49 @@ const LEGACY_BOT_CONFIG = {
 /**
  * Calculate base time per move based on rating
  * Uses a linear scale for human-like timing:
- * - Rating 1000 → 7 seconds (beginner, slow and methodical)
- * - Rating 1200 → 5.6 seconds
- * - Rating 1400 → 4.1 seconds  
- * - Rating 1500 → 3.4 seconds (average player)
- * - Rating 1600 → 2.7 seconds (good player)
- * - Rating 1800 → 1.5 seconds (expert, fast but still human-like)
+ * - Rating 1000 → 9 seconds (beginner, slow and methodical)
+ * - Rating 1200 → 7.2 seconds
+ * - Rating 1400 → 5.4 seconds  
+ * - Rating 1500 → 4.5 seconds (average player)
+ * - Rating 1600 → 3.6 seconds (good player)
+ * - Rating 1800 → 2 seconds (expert, fast but still human-like)
  */
 function calculateBaseTime(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  // Linear formula: 7s at 1000, 1.5s at 1800
-  // Decrease of 5.5s over 800 rating points = 0.006875s per rating point
-  const baseTime = 7 - (r - 1000) * 0.006875;
-  return Math.max(1.5, baseTime);
+  // Linear formula: 9s at 1000, 2s at 1800
+  // Decrease of 7s over 800 rating points = 0.00875s per rating point
+  const baseTime = 9 - (r - 1000) * 0.00875;
+  return Math.max(2, baseTime);
 }
 
 /**
  * Calculate mistake rate based on rating
- * - Rating 1000 → 20% (makes frequent mistakes)
- * - Rating 1200 → 14% 
- * - Rating 1400 → 9%
- * - Rating 1500 → 6% (occasional mistakes)
- * - Rating 1600 → 4%
- * - Rating 1800 → 2% (rarely makes mistakes)
+ * - Rating 1000 → 25% (makes frequent mistakes)
+ * - Rating 1200 → 19% 
+ * - Rating 1400 → 13%
+ * - Rating 1500 → 10% (occasional mistakes)
+ * - Rating 1600 → 7%
+ * - Rating 1800 → 3% (rarely makes mistakes)
  */
 function calculateMistakeRate(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  // Linear: 20% at 1000, 2% at 1800
-  return Math.max(0.02, 0.20 - (r - 1000) * 0.000225);
+  // Linear: 25% at 1000, 3% at 1800
+  return Math.max(0.03, 0.25 - (r - 1000) * 0.000275);
 }
 
 /**
  * Calculate optimal cell selection chance based on rating
- * - Rating 1000 → 50% (often picks random cells)
- * - Rating 1200 → 61%
- * - Rating 1400 → 73%
- * - Rating 1500 → 78% (usually good choices)
- * - Rating 1600 → 84%
- * - Rating 1800 → 95% (almost always optimal)
+ * - Rating 1000 → 40% (often picks random cells)
+ * - Rating 1200 → 51%
+ * - Rating 1400 → 62%
+ * - Rating 1500 → 68% (usually decent choices)
+ * - Rating 1600 → 73%
+ * - Rating 1800 → 85% (usually optimal)
  */
 function calculateOptimalChance(rating: number): number {
   const r = Math.max(1000, Math.min(1800, rating));
-  // Linear: 50% at 1000, 95% at 1800
-  return Math.min(0.95, 0.50 + (r - 1000) * 0.0005625);
+  // Linear: 40% at 1000, 85% at 1800
+  return Math.min(0.85, 0.40 + (r - 1000) * 0.0005625);
 }
 
 // ============================================================
