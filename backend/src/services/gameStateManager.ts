@@ -131,11 +131,9 @@ export const GameStateManager = {
       }
 
       // Normal gameplay - decrement timers for non-locked, non-solved players
-      // Legacy first-match bot: player2.playerId === -1
-      // Queue-based bot: player2.playerId is a real ID but match is flagged as bot match
+      // Only legacy first-match bot (player2.playerId === -1) gets special treatment
+      // Queue-based bots (real player IDs) are treated exactly like human opponents
       const isLegacyBotMatch = Number(game.player2.playerId) === -1;
-      const isQueueBasedBotMatch = Number(game.player1.playerId) === -1; // player1 could theoretically be bot
-      const isBotMatch = isLegacyBotMatch || isQueueBasedBotMatch;
       
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
         game.player1.timeRemaining--;
@@ -150,11 +148,8 @@ export const GameStateManager = {
             onTimeout(matchId);
             return;
           }
-          // Queue-based bot: human can continue playing after timer expires
-          // Regular match: lock the player
-          if (!isBotMatch) {
-            game.player1.isLocked = true;
-          }
+          // All other matches (human vs human, queue-based bot): lock the player
+          game.player1.isLocked = true;
         }
       }
       if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0) {
@@ -162,18 +157,6 @@ export const GameStateManager = {
         if (game.player2.timeRemaining <= 0) {
           game.player2.isLocked = true;
         }
-      }
-
-      // Special case: Queue-based bot matches – if BOTH timers have reached 0, auto-end as a human victory.
-      // (Legacy bot matches end immediately when human timer hits 0, handled above)
-      if (isBotMatch && !isLegacyBotMatch && game.player1.timeRemaining <= 0 && game.player2.timeRemaining <= 0) {
-        // Let getFinalResults decide the winner (human) based on this state.
-        if (game.timerInterval) {
-          clearInterval(game.timerInterval);
-          game.timerInterval = null;
-        }
-        onTimeout(matchId);
-        return;
       }
 
       // Check if game should end (both locked or one solved)
@@ -295,12 +278,8 @@ export const GameStateManager = {
       
       // Check for lockout (timer hit 0)
       if (player.timeRemaining <= 0) {
-        // Distinguish between bot match types:
-        // - Legacy first-match bot: player2.playerId === -1 → game ends immediately
-        // - Queue-based bot: player2 has real playerId → human can continue
+        // Only legacy first-match bot (player2.playerId === -1) gets special treatment
         const isLegacyBotMatch = Number(game.player2.playerId) === -1;
-        const isHumanInQueueBotMatch = !isLegacyBotMatch && player.slot === 1 && 
-          (Number(game.player1.playerId) === -1 || Number(game.player2.playerId) !== game.player1.playerId);
         
         // Legacy first-match bot: human gets locked, game ends immediately
         if (isLegacyBotMatch && player.slot === 1) {
@@ -308,25 +287,21 @@ export const GameStateManager = {
           return { success: true, correct: false, player, gameEnded: true, winner: player.score > opponent.score ? player.slot : opponent.slot };
         }
         
-        if (!isHumanInQueueBotMatch) {
-          player.isLocked = true;
-          
-          // If both players locked, game ends
-          if (opponent.isLocked) {
-            // Don't set status here - let endGame handle it
-            const winner = player.score > opponent.score ? player.slot :
-                           opponent.score > player.score ? opponent.slot : null;
-            return { success: true, correct: false, player, gameEnded: true, winner };
-          }
-          
-          // Otherwise, opponent can continue playing
-          // Check if opponent has already surpassed our score
-          if (opponent.score > player.score) {
-            // Don't set status here - let endGame handle it
-            return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
-          }
+        // All other matches (human vs human, queue-based bot): standard lockout
+        player.isLocked = true;
+        
+        // If both players locked, game ends
+        if (opponent.isLocked) {
+          const winner = player.score > opponent.score ? player.slot :
+                         opponent.score > player.score ? opponent.slot : null;
+          return { success: true, correct: false, player, gameEnded: true, winner };
         }
-        // Human in queue-based bot match: timer stays at 0, they can keep playing
+        
+        // Otherwise, opponent can continue playing
+        // Check if opponent has already surpassed our score
+        if (opponent.score > player.score) {
+          return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
+        }
       }
     }
 
