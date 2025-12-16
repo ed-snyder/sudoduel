@@ -111,8 +111,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     globalCurrentSrc = src;
     
     // Start playback
-    audio.play().catch(err => {
-      console.warn('[Music] Autoplay blocked:', err);
+    audio.play().catch(() => {
+      // Autoplay blocked - user interaction required
     });
 
     setCurrentTrack(track);
@@ -159,12 +159,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   // Direct volume setter - called from Settings (uses GainNode for iOS compatibility)
   const setVolume = useCallback((volume: number) => {
     const normalizedVolume = Math.max(0, Math.min(100, volume)) / 100;
-    console.log('[Music] setVolume called:', normalizedVolume, 'gainNode exists:', !!gainNode);
     if (gainNode) {
       gainNode.gain.value = normalizedVolume;
-      console.log('[Music] Volume set via GainNode');
-    } else {
-      console.log('[Music] No gainNode to set volume on');
     }
   }, []);
 
@@ -183,13 +179,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       listener = await App.addListener('appStateChange', ({ isActive }) => {
         if (!isActive && globalAudio && !globalAudio.paused) {
           // App went to background - pause music
-          console.log('[Music] App backgrounded, pausing music');
           globalAudio.pause();
         } else if (isActive && globalAudio && globalCurrentTrack) {
           // App became active - resume music if we have a track
-          console.log('[Music] App foregrounded, resuming music');
-          globalAudio.play().catch(err => {
-            console.warn('[Music] Failed to resume:', err);
+          globalAudio.play().catch(() => {
+            // Failed to resume
           });
         }
       });

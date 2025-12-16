@@ -33,7 +33,7 @@ export default function UpgradeModal() {
           if (monthly?.price) setMonthlyPrice(monthly.price);
           if (yearly?.price) setYearlyPrice(yearly.price);
         } catch (err) {
-          console.error('[UpgradeModal] Failed to load products:', err);
+          // Failed to load products
         } finally {
           setIsLoading(false);
         }
@@ -52,20 +52,15 @@ export default function UpgradeModal() {
     setError(null);
     
     try {
-      console.log(`[UpgradeModal] Purchasing ${plan}...`);
-      
       // Use context method which handles premium status update
       const result = await purchaseSubscription(plan);
-      console.log('[UpgradeModal] Purchase result:', result);
       
       if (result.success) {
-        console.log('[UpgradeModal] Purchase successful! Modal closing...');
         closeUpgradeModal();
       } else {
         setError(result.error || 'Purchase failed. Please try again.');
       }
     } catch (err: any) {
-      console.error('[UpgradeModal] Purchase error:', err);
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setIsProcessing(false);
@@ -79,19 +74,15 @@ export default function UpgradeModal() {
     setError(null);
     
     try {
-      console.log('[UpgradeModal] Restoring purchases...');
       // Use context method which handles premium status update
       const result = await contextRestorePurchases();
-      console.log('[UpgradeModal] Restore result:', result);
       
       if (result.success) {
-        console.log('[UpgradeModal] Restored! Modal closing...');
         closeUpgradeModal();
       } else {
         setError(result.error || 'No active subscription found.');
       }
     } catch (err: any) {
-      console.error('[UpgradeModal] Restore error:', err);
       setError(err.message || 'Failed to restore purchases.');
     } finally {
       setIsRestoring(false);

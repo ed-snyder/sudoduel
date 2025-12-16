@@ -131,14 +131,28 @@ export const GameStateManager = {
       }
 
       // Normal gameplay - decrement timers for non-locked, non-solved players
-      const isBotMatch = Number(game.player2.playerId) === -1 || Number(game.player1.playerId) === -1;
+      // Legacy first-match bot: player2.playerId === -1
+      // Queue-based bot: player2.playerId is a real ID but match is flagged as bot match
+      const isLegacyBotMatch = Number(game.player2.playerId) === -1;
+      const isQueueBasedBotMatch = Number(game.player1.playerId) === -1; // player1 could theoretically be bot
+      const isBotMatch = isLegacyBotMatch || isQueueBasedBotMatch;
       
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
         game.player1.timeRemaining--;
         if (game.player1.timeRemaining <= 0) {
-          if (isBotMatch) {
-            console.log(`🤖 Bot match ${game.matchId}: Player 1 timer hit 0, NOT locking (bot match)`);
-          } else {
+          // Legacy first-match bot: end game immediately when human runs out of time
+          if (isLegacyBotMatch) {
+            game.player1.isLocked = true;
+            if (game.timerInterval) {
+              clearInterval(game.timerInterval);
+              game.timerInterval = null;
+            }
+            onTimeout(matchId);
+            return;
+          }
+          // Queue-based bot: human can continue playing after timer expires
+          // Regular match: lock the player
+          if (!isBotMatch) {
             game.player1.isLocked = true;
           }
         }
@@ -150,11 +164,9 @@ export const GameStateManager = {
         }
       }
 
-      // Special case: Sudobot matches – if BOTH timers have reached 0, auto-end as a human victory.
-      if (isBotMatch && game.player1.timeRemaining <= 0 && game.player2.timeRemaining <= 0) {
-        console.log(
-          `🤖 Bot match ${game.matchId}: BOTH timers reached 0, forcing game end (human victory rule)`
-        );
+      // Special case: Queue-based bot matches – if BOTH timers have reached 0, auto-end as a human victory.
+      // (Legacy bot matches end immediately when human timer hits 0, handled above)
+      if (isBotMatch && !isLegacyBotMatch && game.player1.timeRemaining <= 0 && game.player2.timeRemaining <= 0) {
         // Let getFinalResults decide the winner (human) based on this state.
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
@@ -218,7 +230,6 @@ export const GameStateManager = {
 
     // Can't move if locked
     if (player.isLocked) {
-      console.log(`[applyMove] Rejecting move: player ${playerId} (slot=${player.slot}) is locked. Opponent (slot=${opponent.slot}) locked=${opponent.isLocked}, opponent score=${opponent.score}, player score=${player.score}`);
       return { success: false, player, gameEnded: false };
     }
 
@@ -260,21 +271,14 @@ export const GameStateManager = {
       // Check for puzzle completion (all 81 cells filled)
       if (player.cellsCompleted === 81) {
         player.isSolved = true;
-        console.log(`[applyMove] Player ${player.slot} solved the puzzle!`);
         // Don't set status here - let endGame handle it
         return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
       }
 
       // Check if opponent is locked and we've surpassed their score
       if (opponent.isLocked && player.score > opponent.score) {
-        console.log(`[applyMove] Victory condition: opponent (slot=${opponent.slot}) is locked, player (slot=${player.slot}) score=${player.score} > opponent score=${opponent.score}`);
         // Don't set status here - let endGame handle it
         return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
-      }
-      
-      // Log when opponent is locked but we haven't surpassed them yet
-      if (opponent.isLocked && player.score <= opponent.score) {
-        console.log(`[applyMove] Opponent (slot=${opponent.slot}) is locked, but player (slot=${player.slot}) score=${player.score} <= opponent score=${opponent.score}. Game continues.`);
       }
     } else {
       // Incorrect move
@@ -291,11 +295,20 @@ export const GameStateManager = {
       
       // Check for lockout (timer hit 0)
       if (player.timeRemaining <= 0) {
-        // Bot matches: player 1 (human) can continue playing after timer hits 0
-        const isBotMatch = Number(game.player2.playerId) === -1;
-        const isHumanInBotMatch = isBotMatch && player.slot === 1;
+        // Distinguish between bot match types:
+        // - Legacy first-match bot: player2.playerId === -1 → game ends immediately
+        // - Queue-based bot: player2 has real playerId → human can continue
+        const isLegacyBotMatch = Number(game.player2.playerId) === -1;
+        const isHumanInQueueBotMatch = !isLegacyBotMatch && player.slot === 1 && 
+          (Number(game.player1.playerId) === -1 || Number(game.player2.playerId) !== game.player1.playerId);
         
-        if (!isHumanInBotMatch) {
+        // Legacy first-match bot: human gets locked, game ends immediately
+        if (isLegacyBotMatch && player.slot === 1) {
+          player.isLocked = true;
+          return { success: true, correct: false, player, gameEnded: true, winner: player.score > opponent.score ? player.slot : opponent.slot };
+        }
+        
+        if (!isHumanInQueueBotMatch) {
           player.isLocked = true;
           
           // If both players locked, game ends
@@ -313,7 +326,7 @@ export const GameStateManager = {
             return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
           }
         }
-        // Human in bot match: timer stays at 0, they can keep playing
+        // Human in queue-based bot match: timer stays at 0, they can keep playing
       }
     }
 
@@ -348,7 +361,6 @@ export const GameStateManager = {
       const elapsed = Date.now() - game.disconnectTime;
       // If grace period expired (15 seconds), treat as forfeit
       if (elapsed >= 15000) {
-        console.log(`[GameState] Disconnected player ${game.disconnectedPlayerId} exceeded grace period, treating as forfeit`);
         // Ensure forfeit is marked
         if (game.forfeitingPlayerId === null) {
           game.forfeitingPlayerId = game.disconnectedPlayerId;
@@ -365,43 +377,24 @@ export const GameStateManager = {
       const player1Id = Number(p1.playerId);
       const player2Id = Number(p2.playerId);
       
-      console.log(`[GameState] getFinalResults FORFEIT DEBUG:`);
-      console.log(`  - forfeitingPlayerId: ${forfeitingId} (type: ${typeof game.forfeitingPlayerId})`);
-      console.log(`  - p1.playerId: ${player1Id}`);
-      console.log(`  - p2.playerId: ${player2Id}`);
-      
-      // CRITICAL: IGNORE forfeitWinnerId if forfeitingPlayerId is set
-      // Always determine winner based on forfeitingPlayerId to ensure correctness
       // Determine winner: ALWAYS the opponent of the forfeiting player
       if (forfeitingId === player1Id) {
         winnerId = player2Id;
         resultCode = 2;
-        console.log(`  - Forfeiter is player1, so player2 (${player2Id}) WINS`);
       } else if (forfeitingId === player2Id) {
         winnerId = player1Id;
         resultCode = 1;
-        console.log(`  - Forfeiter is player2, so player1 (${player1Id}) WINS`);
       } else {
         // Fallback: forfeitingId doesn't match either player (shouldn't happen)
-        console.error(`[GameState] ERROR: forfeitingId ${forfeitingId} doesn't match player1(${player1Id}) or player2(${player2Id})!`);
-        // Last resort: determine opponent by process of elimination
         winnerId = forfeitingId === player1Id ? player2Id : player1Id;
         resultCode = winnerId === player1Id ? 1 : 2;
       }
       
       // CRITICAL VALIDATION: Ensure winnerId is NEVER the forfeiting player
       if (winnerId === forfeitingId) {
-        console.error(`[GameState] CRITICAL ERROR: winnerId matches forfeitingId! Forcing correction...`);
         winnerId = forfeitingId === player1Id ? player2Id : player1Id;
         resultCode = winnerId === player1Id ? 1 : 2;
       }
-      
-      // Additional validation: If forfeitWinnerId is set but doesn't match our determined winner, log warning
-      if (game.forfeitWinnerId != null && Number(game.forfeitWinnerId) !== winnerId) {
-        console.warn(`[GameState] WARNING: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match determined winner (${winnerId}). Using determined winner.`);
-      }
-      
-      console.log(`[GameState] FORFEIT FINAL RESULT: forfeiter=${forfeitingId} LOSES, winner=${winnerId} WINS (resultCode=${resultCode})`);
       
       // Return immediately - forfeit overrides EVERYTHING
       return {
@@ -447,7 +440,6 @@ export const GameStateManager = {
             winnerId = p1.playerId;
             resultCode = 1;
           }
-          console.log(`[GameState] Legacy forfeit resolved: disconnected player ${forfeitingId} forfeited, player ${winnerId} wins`);
       return {
         player1: {
           playerId: p1.playerId,
@@ -473,8 +465,6 @@ export const GameStateManager = {
         }
       }
       // If we can't determine who forfeited, DO NOT trust forfeitWinnerId
-      // Log error and fall through to normal win conditions (but forfeit check will catch it)
-      console.error(`[GameState] CRITICAL: forfeitWinnerId is set (${game.forfeitWinnerId}) but forfeitingPlayerId is null and no disconnected player found. Cannot safely determine winner.`);
     }
 
     // ============================================================
@@ -493,9 +483,6 @@ export const GameStateManager = {
         const humanPlayer = Number(p1.playerId) === -1 ? p2 : p1;
         winnerId = humanPlayer.playerId;
         resultCode = humanPlayer === p1 ? 1 : 2;
-        console.log(
-          `[GameState] Bot match timeout: both timers 0, forcing human victory (winnerId=${winnerId}, resultCode=${resultCode})`
-        );
       }
       // Win condition 1: Puzzle solved
       else if (p1.isSolved && !p2.isSolved) {
@@ -517,19 +504,12 @@ export const GameStateManager = {
         resultCode = 3;
       }
     } else {
-      // Forfeit occurred but wasn't caught above - this shouldn't happen, but handle it
-      console.error(`[GameState] ERROR: Forfeit detected but not handled in early return! forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
-      // Force forfeit handling - determine who forfeited
+      // Forfeit occurred but wasn't caught above - force forfeit handling
       const forfeitingId = game.forfeitingPlayerId ?? (game.disconnectedPlayerId && game.disconnectTime && (Date.now() - game.disconnectTime >= 15000) ? game.disconnectedPlayerId : null);
       if (forfeitingId != null) {
         // We know who forfeited - opponent always wins
         winnerId = forfeitingId === p1.playerId ? p2.playerId : p1.playerId;
         resultCode = winnerId === p1.playerId ? 1 : 2;
-      } else {
-        // CRITICAL: If we don't know who forfeited, DO NOT trust forfeitWinnerId
-        // It might be incorrectly set. Log error and let final safety check handle it.
-        console.error(`[GameState] CRITICAL: Cannot determine forfeiting player! forfeitWinnerId=${game.forfeitWinnerId} cannot be trusted.`);
-        // Don't set winnerId here - let final safety check handle it
       }
     }
 
@@ -564,25 +544,19 @@ export const GameStateManager = {
       
       // If current winnerId is wrong, force correction
       if (winnerId !== correctWinnerId) {
-        console.error(`[GameState] CRITICAL: Forfeit detected (forfeitingId=${finalForfeitingId}), FORCING opponent win. Current winnerId=${winnerId} is WRONG. Correcting to ${correctWinnerId}`);
         winnerId = correctWinnerId;
         resultCode = correctResultCode;
-    }
+      }
     
       // CRITICAL VALIDATION: Ensure forfeitWinnerId is correct (if set)
       if (game.forfeitWinnerId != null) {
-        if (game.forfeitWinnerId === finalForfeitingId) {
-          console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) matches forfeiting player! This is WRONG. Correcting...`);
-          game.forfeitWinnerId = correctWinnerId;
-        } else if (game.forfeitWinnerId !== correctWinnerId) {
-          console.error(`[GameState] CRITICAL: forfeitWinnerId (${game.forfeitWinnerId}) doesn't match correct winner (${correctWinnerId}). Correcting...`);
+        if (game.forfeitWinnerId === finalForfeitingId || game.forfeitWinnerId !== correctWinnerId) {
           game.forfeitWinnerId = correctWinnerId;
         }
       }
       
       // Final assertion: winnerId MUST be the opponent
       if (winnerId === finalForfeitingId) {
-        console.error(`[GameState] CRITICAL ASSERTION FAILED: winnerId (${winnerId}) matches forfeiting player! This should NEVER happen! FORCING correction...`);
         winnerId = correctWinnerId;
         resultCode = correctResultCode;
       }
@@ -622,7 +596,6 @@ export const GameStateManager = {
   forfeit(matchId: number, forfeitingPlayerId: number): void {
     const game = gameStates.get(matchId);
     if (!game) {
-      console.log(`[GameState] Forfeit ignored: game doesn't exist`);
       return;
     }
 
@@ -631,7 +604,6 @@ export const GameStateManager = {
     
     // Validate forfeitingPlayerId
     if (forfeitingPlayerId !== p1.playerId && forfeitingPlayerId !== p2.playerId) {
-      console.error(`[GameState] Invalid forfeitingPlayerId ${forfeitingPlayerId}`);
       return;
     }
     
@@ -651,8 +623,6 @@ export const GameStateManager = {
     const forfeiter = forfeitingPlayerId === p1.playerId ? p1 : p2;
     forfeiter.isLocked = true;
     forfeiter.timeRemaining = 0;
-    
-    console.log(`[GameState] Forfeit: player ${forfeitingPlayerId} forfeits (disconnect), player ${winnerId} wins`);
   },
 
   /**
@@ -678,7 +648,6 @@ export const GameStateManager = {
     // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
     // Forfeit must be handled separately to ensure forfeiting player always loses
     if (game.forfeitingPlayerId != null) {
-      console.log(`[GameState] checkVictoryConditions: Forfeit detected, returning false to prevent normal game end`);
       return false;
     }
 
@@ -772,11 +741,10 @@ export const GameStateManager = {
 
     const player = game.player1.playerId === playerId ? game.player1 : game.player2;
 
-    // Bot matches: player 1 (human) can continue erasing after timer hits 0
-    const isBotMatch = Number(game.player2.playerId) === -1;
-    const isHumanInBotMatch = isBotMatch && player.slot === 1;
-    
-    if (player.isLocked || (player.timeRemaining <= 0 && !isHumanInBotMatch)) {
+    // Can't erase if locked or timer has expired
+    // Note: Legacy first-match bot ends game immediately when timer hits 0
+    // Queue-based bots allow human to continue (timer at 0 but not locked)
+    if (player.isLocked || player.timeRemaining <= 0) {
       return { success: false, player };
     }
 
@@ -840,8 +808,6 @@ export const GameStateManager = {
     game.gracePeriodTimer = setTimeout(() => {
       this.handleGraceExpired(matchId, onGraceExpired);
     }, 15000);
-
-    console.log(`[GameState] Player ${disconnectedPlayerId} disconnected in match ${matchId}, both timers paused, grace period started`);
   },
 
   // Call when disconnected player reconnects
@@ -859,7 +825,6 @@ export const GameStateManager = {
     game.disconnectedPlayerId = null;
     game.disconnectTime = null;
 
-    console.log(`[GameState] Player ${reconnectedPlayerId} reconnected in match ${matchId}, timers resumed`);
     return true;
   },
 
@@ -875,11 +840,6 @@ export const GameStateManager = {
     const p1 = game.player1;
     const p2 = game.player2;
     
-    console.log(`[GameState] handleGraceExpired DEBUG:`);
-    console.log(`  - disconnectedPlayerId (forfeiter): ${forfeitingPlayerId} (type: ${typeof forfeitingPlayerId})`);
-    console.log(`  - player1.playerId: ${p1.playerId} (type: ${typeof p1.playerId})`);
-    console.log(`  - player2.playerId: ${p2.playerId} (type: ${typeof p2.playerId})`);
-    
     // CRITICAL: Coerce to numbers to avoid type mismatch (string vs number)
     const forfeiterId = Number(forfeitingPlayerId);
     const player1Id = Number(p1.playerId);
@@ -887,10 +847,6 @@ export const GameStateManager = {
     
     // Determine winner: ALWAYS the opponent of disconnected player
     const winnerId = forfeiterId === player1Id ? player2Id : player1Id;
-    
-    console.log(`  - forfeiterId === player1Id: ${forfeiterId === player1Id}`);
-    console.log(`  - WINNER should be: ${winnerId}`);
-    console.log(`  - LOSER (forfeiter) is: ${forfeiterId}`);
     
     // Set forfeit state directly on game object (use coerced numbers)
     game.forfeitingPlayerId = forfeiterId;
@@ -906,8 +862,6 @@ export const GameStateManager = {
       clearInterval(game.timerInterval);
       game.timerInterval = null;
     }
-    
-    console.log(`[GameState] Forfeit state FINAL: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
 
     // Clear disconnect state AFTER setting forfeit state
     game.disconnectedPlayerId = null;

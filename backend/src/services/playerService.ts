@@ -363,7 +363,7 @@ export const PlayerService = {
     return currentRating - ratingBefore;
   },
 
-  // Get player's global rank based on rating
+  // Get player's global rank based on rating (premium players only)
   async getPlayerRank(userId: number) {
     const profile = await PlayerProfileModel.findByUserId(userId);
     if (!profile) {
@@ -376,31 +376,39 @@ export const PlayerService = {
     );
 
     const playerRating = rating?.rating || 1500;
+    const userIsPremium = profile.is_premium || false;
 
-    // Count how many players have a higher rating
-    const higherRatedResult = await query(
-      `SELECT COUNT(*) as count
-       FROM player_ratings pr
-       WHERE pr.ladder_id = $1
-         AND pr.rating > $2`,
-      [DEFAULT_LADDER_ID, playerRating]
-    );
+    // Only premium players are ranked
+    let rank: number | null = null;
+    if (userIsPremium) {
+      // Count how many PREMIUM players have a higher rating
+      const higherRatedResult = await query(
+        `SELECT COUNT(*) as count
+         FROM player_ratings pr
+         JOIN player_profiles pp ON pp.id = pr.player_id
+         WHERE pr.ladder_id = $1
+           AND pr.rating > $2
+           AND pp.is_premium = true`,
+        [DEFAULT_LADDER_ID, playerRating]
+      );
 
-    const higherRatedCount = parseInt(higherRatedResult.rows[0].count, 10);
-    const rank = higherRatedCount + 1;
+      const higherRatedCount = parseInt(higherRatedResult.rows[0].count, 10);
+      rank = higherRatedCount + 1;
+    }
 
-    // Get total player count
+    // Get total PREMIUM player count
     const totalPlayersResult = await query(
       `SELECT COUNT(DISTINCT pr.player_id) as count
        FROM player_ratings pr
-       WHERE pr.ladder_id = $1`,
+       JOIN player_profiles pp ON pp.id = pr.player_id
+       WHERE pr.ladder_id = $1 AND pp.is_premium = true`,
       [DEFAULT_LADDER_ID]
     );
 
     const totalPlayers = parseInt(totalPlayersResult.rows[0].count, 10);
 
     return {
-      rank,
+      rank, // null if not premium
       total_players: totalPlayers,
       rating: playerRating,
     };

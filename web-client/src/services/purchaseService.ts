@@ -1,5 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
+const DEBUG = import.meta.env.DEV;
+
 export const PRODUCT_IDS = {
   MONTHLY: 'sudoduel_plus_monthly',
   YEARLY: 'sudoduel_plus_yearly',
@@ -42,7 +44,7 @@ class PurchaseServiceImpl {
 
   private async _doInitialize(): Promise<void> {
     if (!Capacitor.isNativePlatform()) {
-      console.log('[PurchaseService] Web platform - mock mode');
+      if (DEBUG) console.log('[PurchaseService] Web platform - mock mode');
       this.setupMockProducts();
       this.initialized = true;
       return;
@@ -56,7 +58,7 @@ class PurchaseServiceImpl {
     }
 
     if (typeof (window as any).CdvPurchase === 'undefined') {
-      console.log('[PurchaseService] CdvPurchase not found - mock mode');
+      if (DEBUG) console.log('[PurchaseService] CdvPurchase not found - mock mode');
       this.setupMockProducts();
       this.initialized = true;
       return;
@@ -66,7 +68,7 @@ class PurchaseServiceImpl {
       this.CdvPurchase = (window as any).CdvPurchase;
       this.store = this.CdvPurchase.store;
 
-      console.log('[PurchaseService] Initializing with CdvPurchase...');
+      if (DEBUG) console.log('[PurchaseService] Initializing with CdvPurchase...');
 
       // Register products
       this.store.register([
@@ -84,7 +86,7 @@ class PurchaseServiceImpl {
 
       // Track products when they load
       this.store.when().productUpdated((product: any) => {
-        console.log('[PurchaseService] Product updated:', product.id);
+        if (DEBUG) console.log('[PurchaseService] Product updated:', product.id);
         this.rawProducts.set(product.id, product);
         
         const offer = product.offers?.[0];
@@ -104,25 +106,25 @@ class PurchaseServiceImpl {
 
       // Handle transaction flow
       this.store.when().approved((transaction: any) => {
-        console.log('[PurchaseService] >>> APPROVED');
+        if (DEBUG) console.log('[PurchaseService] >>> APPROVED');
         try {
           transaction.verify();
         } catch (e) {
-          console.log('[PurchaseService] verify() error (ignoring):', e);
+          if (DEBUG) console.log('[PurchaseService] verify() error (ignoring):', e);
         }
       });
 
       this.store.when().verified((receipt: any) => {
-        console.log('[PurchaseService] >>> VERIFIED');
+        if (DEBUG) console.log('[PurchaseService] >>> VERIFIED');
         try {
           receipt.finish();
         } catch (e) {
-          console.log('[PurchaseService] finish() error (ignoring):', e);
+          if (DEBUG) console.log('[PurchaseService] finish() error (ignoring):', e);
         }
       });
 
       this.store.when().finished(() => {
-        console.log('[PurchaseService] >>> FINISHED - resolving purchase');
+        if (DEBUG) console.log('[PurchaseService] >>> FINISHED - resolving purchase');
         
         // Resolve the global promise if one is waiting
         if (globalPurchaseResolver && pendingProductId) {
@@ -133,7 +135,7 @@ class PurchaseServiceImpl {
           globalPurchaseResolver = null;
           pendingProductId = null;
           
-          console.log('[PurchaseService] Calling resolver for:', productId);
+          if (DEBUG) console.log('[PurchaseService] Calling resolver for:', productId);
           resolver({ success: true, productId, transactionId: 'completed' });
         }
       });
@@ -144,7 +146,7 @@ class PurchaseServiceImpl {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       this.initialized = true;
-      console.log('[PurchaseService] Ready. Products:', Array.from(this.products.keys()));
+      if (DEBUG) console.log('[PurchaseService] Ready. Products:', Array.from(this.products.keys()));
 
     } catch (error) {
       console.error('[PurchaseService] Init error:', error);
@@ -185,8 +187,8 @@ class PurchaseServiceImpl {
   }
 
   async purchase(productId: string): Promise<PurchaseResult> {
-    console.log('[PurchaseService] ====== PURCHASE START ======');
-    console.log('[PurchaseService] Product:', productId);
+    if (DEBUG) console.log('[PurchaseService] ====== PURCHASE START ======');
+    if (DEBUG) console.log('[PurchaseService] Product:', productId);
 
     if (!this.initialized) {
       await this.initialize();
@@ -194,7 +196,7 @@ class PurchaseServiceImpl {
 
     // Mock for web
     if (!Capacitor.isNativePlatform() || !this.store) {
-      console.log('[PurchaseService] Mock purchase (web)');
+      if (DEBUG) console.log('[PurchaseService] Mock purchase (web)');
       return { success: true, productId, transactionId: `mock_${Date.now()}` };
     }
 
@@ -216,12 +218,12 @@ class PurchaseServiceImpl {
       pendingProductId = productId;
       globalPurchaseResolver = resolve;
       
-      console.log('[PurchaseService] Global resolver set, starting order...');
+      if (DEBUG) console.log('[PurchaseService] Global resolver set, starting order...');
 
       // Set timeout
       const timeoutId = setTimeout(() => {
         if (globalPurchaseResolver === resolve) {
-          console.log('[PurchaseService] Purchase timed out');
+          if (DEBUG) console.log('[PurchaseService] Purchase timed out');
           globalPurchaseResolver = null;
           pendingProductId = null;
           resolve({ success: false, error: 'Purchase timed out. If charged, use Restore Purchases.' });
@@ -232,10 +234,10 @@ class PurchaseServiceImpl {
       try {
         this.store.order(offer)
           .then(() => {
-            console.log('[PurchaseService] order() resolved');
+            if (DEBUG) console.log('[PurchaseService] order() resolved');
           })
           .catch((err: any) => {
-            console.log('[PurchaseService] order() rejected:', err);
+            if (DEBUG) console.log('[PurchaseService] order() rejected:', err);
             
             // FIXED: Always resolve on rejection, not just for "cancel"
             const errorMsg = err?.message || String(err) || '';
@@ -268,7 +270,7 @@ class PurchaseServiceImpl {
   }
 
   async restorePurchases(): Promise<PurchaseResult> {
-    console.log('[PurchaseService] ====== RESTORE START ======');
+    if (DEBUG) console.log('[PurchaseService] ====== RESTORE START ======');
 
     if (!Capacitor.isNativePlatform() || !this.store) {
       return { success: false, error: 'Restore not available.' };
@@ -283,8 +285,8 @@ class PurchaseServiceImpl {
       const monthly = this.rawProducts.get(PRODUCT_IDS.MONTHLY);
       const yearly = this.rawProducts.get(PRODUCT_IDS.YEARLY);
 
-      console.log('[PurchaseService] Restore check - monthly owned:', monthly?.owned);
-      console.log('[PurchaseService] Restore check - yearly owned:', yearly?.owned);
+      if (DEBUG) console.log('[PurchaseService] Restore check - monthly owned:', monthly?.owned);
+      if (DEBUG) console.log('[PurchaseService] Restore check - yearly owned:', yearly?.owned);
 
       if (monthly?.owned || yearly?.owned) {
         return { success: true, productId: monthly?.owned ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY };
@@ -304,7 +306,7 @@ class PurchaseServiceImpl {
   }
 
   resetPurchaseState(): void {
-    console.log('[PurchaseService] Resetting purchase state');
+    if (DEBUG) console.log('[PurchaseService] Resetting purchase state');
     globalPurchaseResolver = null;
     pendingProductId = null;
   }

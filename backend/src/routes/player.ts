@@ -253,43 +253,38 @@ router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: R
     const rating = await PlayerRatingModel.findByPlayerAndLadder(targetPlayerId, 1);
     const playerRating = rating?.rating || 1500;
 
-    // Get rank if player is premium
+    // Get rank if player is premium (only premium players are ranked)
     let rank = null;
-    console.log('[Player Profile] Checking premium status:', {
-      playerId: targetPlayerId,
-      is_premium: profile.is_premium,
-      rating: playerRating
-    });
     if (profile.is_premium) {
+      // Count only PREMIUM players with higher rating
       const rankResult = await query(
         `SELECT COUNT(*) + 1 as rank
-         FROM player_ratings
-         WHERE ladder_id = 1 AND rating > $1`,
+         FROM player_ratings pr
+         JOIN player_profiles pp ON pp.id = pr.player_id
+         WHERE pr.ladder_id = 1 AND pr.rating > $1 AND pp.is_premium = true`,
         [playerRating]
       );
       rank = parseInt(rankResult.rows[0].rank, 10);
-      console.log('[Player Profile] Calculated rank:', rank);
-    } else {
-      console.log('[Player Profile] Player is not premium, rank will be null');
     }
 
-    // Get total players for context
+    // Get total PREMIUM players for context
     const totalResult = await query(
-      `SELECT COUNT(*) as total FROM player_ratings WHERE ladder_id = 1`,
+      `SELECT COUNT(*) as total 
+       FROM player_ratings pr
+       JOIN player_profiles pp ON pp.id = pr.player_id
+       WHERE pr.ladder_id = 1 AND pp.is_premium = true`,
       []
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
 
-    const response = {
+    res.json({
       player_id: profile.id,
       display_name: profile.display_name,
       rating: Math.round(playerRating),
       is_premium: profile.is_premium || false,
       rank: rank,
       total_players: totalPlayers,
-    };
-    console.log('[Player Profile] Returning response:', response);
-    res.json(response);
+    });
   } catch (error: any) {
     console.error('Get player profile error:', error);
     res.status(500).json({ error: error.message });

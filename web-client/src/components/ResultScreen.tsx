@@ -169,10 +169,7 @@ export default function ResultScreen({
     if (hasPlayedResultSound.current) return;
     hasPlayedResultSound.current = true;
     
-    if (isDraw) {
-      console.log('[ResultScreen] Game was a draw - no sound');
-    } else if (didWin) {
-      console.log('[ResultScreen] Playing victory sound');
+    if (!isDraw && didWin) {
       playVictory();
     }
   }, [isDraw, didWin, playVictory]);
@@ -265,7 +262,6 @@ export default function ResultScreen({
         setFriendRequestSent(hasPending);
       }
     } catch (err: any) {
-      console.error('[ResultScreen] Failed to load opponent data:', err);
       setH2hStats(null);
     } finally {
       setH2hLoading(false);
@@ -285,7 +281,6 @@ export default function ResultScreen({
         is_premium: profile.is_premium,
       });
     } catch (error) {
-      console.error('[ResultScreen] Failed to load opponent profile:', error);
       setOpponentProfile(null);
     } finally {
       setProfileLoading(false);
@@ -466,10 +461,7 @@ export default function ResultScreen({
           playRatingTick(diff > 0, progress);
         }
         
-        console.log(`🎰 Step ${currentStep}/${steps}: ${newRating} (progress: ${(progress * 100).toFixed(1)}%)`);
-        
         if (currentStep >= steps) {
-          console.log('🎰 Animation complete!');
           setDisplayedRating(endRating);
           setRatingLanded(true);
           vibrate([30, 15, 30]);
@@ -578,13 +570,11 @@ export default function ResultScreen({
       
       // Join the matchmaking queue
       const result = await matchmakingAPI.join() as { status: string; match_id?: number };
-      console.log('[ResultScreen] Join result:', result);
       
       if (result.status === 'matched' && result.match_id) {
         // Instant match found
         stopMusic();        // Stop lobby music first
         playMatchFound();
-        console.log('[ResultScreen] Instant match found:', result.match_id);
         onFindNewMatch(result.match_id);
         setIsFindingMatch(false);
         return;
@@ -616,12 +606,11 @@ export default function ResultScreen({
               setIsFindingMatch(false);
             }
           } catch (err) {
-            console.error('[ResultScreen] Polling error:', err);
+            // Polling error
           }
         }, 1000);
       }
     } catch (error) {
-      console.error('[ResultScreen] Failed to find match:', error);
       setIsFindingMatch(false);
     }
   };
@@ -642,7 +631,7 @@ export default function ResultScreen({
       const { matchmakingAPI } = await import('../services/api');
       await matchmakingAPI.leave();
     } catch (error) {
-      console.error('[ResultScreen] Failed to cancel search:', error);
+      // Failed to cancel search
     }
   };
 

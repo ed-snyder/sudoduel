@@ -16,6 +16,7 @@ const AD_CONFIG = {
 
 // Use test ads only in development mode
 const USE_TEST_ADS = import.meta.env.DEV;
+const DEBUG = import.meta.env.DEV;
 
 interface AdService {
   initialize: () => Promise<void>;
@@ -34,7 +35,7 @@ class AdServiceImpl implements AdService {
     
     // Only initialize on native platforms
     if (!Capacitor.isNativePlatform()) {
-      console.log('[AdService] Not a native platform, skipping ad initialization');
+      if (DEBUG) console.log('[AdService] Not a native platform, skipping ad initialization');
       return;
     }
 
@@ -49,7 +50,7 @@ class AdServiceImpl implements AdService {
       });
 
       this.initialized = true;
-      console.log('[AdService] Initialized successfully');
+      if (DEBUG) console.log('[AdService] Initialized successfully');
 
       // Pre-load first interstitial
       await this.loadInterstitial();
@@ -72,7 +73,7 @@ class AdServiceImpl implements AdService {
       });
 
       this.interstitialLoaded = true;
-      console.log('[AdService] Interstitial loaded');
+      if (DEBUG) console.log('[AdService] Interstitial loaded');
     } catch (error) {
       console.error('[AdService] Failed to load interstitial:', error);
       this.interstitialLoaded = false;
@@ -81,13 +82,13 @@ class AdServiceImpl implements AdService {
 
   async showInterstitial(): Promise<boolean> {
     if (!this.initialized || !this.AdMob || !this.interstitialLoaded) {
-      console.log('[AdService] Interstitial not ready');
+      if (DEBUG) console.log('[AdService] Interstitial not ready');
       return false;
     }
 
     try {
       await this.AdMob.showInterstitial();
-      console.log('[AdService] Interstitial shown');
+      if (DEBUG) console.log('[AdService] Interstitial shown');
       
       // Reset and load next ad
       this.interstitialLoaded = false;

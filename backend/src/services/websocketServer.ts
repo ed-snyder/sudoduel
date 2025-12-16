@@ -29,8 +29,7 @@ import {
 } from './botService';
 import { getBotMatchInfo, clearBotMatchInfo } from './matchmakingService';
 
-
-
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: number;
@@ -81,7 +80,6 @@ export const setupWebSocketServer = (server: Server) => {
       const isBotMatch = (match as any).is_bot_match === true || botMatchInfo !== undefined;
       if (isBotMatch) {
         botMatches.set(matchId, true);
-        console.log(`🤖 Bot match detected: matchId=${matchId}, is_bot_match=${(match as any).is_bot_match}, botMatchInfo=${!!botMatchInfo}`);
       }
 
       const players = await MatchModel.getPlayers(matchId);
@@ -168,7 +166,6 @@ export const setupWebSocketServer = (server: Server) => {
         // Initialize bot state if this is a bot match
         if (isBotMatch) {
           initBotState(matchId);
-          console.log(`🤖 Bot match ${matchId} initialized`);
         }
       }
 
@@ -184,23 +181,24 @@ export const setupWebSocketServer = (server: Server) => {
                             (isBotMatch && ((opponentRow as any).is_bot || !opponentRow.player_id));
 
       if (isOpponentBot) {
-        // Bot opponent - generate random name each match for variety
-        const randomId = crypto.randomBytes(4).toString('hex').substring(0, 6);
-        opponentName = `Guest_${randomId}`;
+        // Determine if this is a legacy first-match bot or queue-based bot
+        const isLegacyBot = !opponentRow.player_id;
         
-        if (botMatch) {
-          // Queue-based bot: use the botRating from botMatch
-          opponentRatingValue = botMatch.botRating;
-          console.log(`🤖 Bot opponent: name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}, botPlayerId=${botMatch.botPlayerId}`);
-        } else if (opponentRow.player_id) {
-          // Queue-based bot but missing info - get rating from DB
-          const botRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
-          opponentRatingValue = botRating?.rating || 1500;
-          console.log(`🤖 Bot opponent (from DB): name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}, botPlayerId=${opponentRow.player_id}`);
-        } else {
-          // Legacy first-match bot (no player_id)
+        if (isLegacyBot) {
+          // Legacy first-match bot: always named "Sudobot"
+          opponentName = 'Sudobot';
           opponentRatingValue = getBotDisplayRating();
-          console.log(`🤖 Legacy bot opponent: name=${opponentName}, displayedRating=${Math.round(opponentRatingValue)}`);
+        } else if (botMatch) {
+          // Queue-based bot: get display name from profile
+          const botProfile = await PlayerProfileModel.findById(opponentRow.player_id);
+          opponentName = botProfile?.display_name || 'Bot';
+          opponentRatingValue = botMatch.botRating;
+        } else {
+          // Queue-based bot but missing botMatch info - get from DB
+          const botProfile = await PlayerProfileModel.findById(opponentRow.player_id);
+          const botRating = await PlayerRatingModel.findByPlayerAndLadder(opponentRow.player_id, 1);
+          opponentName = botProfile?.display_name || 'Bot';
+          opponentRatingValue = botRating?.rating || 1500;
         }
         opponentIsPremium = false;
       } else {
@@ -237,10 +235,8 @@ export const setupWebSocketServer = (server: Server) => {
       // For bot matches, start with 1 client; for regular matches, need 2 clients
       const clientsNeeded = isBotMatch ? 1 : 2;
       const currentClients = clients.get(matchId)!.size;
-      console.log(`🎮 Game start check: matchId=${matchId}, isBotMatch=${isBotMatch}, clientsNeeded=${clientsNeeded}, currentClients=${currentClients}, gameStatus=${game.status}`);
       
       if (currentClients >= clientsNeeded && game.status === 'WAITING') {
-        console.log(`✅ Starting game: matchId=${matchId}, isBotMatch=${isBotMatch}`);
         // Mark game as starting (prevents re-triggering)
         (game as any).status = 'STARTING';
         
@@ -290,8 +286,6 @@ export const setupWebSocketServer = (server: Server) => {
             // If botMatchInfo is missing but this is a queue-based bot match,
             // try to reconstruct bot info from match players and player_profiles
             if (!botMatch && (match as any).is_bot_match === true) {
-              console.log(`🤖 Bot match info missing for match ${matchId}, reconstructing from DB...`);
-              
               // Query match_players joined with player_profiles to find the bot
               const botResult = await query(
                 `SELECT mp.player_id, pp.is_bot, pr.rating
@@ -308,15 +302,11 @@ export const setupWebSocketServer = (server: Server) => {
                   botPlayerId: botRow.player_id,
                   botRating: botRow.rating,
                 };
-                console.log(`🤖 Reconstructed bot info: playerId=${botRow.player_id}, rating=${Math.round(botRow.rating)}`);
-              } else {
-                console.log(`🤖 No bot player found in match ${matchId}, using legacy bot`);
               }
             }
             
             if (botMatch) {
               // Queue-based bot match: use new bot system
-              console.log(`🤖 Starting queue-based bot loop for match ${matchId}`);
               startBotLoop(
                 matchId,
                 botMatch.botPlayerId,
@@ -326,7 +316,6 @@ export const setupWebSocketServer = (server: Server) => {
               );
             } else {
               // Legacy first-match bot: use old bot system
-              console.log(`🤖 Using legacy bot loop for match ${matchId} (first-match bot)`);
               startBotMoveLoop(matchId);
             }
           }
@@ -372,20 +361,15 @@ export const setupWebSocketServer = (server: Server) => {
       ws.on('close', async () => {
         const game = GameStateManager.getGame(matchId);
         const wasInProgress = game?.status === 'IN_PROGRESS';
-        const remainingClients = clients.get(matchId)?.size || 0;
-        
-        console.log(`[WS] DISCONNECT userId=${ws.userId} playerId=${profile.id} matchId=${matchId} gameStatus=${game?.status || 'N/A'} remainingClients=${remainingClients}`);
         
         clients.get(matchId)?.delete(ws);
         
         if (clients.get(matchId)?.size === 0) {
           clients.delete(matchId);
-          console.log(`[WS] No clients remaining for match ${matchId}, cleaned up`);
           // Clear matchmaking cache so players can join new games
           MatchmakingService.clearMatch(matchId);
         } else if (wasInProgress) {
           // Start disconnect handling
-          console.log(`[WS] DISCONNECT DEBUG: Player ${profile.id} disconnected, they will LOSE if they don't reconnect`);
           GameStateManager.handleDisconnect(matchId, profile.id, async (matchId) => {
             await endGame(matchId);
           });
@@ -453,17 +437,7 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           return;
         }
 
-        console.log(
-          `[WS] PLACE_NUMBER from userId=${userId} playerId=${playerId} row=${row} col=${col} value=${value}`
-        );
         const result = GameStateManager.applyMove(matchId, playerId, row, col, value);
-
-        console.log(
-          `[WS] MOVE_RESULT userId=${userId} playerId=${playerId} ` +
-          `success=${result.success} correct=${result.correct} ` +
-          `score=${result.player.score} isLocked=${result.player.isLocked} ` +
-          `cellsCompleted=${result.player.cellsCompleted} timeRemaining=${result.player.timeRemaining} gameEnded=${result.gameEnded}`
-        );
 
         if (result.success) {
           const game = GameStateManager.getGame(matchId);
@@ -508,7 +482,6 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           });
 
           if (result.gameEnded) {
-            console.log(`[WS] gameEnded=true, calling endGame for match ${matchId}`);
             try {
               await endGame(matchId);
             } catch (error) {
@@ -540,20 +513,12 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
               }
             }
           }
-        } else {
-          // Log why the move was rejected (locked out or timed out)
-          console.log(
-            `[WS] MOVE_REJECTED userId=${userId} playerId=${playerId} ` +
-            `isLocked=${result.player.isLocked} ` +
-            `timeRemaining=${result.player.timeRemaining}`
-          );
         }
       } catch (error) {
         console.error(`❌ Error applying move:`, error);
       }
       break;
     case 'ERASE_CELL':
-      console.log(`🗑️ Processing ERASE_CELL for user ${userId}`);
       const { row: eraseRow, col: eraseCol } = data;
       
       try {
@@ -671,7 +636,6 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           // Get a random puzzle for the rematch
           const puzzle = await PuzzleModel.getRandomByLadder(1);
           if (!puzzle) {
-            console.error('❌ No puzzle available for rematch');
             return;
           }
 
@@ -701,39 +665,10 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           );
 
           // Send rematch accepted directly to both players
-          console.log(`🔄 Rematch accepted! Sending REMATCH_ACCEPTED to match ${matchId} with new_match_id ${newMatch.id}`);
-          console.log(`   Player 1: ${userProfile.id}, Player 2: ${opponentSlot.player_id}`);
-          
           const rematchMessage = {
             type: 'REMATCH_ACCEPTED',
             data: { new_match_id: newMatch.id },
           };
-          const rematchMessageStr = JSON.stringify(rematchMessage);
-          
-          // Send to all clients connected to the old match
-          const matchClients = clients.get(matchId);
-          if (matchClients) {
-            console.log(`   Sending to ${matchClients.size} connected clients`);
-            let sentCount = 0;
-            matchClients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN) {
-                try {
-                  client.send(rematchMessageStr);
-                  sentCount++;
-                  console.log(`   ✅ Sent REMATCH_ACCEPTED to client (userId: ${(client as any).userId})`);
-                } catch (error) {
-                  console.error(`   ❌ Error sending to client:`, error);
-                }
-              } else {
-                console.log(`   ⚠️ Client not OPEN (readyState: ${client.readyState})`);
-              }
-            });
-            console.log(`   📤 Successfully sent to ${sentCount} client(s)`);
-          } else {
-            console.log(`   ⚠️ No clients found for match ${matchId}`);
-          }
-          
-          // Also try to send via broadcast as fallback
           broadcastToMatch(matchId, rematchMessage);
 
           rematchRequests.delete(matchId);
@@ -802,7 +737,6 @@ function broadcastToMatch(matchId: number, message: any) {
 }
 
 async function handleTimeout(matchId: number) {
-  console.log(`⏱️ Match ${matchId} timed out`);
   await endGame(matchId);
 }
 
@@ -832,12 +766,9 @@ function handleTimerUpdate(matchId: number) {
  * Bot makes moves every 8-12 seconds, with one intentional mistake around 2 minutes
  */
 function startBotMoveLoop(matchId: number) {
-  console.log(`🤖 Starting bot move loop for match ${matchId}`);
-
   const runBotMove = async () => {
     const game = GameStateManager.getGame(matchId);
     if (!game || game.status !== 'IN_PROGRESS') {
-      console.log(`🤖 Bot loop stopping - game not in progress for match ${matchId}`);
       cleanupBotState(matchId);
       return;
     }
@@ -847,13 +778,11 @@ function startBotMoveLoop(matchId: number) {
     
     // Don't make moves if bot is locked out
     if (botPlayer.isLocked) {
-      console.log(`🤖 Bot is locked out in match ${matchId}`);
       return;
     }
 
     // Don't make moves if human has already won
     if (game.player1.isSolved) {
-      console.log(`🤖 Human already won in match ${matchId}`);
       return;
     }
 
@@ -868,8 +797,6 @@ function startBotMoveLoop(matchId: number) {
     );
 
     if (botMove) {
-      console.log(`🤖 Bot making move in match ${matchId}: row=${botMove.row}, col=${botMove.col}, value=${botMove.value}, isMistake=${botMove.isMistake}`);
-      
       if (botMove.isMistake) {
         // Bot makes a mistake - loses time and doesn't score
         botPlayer.mistakes++;
@@ -979,7 +906,6 @@ async function handleBotMove(
   const result = GameStateManager.applyMove(matchId, botPlayerId, row, col, value);
 
   if (!result.success) {
-    console.log(`🤖 Bot move rejected: matchId=${matchId}, botPlayerId=${botPlayerId}, row=${row}, col=${col}, value=${value}`);
     return;
   }
 
@@ -1037,35 +963,23 @@ async function handleBotMove(
 }
 
 async function endGame(matchId: number) {
-  console.log(`🎬 endGame CALLED for match ${matchId}`);
-
   const game = GameStateManager.getGame(matchId);
-  console.log(`🎮 Game exists:`, !!game);
-  console.log(`🎮 Game status:`, game?.status);
 
   if (!game) {
-    console.log(`⚠️ endGame early return - game doesn't exist`);
     return;
   }
 
   // Only proceed if game is still IN_PROGRESS (allow multiple calls but only process once)
   if (game.status === 'COMPLETED') {
-    console.log(`⚠️ endGame early return - game already completed`);
     return;
   }
 
   // Set status to COMPLETED immediately to prevent race conditions
   game.status = 'COMPLETED';
-  console.log(`✅ Set game.status to COMPLETED in memory`);
-  
-  // Log forfeit state for debugging
-  console.log(`[endGame] Forfeit state: forfeitingPlayerId=${game.forfeitingPlayerId}, forfeitWinnerId=${game.forfeitWinnerId}`);
 
   const results = GameStateManager.getFinalResults(matchId);
-  console.log(`📊 Final results:`, results);
 
   if (!results) {
-    console.log(`❌ No results returned, exiting endGame`);
     return;
   }
 
@@ -1076,7 +990,6 @@ async function endGame(matchId: number) {
     const match = await MatchModel.findById(matchId);
     const isRanked = match?.is_ranked !== false; // Default to ranked if not set
     const isBotMatch = botMatches.get(matchId) || (match as any).is_bot_match === true;
-    console.log(`📊 Match ${matchId} is_ranked: ${isRanked}, is_bot_match: ${isBotMatch}`);
 
     // Clean up bot state if this is a bot match
     if (isBotMatch) {
@@ -1092,22 +1005,13 @@ async function endGame(matchId: number) {
       botMatches.delete(matchId);
     }
 
-    console.log(`💾 [1/6] Updating match status...`);
     await MatchModel.updateStatus(matchId, 'COMPLETED');
-    console.log(`✅ [1/6] Match status updated`);
-
-    console.log(`💾 [2/6] Setting result code: ${results.resultCode}`);
     await MatchModel.setResult(matchId, results.resultCode);
-    console.log(`✅ [2/6] Result code set`);
 
-    console.log(`💾 [3/6] Fetching match players...`);
     const matchPlayers = await MatchModel.getPlayers(matchId);
-    console.log(`✅ [3/6] Got ${matchPlayers.length} players:`, matchPlayers.map(p => p.player_id));
 
     const player1Data = matchPlayers.find(p => p.slot === 1);
     const player2Data = matchPlayers.find(p => p.slot === 2);
-    console.log(`👤 Player 1 data:`, player1Data?.player_id);
-    console.log(`👤 Player 2 data:`, player2Data?.player_id);
 
     // For bot matches, check if it's a queue-based bot (ranked) or legacy first-match bot (unranked)
     if (isBotMatch) {
@@ -1115,16 +1019,12 @@ async function endGame(matchId: number) {
       const isQueueBasedBot = player2Data?.player_id != null; // Queue-based bots have real player_id
       const isBotMatchRanked = isRanked && isQueueBasedBot;
       
-      console.log(`🤖 Bot match processing: isQueueBasedBot=${isQueueBasedBot}, isBotMatchRanked=${isBotMatchRanked}`);
-      
       if (!player1Data) {
-        console.log(`❌ Missing human player data, exiting`);
         return;
       }
 
       const rating1 = await PlayerRatingModel.findByPlayerAndLadder(player1Data.player_id, 1);
       if (!rating1) {
-        console.error(`❌ Human player rating not found`);
         return;
       }
 
@@ -1138,7 +1038,6 @@ async function endGame(matchId: number) {
         // Queue-based bot: update both ratings using Glicko-2
         const rating2 = await PlayerRatingModel.findByPlayerAndLadder(player2Data.player_id, 1);
         if (!rating2) {
-          console.error(`❌ Bot player rating not found`);
           return;
         }
 
@@ -1153,8 +1052,6 @@ async function endGame(matchId: number) {
           outcome = 0.5; // Draw
         }
 
-        console.log(`🎲 Bot match outcome: ${outcome === 1 ? 'Human wins' : outcome === 0 ? 'Bot wins' : 'Draw'}`);
-
         newRatings = await RatingService.updateRatings(
           rating1.id,
           rating1.rating,
@@ -1168,8 +1065,6 @@ async function endGame(matchId: number) {
           rating2.last_update_at,
           outcome
         );
-
-        console.log(`📊 Rating changes: human ${Math.round(rating1.rating)} → ${Math.round(newRatings.player1.rating)}, bot ${Math.round(rating2.rating)} → ${Math.round(newRatings.player2.rating)}`);
       } else {
         // Legacy first-match bot: no rating changes
         newRatings = {
@@ -1266,30 +1161,22 @@ async function endGame(matchId: number) {
         },
       });
 
-      console.log(`📤 GAME_END message broadcasted for bot match (ranked=${isBotMatchRanked})`);
-
       setTimeout(() => {
         GameStateManager.removeGame(matchId);
         clients.delete(matchId);
-        console.log(`🧹 Cleaned up bot game state`);
       }, 30000);
 
       return; // Exit early for bot matches
     }
 
     if (!player1Data || !player2Data) {
-      console.log(`❌ Missing player data, exiting`);
       return;
     }
 
-    console.log(`💾 [4/6] Fetching player ratings...`);
     const rating1 = await PlayerRatingModel.findByPlayerAndLadder(player1Data.player_id, 1);
     const rating2 = await PlayerRatingModel.findByPlayerAndLadder(player2Data.player_id, 1);
-    console.log(`✅ [4/6] Rating 1:`, rating1?.rating);
-    console.log(`✅ [4/6] Rating 2:`, rating2?.rating);
 
     if (!rating1 || !rating2) {
-      console.error(`❌ Player ratings not found`);
       return;
     }
 
@@ -1308,9 +1195,7 @@ async function endGame(matchId: number) {
       } else {
         outcome = 0.5;
       }
-      console.log(`🎲 Outcome value: ${outcome}`);
 
-      console.log(`💾 [5/6] Updating ratings with Glicko-2...`);
       newRatings = await RatingService.updateRatings(
         rating1.id,
         rating1.rating,
@@ -1324,10 +1209,8 @@ async function endGame(matchId: number) {
         rating2.last_update_at,
         outcome
       );
-      console.log(`✅ [5/6] New ratings calculated:`, newRatings);
     } else {
       // Unranked match - no rating changes
-      console.log(`💾 [5/6] Unranked match - skipping rating calculation`);
       newRatings = {
         player1: {
           rating: rating1.rating,
@@ -1340,10 +1223,8 @@ async function endGame(matchId: number) {
           volatility: rating2.volatility,
         },
       };
-      console.log(`✅ [5/6] Ratings unchanged (friendly match)`);
     }
 
-    console.log(`💾 [6/6] Saving player stats for player ${results.player1.playerId}...`);
     await MatchModel.updatePlayerStats(matchId, results.player1.playerId, {
       cellsCompleted: results.player1.cellsCompleted,
       livesUsed: 0, // No longer using lives
@@ -1358,9 +1239,7 @@ async function endGame(matchId: number) {
       timeAtFinish: results.player1.timeRemaining ?? null,
       longestCellStreak: results.player1.longestCellStreak ?? 0,
     });
-    console.log(`✅ [6/6a] Player 1 stats saved`);
 
-    console.log(`💾 [6/6] Saving player stats for player ${results.player2.playerId}...`);
     await MatchModel.updatePlayerStats(matchId, results.player2.playerId, {
       cellsCompleted: results.player2.cellsCompleted,
       livesUsed: 0, // No longer using lives
@@ -1375,25 +1254,20 @@ async function endGame(matchId: number) {
       timeAtFinish: results.player2.timeRemaining ?? null,
       longestCellStreak: results.player2.longestCellStreak ?? 0,
     });
-    console.log(`✅ [6/6b] Player 2 stats saved`);
 
     // Update head-to-head stats
-    console.log(`💾 [7/7] Updating head-to-head stats...`);
     try {
       await HeadToHeadModel.updateAfterMatch(
         results.player1.playerId,
         results.player2.playerId,
         results.winnerId || null
       );
-      console.log(`✅ [7/7] Head-to-head stats updated`);
     } catch (error: any) {
-      console.error('[endGame] Failed to update H2H stats:', error);
       // Don't fail match completion if H2H update fails
     }
 
     // Update win streaks and peak rating (if columns exist) - only for ranked matches
     if (isRanked) {
-      console.log(`💾 [8/8] Updating win streaks and peak ratings...`);
       try {
         const { query } = await import('../config/database');
         
@@ -1432,18 +1306,9 @@ async function endGame(matchId: number) {
             WHERE id = $2
           `, [newRatings.player2.rating, results.player2.playerId]);
         }
-        console.log(`✅ [8/8] Win streaks and peak ratings updated`);
       } catch (error: any) {
-        // If columns don't exist (migration not run), skip this step
-        if (error.message && error.message.includes('column') && (error.message.includes('current_win_streak') || error.message.includes('peak_rating'))) {
-          console.warn(`[endGame] Win streak columns not found, skipping (migration may not be run)`);
-        } else {
-          // Log other errors but don't fail the game end
-          console.error(`[endGame] Error updating win streaks:`, error);
-        }
+        // If columns don't exist (migration not run), skip silently
       }
-    } else {
-      console.log(`💾 [8/8] Skipping win streaks (unranked match)`);
     }
 
     // Clear matchmaking cache for this match so players can join new games
@@ -1456,8 +1321,6 @@ async function endGame(matchId: number) {
     cache.invalidate(`profile:`);
     // Invalidate H2H cache for both players (they have stats against each other)
     cache.invalidate(CacheKeys.headToHead(player1Data.player_id, player2Data.player_id));
-
-    console.log(`📤 Broadcasting GAME_END...`);
     
     // Determine winner slot and reason
     let winnerSlot: 1 | 2 | null = null;
@@ -1475,7 +1338,6 @@ async function endGame(matchId: number) {
     
     if (hasForfeit) {
       reason = 'FORFEIT';
-      console.log(`[endGame] FORFEIT detected: forfeitingPlayerId=${game?.forfeitingPlayerId}, forfeitWinnerId=${game?.forfeitWinnerId}`);
     } else if (winnerSlot === null) {
       reason = 'DRAW';
     } else {
@@ -1508,15 +1370,12 @@ async function endGame(matchId: number) {
       },
     });
 
-    console.log(`📤 GAME_END message broadcasted`);
-
     setTimeout(() => {
       GameStateManager.removeGame(matchId);
       clients.delete(matchId);
-      console.log(`🧹 Cleaned up game state`);
     }, 30000);
 
   } catch (error) {
-    console.error(`💥 ERROR in endGame:`, error);
+    console.error(`[endGame] Error:`, error);
   }
 }

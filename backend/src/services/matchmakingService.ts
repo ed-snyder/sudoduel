@@ -44,21 +44,12 @@ async function isFirstMatch(playerId: number): Promise<boolean> {
   // Player is only "first match" if BOTH indicate zero games
   const isFirst = matchCount === 0 && gamesPlayed === 0;
   
-  if (matchCount !== gamesPlayed) {
-    console.log(`⚠️ Data inconsistency for player ${playerId}: match_players=${matchCount}, games_played=${gamesPlayed}`);
-  }
-  
-  console.log(`🎮 isFirstMatch check: player=${playerId}, matchCount=${matchCount}, gamesPlayed=${gamesPlayed}, result=${isFirst}`);
-  
   return isFirst;
 }
 
 export const MatchmakingService = {
   async joinQueue(userId: number) {
-    console.log(`🎯 Matchmaking: User ${userId} joining queue`);
-
     const profile = await PlayerProfileModel.findByUserId(userId);
-    console.log(`👤 Profile found:`, profile?.id);
 
     if (!profile) {
       throw new Error('Player profile not found');
@@ -67,7 +58,6 @@ export const MatchmakingService = {
     // Check if player already has an active match
     if (playerMatches.has(profile.id)) {
       const matchId = playerMatches.get(profile.id)!;
-      console.log(`✅ Player ${profile.id} already has match ${matchId}`);
       return { status: 'matched', match_id: matchId };
     }
 
@@ -75,7 +65,6 @@ export const MatchmakingService = {
       profile.id,
       DEFAULT_LADDER_ID
     );
-    console.log(`⭐ Rating loaded:`, rating ? `rating=${rating.rating} rd=${rating.rd} games_played=${rating.games_played}` : 'NOT FOUND');
 
     if (!rating) {
       // Create default rating if not exists
@@ -84,7 +73,6 @@ export const MatchmakingService = {
         profile.id,
         DEFAULT_LADDER_ID
       );
-      console.log(`🆕 Created new rating:`, rating?.rating);
     }
 
     const playerRating = rating?.rating || 1500;
@@ -93,7 +81,6 @@ export const MatchmakingService = {
     // Check if this is the player's first match ever - create bot match
     const firstMatch = await isFirstMatch(profile.id);
     if (firstMatch) {
-      console.log(`🤖 First match for player ${profile.id}, creating bot match`);
       const botMatch = await this.createBotMatch(profile.id);
       playerMatches.set(profile.id, botMatch.id);
       return { 
@@ -115,18 +102,13 @@ export const MatchmakingService = {
       // Already in queue - check if we got matched while waiting
       if (playerMatches.has(profile.id)) {
         const matchId = playerMatches.get(profile.id)!;
-        console.log(`✅ Match found (was in queue): ${matchId}`);
         return { status: 'matched', match_id: matchId };
       }
-      // Still waiting, return queued status without logging
+      // Still waiting
       return { status: 'queued', message: 'Waiting for opponent...' };
     }
 
-    // Not in queue yet - proceed with joining
-    console.log(`📋 Not in queue, joining...`);
-    
-    // Try to find an opponent first (excluding blocked users)
-    console.log(`🔍 Looking for opponent...`);
+    // Not in queue yet - try to find an opponent first (excluding blocked users)
     const opponent = await MatchmakingQueueModel.findOpponent(
       profile.id,
       DEFAULT_LADDER_ID,
@@ -145,7 +127,6 @@ export const MatchmakingService = {
         return { status: 'matched', match_id: matchId };
       }
 
-      console.log(`✅ Found opponent:`, opponent.player_id);
       // Create match
       const match = await this.createMatch(profile.id, opponent.player_id);
       
@@ -160,7 +141,6 @@ export const MatchmakingService = {
     }
 
     // No opponent found, add to queue
-    console.log(`📝 Adding to queue...`);
     await MatchmakingQueueModel.enqueue(
       profile.id,
       DEFAULT_LADDER_ID,
@@ -171,7 +151,6 @@ export const MatchmakingService = {
     // Check again if someone matched with us while we were processing
     if (playerMatches.has(profile.id)) {
       const matchId = playerMatches.get(profile.id)!;
-      console.log(`✅ Match found while processing: ${matchId}`);
       // Remove from queue since we're matched
       await MatchmakingQueueModel.dequeue(profile.id, DEFAULT_LADDER_ID);
       // Cancel bot spawn timer if it exists
@@ -209,7 +188,6 @@ export const MatchmakingService = {
         return { status: 'matched', match_id: matchId };
       }
 
-      console.log(`✅ Found opponent after enqueue:`, opponentAfterEnqueue.player_id);
       // Create match
       const match = await this.createMatch(profile.id, opponentAfterEnqueue.player_id);
       
@@ -232,17 +210,13 @@ export const MatchmakingService = {
     }
 
     // No human opponent found - start 12-second timer to spawn bot
-    console.log(`⏱️ Starting ${BOT_SPAWN_DELAY_MS}ms timer for bot spawn (player ${profile.id})`);
     const botTimer = setTimeout(async () => {
       // Check if player still in queue and doesn't have a match
       const stillInQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
       const hasMatch = playerMatches.has(profile.id);
       
       if (stillInQueue && !hasMatch) {
-        console.log(`🤖 Timer expired, spawning bot for player ${profile.id}`);
         await this.spawnBotOpponent(profile.id, playerRating);
-      } else {
-        console.log(`⏱️ Timer expired but player ${profile.id} no longer needs bot (inQueue=${stillInQueue}, hasMatch=${hasMatch})`);
       }
       
       queueTimers.delete(profile.id);
@@ -312,7 +286,6 @@ export const MatchmakingService = {
           return { status: 'matched', match_id: matchId };
         }
 
-        console.log(`✅ Found opponent during status check:`, opponent.player_id);
         // Create match
         const match = await this.createMatch(profile.id, opponent.player_id);
         
@@ -334,8 +307,6 @@ export const MatchmakingService = {
   },
 
   async createMatch(player1Id: number, player2Id: number) {
-    console.log(`🎮 Creating match: Player ${player1Id} vs Player ${player2Id}`);
-    
     const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
     if (!puzzle) {
       throw new Error('No puzzle available');
@@ -366,16 +337,13 @@ export const MatchmakingService = {
       rating2?.volatility || 0.06
     );
 
-    console.log(`✅ Match ${match.id} created`);
     return match;
   },
 
   // Clean up match from cache (call after game ends)
   clearMatch(matchId: number) {
-    console.log(`🧹 [Matchmaking] Clearing match ${matchId} from cache`);
     for (const [playerId, mId] of playerMatches.entries()) {
       if (Number(mId) === Number(matchId)) {
-        console.log(`🧹 [Matchmaking] Removing player ${playerId} (matchId=${mId}) from cache`);
         playerMatches.delete(playerId);
       }
     }
@@ -383,7 +351,6 @@ export const MatchmakingService = {
 
   // Create a bot match for first-time players
   async createBotMatch(playerId: number) {
-    console.log(`🤖 Creating bot match for player ${playerId}`);
 
     const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
     if (!puzzle) {
@@ -418,7 +385,6 @@ export const MatchmakingService = {
       [match.id, botPlayer.id, getBotDisplayRating()]
     );
 
-    console.log(`✅ Bot match ${match.id} created for player ${playerId}`);
     return match;
   },
 
@@ -426,11 +392,8 @@ export const MatchmakingService = {
   async spawnBotOpponent(humanPlayerId: number, humanRating: number) {
     const bot = await findBotNearRating(humanRating);
     if (!bot) {
-      console.error(`❌ No bot found for rating ${humanRating}`);
       return null;
     }
-
-    console.log(`🤖 Spawning bot ${bot.displayName} (rating: ${Math.round(bot.rating)}) for player ${humanPlayerId}`);
 
     // Create match with is_bot_match flag set in database
     const puzzle = await PuzzleModel.getRandomByLadder(DEFAULT_LADDER_ID);
@@ -482,7 +445,6 @@ export const MatchmakingService = {
     playerMatches.set(humanPlayerId, match.id);
     await MatchmakingQueueModel.dequeue(humanPlayerId, DEFAULT_LADDER_ID);
 
-    console.log(`✅ Bot match ${match.id} created for player ${humanPlayerId} vs bot ${bot.playerId}`);
     return match;
   },
 };

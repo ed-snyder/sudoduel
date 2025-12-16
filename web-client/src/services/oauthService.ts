@@ -1,5 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
+const DEBUG = import.meta.env.DEV;
+
 // Google Sign-In user interface
 export interface GoogleUser {
   email: string;
@@ -53,7 +55,7 @@ class OAuthService {
     }
 
     if (!Capacitor.isNativePlatform()) {
-      console.log('[OAuthService] Skipping initialization - not a native platform');
+      if (DEBUG) console.log('[OAuthService] Skipping initialization - not a native platform');
       this.initialized = true;
       return;
     }
@@ -74,7 +76,7 @@ class OAuthService {
         scopes: ['profile', 'email'],
         grantOfflineAccess: true,
       });
-      console.log('[OAuthService] Google Auth initialized with client:', Capacitor.getPlatform());
+      if (DEBUG) console.log('[OAuthService] Google Auth initialized with client:', Capacitor.getPlatform());
     } catch (error) {
       console.error('[OAuthService] Failed to initialize Google Auth:', error);
     }
@@ -84,7 +86,7 @@ class OAuthService {
       try {
         const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
         this.appleSignInPlugin = SignInWithApple;
-        console.log('[OAuthService] Apple Sign In initialized');
+        if (DEBUG) console.log('[OAuthService] Apple Sign In initialized');
       } catch (error) {
         console.error('[OAuthService] Failed to initialize Apple Sign In:', error);
       }
@@ -106,7 +108,7 @@ class OAuthService {
       const user = await this.googleAuthPlugin.signIn();
       
       if (!user || !user.authentication?.idToken) {
-        console.log('[OAuthService] Google sign-in: no token received');
+        if (DEBUG) console.log('[OAuthService] Google sign-in: no token received');
         return null;
       }
 
@@ -126,7 +128,7 @@ class OAuthService {
         code === '12501' || // Google Sign-In cancel code on Android
         code === '1001'     // Apple cancel code
       ) {
-        console.log('[OAuthService] Google sign-in cancelled by user');
+        if (DEBUG) console.log('[OAuthService] Google sign-in cancelled by user');
         return null;
       }
 
@@ -145,7 +147,7 @@ class OAuthService {
 
     try {
       await this.googleAuthPlugin.signOut();
-      console.log('[OAuthService] Signed out from Google');
+      if (DEBUG) console.log('[OAuthService] Signed out from Google');
     } catch (error) {
       console.error('[OAuthService] Google sign-out error:', error);
     }
@@ -174,7 +176,7 @@ class OAuthService {
       });
 
       if (!result?.response?.identityToken) {
-        console.log('[OAuthService] Apple sign-in: no token received');
+        if (DEBUG) console.log('[OAuthService] Apple sign-in: no token received');
         return null;
       }
 
@@ -197,7 +199,7 @@ class OAuthService {
         message.includes('user cancel') ||
         code === '1001' // Apple authorization cancelled
       ) {
-        console.log('[OAuthService] Apple sign-in cancelled by user');
+        if (DEBUG) console.log('[OAuthService] Apple sign-in cancelled by user');
         return null;
       }
 

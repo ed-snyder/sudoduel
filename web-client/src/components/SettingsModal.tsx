@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useSubscription } from '../context/SubscriptionContext';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useMusic } from '../context/MusicContext';
 import { authAPI } from '../services/api';
@@ -12,11 +11,9 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { logout } = useAuth();
-  const { isPremium, updatePremiumStatus } = useSubscription();
   const { playModalOpen, playModalClose, playButtonTap } = useSoundEffects(0.8);
   const { setVolume: setMusicVolumeDirectly } = useMusic();
   const hasPlayedOpenSound = useRef(false);
-  const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [musicVolume, setMusicVolume] = useState(100);
   const [sfxVolume, setSfxVolume] = useState(55);
@@ -25,24 +22,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-
-  // Check if dev options should be shown
-  // Show if: dev mode, localhost, or localStorage flag is set
-  // To enable manually: localStorage.setItem('sudoduel_show_dev_options', 'true')
-  const showDevOptions = (() => {
-    // Always check localStorage first (allows manual override)
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem('sudoduel_show_dev_options') === 'true') return true;
-    }
-    // Check dev mode
-    if (import.meta.env.DEV || import.meta.env.MODE === 'development') return true;
-    // Check if running on localhost
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '') return true;
-    }
-    return false;
-  })();
 
   // Load settings from localStorage
   useEffect(() => {
@@ -256,6 +235,16 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             >
               Contact: support@axolabs.io
             </a>
+            
+            <a
+              href="https://www.sudoduel.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-3 px-4 rounded-xl font-body text-sm text-secondary text-left transition-all active:scale-[0.98]"
+              style={{ background: 'rgba(26, 6, 64, 0.4)' }}
+            >
+              Get in touch: www.sudoduel.com ↗
+            </a>
           </div>
 
           {/* About */}
@@ -294,45 +283,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               Delete Account
             </button>
           </div>
-
-          {/* DEV OPTIONS - placed at bottom after Danger Zone */}
-          {showDevOptions && (
-            <div className="px-4 py-4 border-t border-warning/30 bg-warning/5">
-              <h3 className="text-xs font-display font-black text-warning uppercase tracking-wider mb-3">
-                ⚠️ Dev Options
-              </h3>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-primary font-display">Sudoduel+ Status</span>
-                  <p className="text-xs text-muted mt-0.5">Toggle premium for testing</p>
-                </div>
-                <button
-                  onClick={async () => {
-                    if (isUpdatingPremium) return;
-                    setIsUpdatingPremium(true);
-                    try {
-                      console.log('[SettingsModal] Toggling premium, current:', isPremium);
-                      await updatePremiumStatus(!isPremium);
-                      console.log('[SettingsModal] Premium status updated to:', !isPremium);
-                    } catch (error) {
-                      console.error('[SettingsModal] Failed to toggle premium:', error);
-                    } finally {
-                      setIsUpdatingPremium(false);
-                    }
-                  }}
-                  disabled={isUpdatingPremium}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isPremium 
-                      ? 'bg-player/20 text-player border border-player' 
-                      : 'bg-surface text-muted border border-grid-line'
-                  }`}
-                >
-                  {isUpdatingPremium ? 'Updating...' : isPremium ? 'PREMIUM' : 'FREE'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

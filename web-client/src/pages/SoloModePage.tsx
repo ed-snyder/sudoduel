@@ -76,14 +76,9 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       setError('');
       
       const response = await puzzleAPI.getRandom();
-      console.log('[SOLO] API response:', response);
-      console.log('[SOLO] Has initial_grid:', !!response.initial_grid);
-      console.log('[SOLO] Has solution_grid:', !!response.solution_grid);
       
       const initial = parseGridString(response.initial_grid);
       const solution = parseGridString(response.solution_grid);
-      console.log('[SOLO] Parsed initial grid:', initial);
-      console.log('[SOLO] Parsed solution grid:', solution);
       
       setInitialGrid(initial);
       setSolutionGrid(solution);
@@ -165,24 +160,17 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
   }, [playCorrect, impact]);
   
   const handleCellClick = useCallback((row: number, col: number) => {
-    console.log('[SOLO] Cell clicked:', row, col);
-    console.log('[SOLO] gameStatus:', gameStatus);
-    console.log('[SOLO] isLocked:', isLocked);
-    
     if (gameStatus !== 'playing' || isLocked) {
-      console.log('[SOLO] BLOCKED: cell click - game not playing or locked');
       return;
     }
     
     // If tapping the same cell again, clear selection
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
-      console.log('[SOLO] Clearing selection (same cell)');
       setSelectedCell(null);
       return;
     }
     
     // Select the cell (works for empty cells and cells with numbers for highlighting)
-    console.log('[SOLO] Setting selected cell to:', { row, col });
     setSelectedCell({ row, col });
   }, [gameStatus, isLocked, selectedCell]);
   
@@ -310,26 +298,15 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
   }, []);
   
   const handleNumberClick = useCallback((num: number) => {
-    console.log('[SOLO] handleNumberClick called with:', num);
-    console.log('[SOLO] gameStatus:', gameStatus);
-    console.log('[SOLO] selectedCell:', selectedCell);
-    console.log('[SOLO] isLocked:', isLocked);
-    
     if (!selectedCell || gameStatus !== 'playing' || isLocked) {
-      console.log('[SOLO] BLOCKED: early return check failed');
       return;
     }
     
     const { row, col } = selectedCell;
-    console.log('[SOLO] Placing', num, 'at row', row, 'col', col);
-    console.log('[SOLO] initialGrid length:', initialGrid.length);
-    console.log('[SOLO] initialGrid[row]:', initialGrid[row]);
-    console.log('[SOLO] initialGrid[row]?.[col]:', initialGrid[row]?.[col]);
     
     // Prevent placing numbers in initial clue cells
     // Check if initialGrid is loaded and if this cell is an initial clue
     if (initialGrid.length > 0 && initialGrid[row]?.[col] !== 0) {
-      console.log('[SOLO] BLOCKED: cell is an initial clue');
       return;
     }
     
@@ -355,18 +332,9 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
       });
     } else {
       // Normal mode: place number
-      console.log('[SOLO] Normal mode - placing number');
-      console.log('[SOLO] solutionGrid length:', solutionGrid.length);
-      console.log('[SOLO] solutionGrid[row]?.[col]:', solutionGrid[row]?.[col]);
-      console.log('[SOLO] myGrid[row]?.[col]:', myGrid[row]?.[col]);
-      
       const isCorrect = solutionGrid.length > 0 && solutionGrid[row]?.[col] === num;
       const wasEmpty = myGrid[row]?.[col] === 0;
       const isInitialClue = initialGrid.length > 0 && initialGrid[row]?.[col] !== 0;
-      
-      console.log('[SOLO] isCorrect:', isCorrect);
-      console.log('[SOLO] wasEmpty:', wasEmpty);
-      console.log('[SOLO] isInitialClue:', isInitialClue);
       
       if (isCorrect) {
         // Update streak
@@ -380,7 +348,6 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
         // Update grid
         const newGrid = myGrid.map((r) => [...r]);
         newGrid[row][col] = num;
-        console.log('[SOLO] Updating grid - new value at', row, col, ':', newGrid[row][col]);
         setMyGrid(newGrid);
         lastCellPlacementRef.current = Date.now();
         
@@ -669,7 +636,6 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('[SOLO] Number clicked:', num);
                     handleNumberClick(num);
                   }}
                   onTouchStart={(e) => {
