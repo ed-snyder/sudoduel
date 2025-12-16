@@ -161,13 +161,13 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
           >
             <div className="flex items-center gap-3">
               <span className="text-player font-mono font-bold text-lg">
-                #{yourRank.toLocaleString()}
+                #{yourRank != null ? yourRank.toLocaleString() : '--'}
               </span>
               <span className="text-primary font-display font-bold">You</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted font-mono">
-                of {totalPlayers.toLocaleString()}
+                of {totalPlayers != null ? totalPlayers.toLocaleString() : '--'}
               </span>
               <svg className="w-4 h-4 text-player" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

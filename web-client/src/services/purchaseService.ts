@@ -120,21 +120,18 @@ class PurchaseServiceImpl {
         console.log('[PurchaseService] >>> VERIFIED');
         try {
           // Try multiple ways to get the receipt data
-          // 1. From the store's applicationReceipt (most reliable for iOS)
-          // 2. From the verified receipt object
-          // 3. From sourceReceipt/nativeData
           let receiptData: string | null = null;
           
-          // Method 1: Application receipt from store
+          // Method 1: Application receipt from store (most reliable for iOS)
           if (this.store.applicationReceipt) {
             receiptData = this.store.applicationReceipt;
             console.log('[PurchaseService] Got receipt from store.applicationReceipt');
           }
           
-          // Method 2: From the receipt's native data  
-          if (!receiptData && receipt.nativeData?.appStoreReceipt) {
-            receiptData = receipt.nativeData.appStoreReceipt;
-            console.log('[PurchaseService] Got receipt from receipt.nativeData.appStoreReceipt');
+          // Method 2: latestReceipt on the receipt object (seen in logs!)
+          if (!receiptData && receipt.latestReceipt) {
+            receiptData = receipt.latestReceipt;
+            console.log('[PurchaseService] Got receipt from receipt.latestReceipt');
           }
           
           // Method 3: From sourceReceipt
@@ -143,13 +140,19 @@ class PurchaseServiceImpl {
             console.log('[PurchaseService] Got receipt from receipt.sourceReceipt.appStoreReceipt');
           }
           
-          // Method 4: From raw
+          // Method 4: From the receipt's native data  
+          if (!receiptData && receipt.nativeData?.appStoreReceipt) {
+            receiptData = receipt.nativeData.appStoreReceipt;
+            console.log('[PurchaseService] Got receipt from receipt.nativeData.appStoreReceipt');
+          }
+          
+          // Method 5: From raw
           if (!receiptData && receipt.raw?.appStoreReceipt) {
             receiptData = receipt.raw.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.raw.appStoreReceipt');
           }
           
-          // Method 5: Direct property
+          // Method 6: Direct property
           if (!receiptData && receipt.appStoreReceipt) {
             receiptData = receipt.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.appStoreReceipt');
@@ -161,6 +164,8 @@ class PurchaseServiceImpl {
           } else {
             console.log('[PurchaseService] No receipt found. Receipt object keys:', Object.keys(receipt || {}));
             console.log('[PurchaseService] store.applicationReceipt:', this.store.applicationReceipt ? 'present' : 'missing');
+            // Log the actual values for debugging
+            console.log('[PurchaseService] receipt.latestReceipt:', receipt.latestReceipt ? `present (${typeof receipt.latestReceipt})` : 'missing');
           }
           
           receipt.finish();
@@ -373,6 +378,11 @@ class PurchaseServiceImpl {
       // Method 2: Try to get receipt from the local receipts
       const receipts = this.store.localReceipts || [];
       for (const receipt of receipts) {
+        // Try latestReceipt first (seen in logs)
+        if (receipt.latestReceipt) {
+          console.log('[PurchaseService] Found latestReceipt in localReceipts');
+          return receipt.latestReceipt;
+        }
         const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
                             receipt.nativeData?.appStoreReceipt ||
                             receipt.raw?.appStoreReceipt ||
@@ -386,6 +396,11 @@ class PurchaseServiceImpl {
       // Method 3: Check verified receipts
       const verifiedReceipts = this.store.verifiedReceipts || [];
       for (const receipt of verifiedReceipts) {
+        // Try latestReceipt first (seen in logs)
+        if (receipt.latestReceipt) {
+          console.log('[PurchaseService] Found latestReceipt in verifiedReceipts');
+          return receipt.latestReceipt;
+        }
         const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
                             receipt.nativeData?.appStoreReceipt ||
                             receipt.raw?.appStoreReceipt ||
