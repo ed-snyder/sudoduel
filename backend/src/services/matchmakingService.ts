@@ -25,12 +25,32 @@ const queueTimers = new Map<number, NodeJS.Timeout>(); // playerId -> timer
 const botMatches = new Map<number, { botPlayerId: number; botRating: number }>(); // matchId -> bot info
 
 // Helper function to check if this is the player's first match ever
+// Uses multiple checks to handle data inconsistencies
 async function isFirstMatch(playerId: number): Promise<boolean> {
-  const result = await query(
+  // Check 1: match_players table
+  const matchPlayersResult = await query(
     `SELECT COUNT(*) as count FROM match_players WHERE player_id = $1`,
     [playerId]
   );
-  return parseInt(result.rows[0].count, 10) === 0;
+  const matchCount = parseInt(matchPlayersResult.rows[0].count, 10);
+  
+  // Check 2: games_played in player_ratings (more reliable)
+  const ratingsResult = await query(
+    `SELECT games_played FROM player_ratings WHERE player_id = $1 AND ladder_id = 1`,
+    [playerId]
+  );
+  const gamesPlayed = ratingsResult.rows[0]?.games_played || 0;
+  
+  // Player is only "first match" if BOTH indicate zero games
+  const isFirst = matchCount === 0 && gamesPlayed === 0;
+  
+  if (matchCount !== gamesPlayed) {
+    console.log(`⚠️ Data inconsistency for player ${playerId}: match_players=${matchCount}, games_played=${gamesPlayed}`);
+  }
+  
+  console.log(`🎮 isFirstMatch check: player=${playerId}, matchCount=${matchCount}, gamesPlayed=${gamesPlayed}, result=${isFirst}`);
+  
+  return isFirst;
 }
 
 export const MatchmakingService = {
