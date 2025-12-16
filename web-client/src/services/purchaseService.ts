@@ -146,36 +146,63 @@ class PurchaseServiceImpl {
             }
           }
           
-          // Method 3: From sourceReceipt
+          // Method 3: From sourceReceipt.nativeData (this is where the receipt actually is!)
+          if (!receiptData && receipt.sourceReceipt?.nativeData) {
+            const nd = receipt.sourceReceipt.nativeData;
+            receiptData = nd.appStoreReceipt || nd.receipt || nd.rawReceipt;
+            if (receiptData && typeof receiptData === 'string') {
+              console.log('[PurchaseService] Got receipt from sourceReceipt.nativeData, length:', receiptData.length);
+            } else {
+              console.log('[PurchaseService] sourceReceipt.nativeData keys:', Object.keys(nd));
+              receiptData = null;
+            }
+          }
+          
+          // Method 4: From sourceReceipt directly
           if (!receiptData && receipt.sourceReceipt?.appStoreReceipt) {
             receiptData = receipt.sourceReceipt.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.sourceReceipt.appStoreReceipt, length:', receiptData?.length);
           }
           
-          // Method 4: From the receipt's native data  
+          // Method 5: From the receipt's native data  
           if (!receiptData && receipt.nativeData?.appStoreReceipt) {
             receiptData = receipt.nativeData.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.nativeData.appStoreReceipt, length:', receiptData?.length);
           }
           
-          // Method 5: From raw
+          // Method 6: From raw
           if (!receiptData && receipt.raw?.appStoreReceipt) {
             receiptData = receipt.raw.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.raw.appStoreReceipt, length:', receiptData?.length);
           }
           
-          // Method 6: Direct property
+          // Method 7: Direct property
           if (!receiptData && receipt.appStoreReceipt) {
             receiptData = receipt.appStoreReceipt;
             console.log('[PurchaseService] Got receipt from receipt.appStoreReceipt, length:', receiptData?.length);
           }
           
-          // Method 7: Try nativeTransactions
+          // Method 8: Try nativeTransactions
           if (!receiptData && receipt.nativeTransactions?.length > 0) {
             const firstTx = receipt.nativeTransactions[0];
             receiptData = firstTx?.appStoreReceipt || firstTx?.receipt;
-            if (receiptData) {
+            if (receiptData && typeof receiptData === 'string') {
               console.log('[PurchaseService] Got receipt from nativeTransactions, length:', receiptData.length);
+            } else {
+              console.log('[PurchaseService] nativeTransactions[0] keys:', Object.keys(firstTx || {}));
+              receiptData = null;
+            }
+          }
+          
+          // Method 9: Try to get from localReceipts immediately
+          if (!receiptData && this.store.localReceipts?.length > 0) {
+            for (const lr of this.store.localReceipts) {
+              const nd = lr.sourceReceipt?.nativeData || lr.nativeData;
+              if (nd?.appStoreReceipt && typeof nd.appStoreReceipt === 'string') {
+                receiptData = nd.appStoreReceipt;
+                console.log('[PurchaseService] Got receipt from localReceipts in verified, length:', nd.appStoreReceipt.length);
+                break;
+              }
             }
           }
           
@@ -400,7 +427,7 @@ class PurchaseServiceImpl {
     
     try {
       // Method 1: Direct applicationReceipt (most reliable)
-      if (this.store.applicationReceipt) {
+      if (this.store.applicationReceipt && typeof this.store.applicationReceipt === 'string') {
         console.log('[PurchaseService] Found applicationReceipt');
         return this.store.applicationReceipt;
       }
@@ -408,16 +435,18 @@ class PurchaseServiceImpl {
       // Method 2: Try to get receipt from the local receipts
       const receipts = this.store.localReceipts || [];
       for (const receipt of receipts) {
-        // Try latestReceipt first (seen in logs)
-        if (receipt.latestReceipt) {
-          console.log('[PurchaseService] Found latestReceipt in localReceipts');
-          return receipt.latestReceipt;
+        // Check sourceReceipt.nativeData first (this is where it actually is!)
+        const nativeData = receipt.sourceReceipt?.nativeData || receipt.nativeData;
+        if (nativeData?.appStoreReceipt && typeof nativeData.appStoreReceipt === 'string') {
+          console.log('[PurchaseService] Found receipt in localReceipts.sourceReceipt.nativeData');
+          return nativeData.appStoreReceipt;
         }
+        
+        // Fallback to other properties
         const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
-                            receipt.nativeData?.appStoreReceipt ||
                             receipt.raw?.appStoreReceipt ||
                             receipt.appStoreReceipt;
-        if (receiptData) {
+        if (receiptData && typeof receiptData === 'string') {
           console.log('[PurchaseService] Found receipt in localReceipts');
           return receiptData;
         }
@@ -426,16 +455,17 @@ class PurchaseServiceImpl {
       // Method 3: Check verified receipts
       const verifiedReceipts = this.store.verifiedReceipts || [];
       for (const receipt of verifiedReceipts) {
-        // Try latestReceipt first (seen in logs)
-        if (receipt.latestReceipt) {
-          console.log('[PurchaseService] Found latestReceipt in verifiedReceipts');
-          return receipt.latestReceipt;
+        // Check sourceReceipt.nativeData first
+        const nativeData = receipt.sourceReceipt?.nativeData || receipt.nativeData;
+        if (nativeData?.appStoreReceipt && typeof nativeData.appStoreReceipt === 'string') {
+          console.log('[PurchaseService] Found receipt in verifiedReceipts.sourceReceipt.nativeData');
+          return nativeData.appStoreReceipt;
         }
+        
         const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
-                            receipt.nativeData?.appStoreReceipt ||
                             receipt.raw?.appStoreReceipt ||
                             receipt.appStoreReceipt;
-        if (receiptData) {
+        if (receiptData && typeof receiptData === 'string') {
           console.log('[PurchaseService] Found receipt in verifiedReceipts');
           return receiptData;
         }
