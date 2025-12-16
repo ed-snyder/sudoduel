@@ -100,7 +100,7 @@ async function callAppleAPI(url: string, body: string): Promise<AppleVerifyRespo
     throw new Error(`Apple API returned ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<AppleVerifyResponse>;
 }
 
 function parseAppleResponse(response: AppleVerifyResponse): AppleReceiptValidationResult {
