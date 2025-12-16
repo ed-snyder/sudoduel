@@ -20,12 +20,14 @@ export interface PurchaseResult {
   success: boolean;
   productId?: string;
   transactionId?: string;
+  receipt?: string;  // Base64 encoded receipt for server validation
   error?: string;
 }
 
 // Global resolver - this is the key to avoiding callback issues
 let globalPurchaseResolver: ((result: PurchaseResult) => void) | null = null;
 let pendingProductId: string | null = null;
+let pendingReceipt: string | null = null;
 
 class PurchaseServiceImpl {
   private CdvPurchase: any = null;
@@ -117,6 +119,17 @@ class PurchaseServiceImpl {
       this.store.when().verified((receipt: any) => {
         if (DEBUG) console.log('[PurchaseService] >>> VERIFIED');
         try {
+          // Capture the receipt for server-side validation
+          // The receipt data is on the sourceReceipt or nativeData
+          const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
+                              receipt.nativeData?.appStoreReceipt ||
+                              receipt.raw?.appStoreReceipt;
+          if (receiptData) {
+            pendingReceipt = receiptData;
+            if (DEBUG) console.log('[PurchaseService] Receipt captured for validation');
+          } else {
+            if (DEBUG) console.log('[PurchaseService] No receipt data found on verified receipt');
+          }
           receipt.finish();
         } catch (e) {
           if (DEBUG) console.log('[PurchaseService] finish() error (ignoring):', e);
@@ -130,13 +143,15 @@ class PurchaseServiceImpl {
         if (globalPurchaseResolver && pendingProductId) {
           const resolver = globalPurchaseResolver;
           const productId = pendingProductId;
+          const receipt = pendingReceipt;
           
           // Clear before calling to prevent double-resolve
           globalPurchaseResolver = null;
           pendingProductId = null;
+          pendingReceipt = null;
           
-          if (DEBUG) console.log('[PurchaseService] Calling resolver for:', productId);
-          resolver({ success: true, productId, transactionId: 'completed' });
+          if (DEBUG) console.log('[PurchaseService] Calling resolver for:', productId, 'receipt:', receipt ? 'present' : 'missing');
+          resolver({ success: true, productId, transactionId: 'completed', receipt: receipt || undefined });
         }
       });
 
@@ -289,13 +304,56 @@ class PurchaseServiceImpl {
       if (DEBUG) console.log('[PurchaseService] Restore check - yearly owned:', yearly?.owned);
 
       if (monthly?.owned || yearly?.owned) {
-        return { success: true, productId: monthly?.owned ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY };
+        // Get the app receipt for server validation
+        const receipt = await this.getAppReceipt();
+        return { 
+          success: true, 
+          productId: monthly?.owned ? PRODUCT_IDS.MONTHLY : PRODUCT_IDS.YEARLY,
+          receipt: receipt || undefined,
+        };
       }
 
       return { success: false, error: 'No active subscription found.' };
     } catch (error: any) {
       console.error('[PurchaseService] Restore error:', error);
       return { success: false, error: 'Failed to restore purchases.' };
+    }
+  }
+
+  // Get the current app store receipt (for restore/validation)
+  async getAppReceipt(): Promise<string | null> {
+    if (!this.store || !this.CdvPurchase) return null;
+    
+    try {
+      // Try to get receipt from the local receipts
+      const receipts = this.store.localReceipts || [];
+      for (const receipt of receipts) {
+        const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
+                            receipt.nativeData?.appStoreReceipt ||
+                            receipt.raw?.appStoreReceipt;
+        if (receiptData) {
+          if (DEBUG) console.log('[PurchaseService] Found app receipt');
+          return receiptData;
+        }
+      }
+      
+      // Also check verified receipts
+      const verifiedReceipts = this.store.verifiedReceipts || [];
+      for (const receipt of verifiedReceipts) {
+        const receiptData = receipt.sourceReceipt?.appStoreReceipt || 
+                            receipt.nativeData?.appStoreReceipt ||
+                            receipt.raw?.appStoreReceipt;
+        if (receiptData) {
+          if (DEBUG) console.log('[PurchaseService] Found verified receipt');
+          return receiptData;
+        }
+      }
+      
+      if (DEBUG) console.log('[PurchaseService] No receipt found');
+      return null;
+    } catch (e) {
+      if (DEBUG) console.log('[PurchaseService] Error getting receipt:', e);
+      return null;
     }
   }
 

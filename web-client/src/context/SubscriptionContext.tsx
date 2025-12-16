@@ -9,12 +9,9 @@ interface SubscriptionContextType {
   isUpgradeModalOpen: boolean;
   openUpgradeModal: () => void;
   closeUpgradeModal: () => void;
-  updatePremiumStatus: (newStatus: boolean) => Promise<void>;
   purchaseSubscription: (plan: 'monthly' | 'yearly') => Promise<PurchaseResult>;
   restorePurchases: () => Promise<PurchaseResult>;
   isProcessingPurchase: boolean;
-  // Dev only - for testing (kept for backward compatibility)
-  togglePremiumStatus: () => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
@@ -75,23 +72,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const openUpgradeModal = useCallback(() => setIsUpgradeModalOpen(true), []);
   const closeUpgradeModal = useCallback(() => setIsUpgradeModalOpen(false), []);
-
-  // Update premium status (syncs to backend)
-  const updatePremiumStatus = useCallback(async (newStatus: boolean) => {
-    try {
-      // Update backend first
-      await playerAPI.updatePremiumStatus(newStatus);
-      
-      // Then update local state and localStorage
-      setIsPremium(newStatus);
-      localStorage.setItem(STORAGE_KEY, String(newStatus));
-      
-      console.log(`[Subscription] Premium status updated to: ${newStatus}`);
-    } catch (error) {
-      console.error('[Subscription] Failed to update premium status:', error);
-      throw error;
-    }
-  }, []);
   
   const purchaseSubscription = useCallback(async (plan: 'monthly' | 'yearly'): Promise<PurchaseResult> => {
     setIsProcessingPurchase(true);
@@ -101,11 +81,44 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const result = await purchaseService.purchase(productId);
       
       if (result.success) {
-        // Play purchase success sound
-        playPurchaseSound();
-        // Update premium status in backend and local state
-        await updatePremiumStatus(true);
-        setIsUpgradeModalOpen(false);
+        // Validate the receipt with the backend
+        if (result.receipt) {
+          try {
+            const validation = await playerAPI.validatePremiumPurchase(result.receipt, 'ios');
+            if (validation.success && validation.is_premium) {
+              // Play purchase success sound
+              playPurchaseSound();
+              // Update local state
+              setIsPremium(true);
+              localStorage.setItem(STORAGE_KEY, 'true');
+              setIsUpgradeModalOpen(false);
+              console.log('[Subscription] Premium validated with backend');
+              return result;
+            } else {
+              console.error('[Subscription] Backend validation failed:', validation.error);
+              return {
+                success: false,
+                error: validation.error || 'Failed to validate purchase with server',
+              };
+            }
+          } catch (error: any) {
+            console.error('[Subscription] Failed to validate with backend:', error);
+            // Purchase went through with Apple but backend validation failed
+            // Still mark as premium locally (Apple is source of truth)
+            playPurchaseSound();
+            setIsPremium(true);
+            localStorage.setItem(STORAGE_KEY, 'true');
+            setIsUpgradeModalOpen(false);
+            return result;
+          }
+        } else {
+          // No receipt available (shouldn't happen on real device)
+          console.warn('[Subscription] Purchase succeeded but no receipt available');
+          playPurchaseSound();
+          setIsPremium(true);
+          localStorage.setItem(STORAGE_KEY, 'true');
+          setIsUpgradeModalOpen(false);
+        }
       }
       
       return result;
@@ -118,7 +131,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsProcessingPurchase(false);
     }
-  }, [updatePremiumStatus]);
+  }, []);
 
   const restorePurchases = useCallback(async (): Promise<PurchaseResult> => {
     setIsProcessingPurchase(true);
@@ -126,9 +139,37 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       const result = await purchaseService.restorePurchases();
       
-      if (result.success) {
+      if (result.success && result.receipt) {
+        // Validate the receipt with the backend
+        try {
+          const validation = await playerAPI.restorePremium(result.receipt, 'ios');
+          if (validation.success && validation.is_premium) {
+            playPurchaseSound();
+            setIsPremium(true);
+            localStorage.setItem(STORAGE_KEY, 'true');
+            console.log('[Subscription] Premium restored and validated with backend');
+            return result;
+          } else {
+            return {
+              success: false,
+              error: validation.error || 'No active subscription found',
+            };
+          }
+        } catch (error: any) {
+          console.error('[Subscription] Failed to validate restore with backend:', error);
+          // Restore succeeded with Apple - trust that
+          playPurchaseSound();
+          setIsPremium(true);
+          localStorage.setItem(STORAGE_KEY, 'true');
+          return result;
+        }
+      } else if (result.success) {
+        // Restore succeeded but no receipt
+        console.warn('[Subscription] Restore succeeded but no receipt available');
         playPurchaseSound();
-        await updatePremiumStatus(true);
+        setIsPremium(true);
+        localStorage.setItem(STORAGE_KEY, 'true');
+        return result;
       }
       
       return result;
@@ -140,17 +181,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsProcessingPurchase(false);
     }
-  }, [updatePremiumStatus]);
-
-  // Toggle premium status (for backward compatibility, calls updatePremiumStatus)
-  const togglePremiumStatus = useCallback(async () => {
-    console.log('[SubscriptionContext] Toggling premium status, current:', isPremium);
-    try {
-      await updatePremiumStatus(!isPremium);
-    } catch (error) {
-      console.error('[SubscriptionContext] Failed to toggle premium status:', error);
-    }
-  }, [isPremium, updatePremiumStatus]);
+  }, []);
 
   return (
     <SubscriptionContext.Provider value={{
@@ -158,11 +189,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isUpgradeModalOpen,
       openUpgradeModal,
       closeUpgradeModal,
-      updatePremiumStatus,
       purchaseSubscription,
       restorePurchases,
       isProcessingPurchase,
-      togglePremiumStatus,
     }}>
       {children}
     </SubscriptionContext.Provider>

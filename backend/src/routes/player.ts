@@ -200,38 +200,117 @@ router.post('/set-initial-rating', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
-// PATCH /api/player/premium - Update premium status (for dev/testing)
-router.patch('/premium', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/player/premium/validate - Validate Apple receipt and grant premium
+router.post('/premium/validate', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { validateAppleReceipt } = await import('../services/appleReceiptValidator');
+  
   try {
-    const { is_premium } = req.body;
+    const { receipt, platform } = req.body;
     
-    if (typeof is_premium !== 'boolean') {
-      return res.status(400).json({ error: 'is_premium must be a boolean' });
+    if (!receipt) {
+      return res.status(400).json({ error: 'Receipt is required' });
     }
 
-    // Update the player's premium status
+    // Currently only supporting iOS
+    if (platform !== 'ios') {
+      return res.status(400).json({ error: 'Unsupported platform' });
+    }
+
+    // Validate the receipt with Apple
+    const validation = await validateAppleReceipt(receipt);
+    
+    if (!validation.isValid) {
+      console.log(`[Premium] Receipt validation failed for user ${req.userId}: ${validation.error}`);
+      return res.status(403).json({ 
+        error: validation.error || 'Invalid receipt',
+        is_premium: false 
+      });
+    }
+
+    // Receipt is valid - update premium status
     const result = await query(
       `UPDATE player_profiles 
-       SET is_premium = $1 
-       WHERE user_id = $2
+       SET is_premium = true 
+       WHERE user_id = $1
        RETURNING id, display_name, is_premium`,
-      [is_premium, req.userId]
+      [req.userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Player profile not found' });
     }
 
-    console.log(`[Premium] User ${req.userId} premium status updated to: ${is_premium}`);
+    console.log(`[Premium] User ${req.userId} premium validated! Product: ${validation.productId}, Transaction: ${validation.transactionId}`);
+    
+    // Invalidate cache so fresh data is fetched
+    cache.delete(CacheKeys.playerProfile(req.userId!));
     
     res.json({ 
       success: true, 
-      is_premium: result.rows[0].is_premium,
-      display_name: result.rows[0].display_name
+      is_premium: true,
+      product_id: validation.productId,
+      expires_at: validation.expiresDate?.toISOString(),
     });
   } catch (error: any) {
-    console.error('Update premium status error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Premium validation error:', error);
+    res.status(500).json({ error: 'Failed to validate purchase' });
+  }
+});
+
+// POST /api/player/premium/restore - Restore purchases (validate existing subscription)
+router.post('/premium/restore', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { validateAppleReceipt } = await import('../services/appleReceiptValidator');
+  
+  try {
+    const { receipt, platform } = req.body;
+    
+    if (!receipt) {
+      return res.status(400).json({ error: 'Receipt is required' });
+    }
+
+    if (platform !== 'ios') {
+      return res.status(400).json({ error: 'Unsupported platform' });
+    }
+
+    // Validate the receipt with Apple
+    const validation = await validateAppleReceipt(receipt);
+    
+    if (!validation.isValid) {
+      // For restore, a failed validation might just mean no active subscription
+      console.log(`[Premium] Restore failed for user ${req.userId}: ${validation.error}`);
+      return res.json({ 
+        success: false, 
+        is_premium: false,
+        error: validation.error || 'No active subscription found'
+      });
+    }
+
+    // Has valid subscription - update premium status
+    const result = await query(
+      `UPDATE player_profiles 
+       SET is_premium = true 
+       WHERE user_id = $1
+       RETURNING id, display_name, is_premium`,
+      [req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Player profile not found' });
+    }
+
+    console.log(`[Premium] User ${req.userId} subscription restored! Product: ${validation.productId}`);
+    
+    cache.delete(CacheKeys.playerProfile(req.userId!));
+    
+    res.json({ 
+      success: true, 
+      is_premium: true,
+      product_id: validation.productId,
+      expires_at: validation.expiresDate?.toISOString(),
+    });
+  } catch (error: any) {
+    console.error('Premium restore error:', error);
+    res.status(500).json({ error: 'Failed to restore purchases' });
   }
 });
 

@@ -174,12 +174,24 @@ export const playerAPI = {
   markTutorialComplete: () => 
     api.patch('/api/player/tutorial-complete', {}) as Promise<{ success: boolean; tutorial_completed: boolean; tutorial_completed_at: string }>,
   
-  // Update premium status
-  updatePremiumStatus: (isPremium: boolean) =>
-    api.patch('/api/player/premium', { is_premium: isPremium }) as Promise<{
+  // Validate purchase receipt and grant premium
+  validatePremiumPurchase: (receipt: string, platform: 'ios' | 'android' = 'ios') =>
+    api.post('/api/player/premium/validate', { receipt, platform }) as Promise<{
       success: boolean;
       is_premium: boolean;
-      display_name: string;
+      product_id?: string;
+      expires_at?: string;
+      error?: string;
+    }>,
+  
+  // Restore premium subscription
+  restorePremium: (receipt: string, platform: 'ios' | 'android' = 'ios') =>
+    api.post('/api/player/premium/restore', { receipt, platform }) as Promise<{
+      success: boolean;
+      is_premium: boolean;
+      product_id?: string;
+      expires_at?: string;
+      error?: string;
     }>,
   
   // Set initial rating (for new players during tutorial)
