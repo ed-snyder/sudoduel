@@ -122,13 +122,14 @@ function LandingPage() {
               border: '1px solid rgba(139, 0, 255, 0.3)'
             }}
           >
-            <RoadmapItem done label="Mobile App Launch (iOS & Android)" />
+            <RoadmapItem done label="iOS App Launch" />
             <RoadmapItem done label="Ranked Matchmaking & Leaderboards" />
             <RoadmapItem done label="Friends System & Private Matches" />
             <RoadmapItem label="Web Browser Version" />
+            <RoadmapItem label="Android Version" />
+            <RoadmapItem label="iPad Support" />
             <RoadmapItem label="More Difficulty Levels & Rankings (Medium, Hard, Expert, etc.)" />
             <RoadmapItem label="Tournaments & Seasons" />
-            <RoadmapItem label="Team Battles" />
           </div>
         </div>
 
@@ -178,7 +179,7 @@ function LandingPage() {
         {/* Footer */}
         <div className="mt-auto pt-8 text-center">
           <p className="text-xs text-muted/50 font-mono">
-            © 2024 Sudoduel • 
+            © Axo Labs LLC 2025 • 
             <a href="https://sudoduel.com/privacy" className="hover:text-muted ml-1">Privacy</a> • 
             <a href="https://sudoduel.com/terms" className="hover:text-muted ml-1">Terms</a>
           </p>
