@@ -14,8 +14,9 @@ const AD_CONFIG = {
   },
 };
 
-// Use test ads only in development mode
-const USE_TEST_ADS = import.meta.env.DEV;
+// Use test ads until app is published on the App Store
+// TODO: Set to `false` after app is live and ad units are linked
+const USE_TEST_ADS = true;
 const DEBUG = import.meta.env.DEV;
 
 interface AdService {
@@ -46,7 +47,14 @@ class AdServiceImpl implements AdService {
 
       await AdMob.initialize({
         initializeForTesting: USE_TEST_ADS,
-        testingDevices: ['2b6e21685e596d109ade04edd9efa00c'],
+        testingDevices: [
+          '2b6e21685e596d109ade04edd9efa00c',
+          'b2e1f87e1cef52e29d733f279d549cd0',
+          '00ef775ee483377c47ea51e5386b33b1',
+          '1f3b30d7643ed9b6793e07f86c679f71',
+          '0e4a88237939fd91d32ed1154d0c93ab',
+          '6ada718fbe8eafb7c9786126599d9b4e',
+        ],
       });
 
       this.initialized = true;
