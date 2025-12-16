@@ -7,7 +7,7 @@ import { PlayerRatingModel } from '../models/PlayerRating';
 const router = Router();
 const DEFAULT_LADDER_ID = 1;
 
-// GET /api/leaderboard - Get leaderboard data (premium players only)
+// GET /api/leaderboard - Get leaderboard data (all players, but rank visibility gated to premium)
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     // Get current user's profile and rating
@@ -23,7 +23,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const currentUserRating = userRating?.rating || 1500;
     const userIsPremium = profile.is_premium || false;
 
-    // Get top 100 PREMIUM players only
+    // Get top 100 players (ALL players)
     const top100Result = await query(
       `SELECT 
         pp.id as player_id,
@@ -32,31 +32,26 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         RANK() OVER (ORDER BY pr.rating DESC) as rank
        FROM player_ratings pr
        JOIN player_profiles pp ON pp.id = pr.player_id
-       WHERE pr.ladder_id = $1 AND pp.is_premium = true
+       WHERE pr.ladder_id = $1
        ORDER BY pr.rating DESC
        LIMIT 100`,
       [DEFAULT_LADDER_ID]
     );
 
-    // Get current user's rank among PREMIUM players only (if they're premium)
-    let userRank: number | null = null;
-    if (userIsPremium) {
-      const userRankResult = await query(
-        `SELECT COUNT(*)::int as rank
-         FROM player_ratings pr
-         JOIN player_profiles pp ON pp.id = pr.player_id
-         WHERE pr.ladder_id = $1 AND pr.rating > $2 AND pp.is_premium = true`,
-        [DEFAULT_LADDER_ID, currentUserRating]
-      );
-      userRank = parseInt(userRankResult.rows[0].rank, 10) + 1;
-    }
+    // Calculate user's actual rank among ALL players
+    const userRankResult = await query(
+      `SELECT COUNT(*)::int as rank
+       FROM player_ratings pr
+       WHERE pr.ladder_id = $1 AND pr.rating > $2`,
+      [DEFAULT_LADDER_ID, currentUserRating]
+    );
+    const actualUserRank = parseInt(userRankResult.rows[0].rank, 10) + 1;
 
-    // Get total PREMIUM player count
+    // Get total player count (ALL players)
     const totalResult = await query(
       `SELECT COUNT(*) as total 
        FROM player_ratings pr
-       JOIN player_profiles pp ON pp.id = pr.player_id
-       WHERE pr.ladder_id = $1 AND pp.is_premium = true`,
+       WHERE pr.ladder_id = $1`,
       [DEFAULT_LADDER_ID]
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
@@ -70,9 +65,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       is_you: row.player_id === profile.id,
     }));
 
-    // If user is premium and outside top 100, get their neighborhood (±5 players)
+    // If user is outside top 100, get their neighborhood (±5 players) - only if premium
     let neighborhood: any[] = [];
-    if (userIsPremium && userRank && userRank > 100) {
+    if (userIsPremium && actualUserRank > 100) {
       const neighborhoodResult = await query(
         `WITH ranked_players AS (
           SELECT 
@@ -82,12 +77,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
             RANK() OVER (ORDER BY pr.rating DESC) as rank
           FROM player_ratings pr
           JOIN player_profiles pp ON pp.id = pr.player_id
-          WHERE pr.ladder_id = $1 AND pp.is_premium = true
+          WHERE pr.ladder_id = $1
         )
         SELECT * FROM ranked_players
         WHERE rank BETWEEN $2 AND $3
         ORDER BY rank ASC`,
-        [DEFAULT_LADDER_ID, Math.max(1, userRank - 5), userRank + 5]
+        [DEFAULT_LADDER_ID, Math.max(1, actualUserRank - 5), actualUserRank + 5]
       );
 
       neighborhood = neighborhoodResult.rows.map(row => ({
@@ -102,7 +97,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json({
       top100,
       neighborhood,
-      your_rank: userRank, // null if not premium
+      your_rank: userIsPremium ? actualUserRank : null, // Soft wall: only premium can see their rank
       total_players: totalPlayers,
     });
   } catch (error: any) {

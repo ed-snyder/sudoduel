@@ -363,7 +363,8 @@ export const PlayerService = {
     return currentRating - ratingBefore;
   },
 
-  // Get player's global rank based on rating (premium players only)
+  // Get player's global rank based on rating
+  // All players are ranked, but only premium users can see their rank (soft wall)
   async getPlayerRank(userId: number) {
     const profile = await PlayerProfileModel.findByUserId(userId);
     if (!profile) {
@@ -378,37 +379,30 @@ export const PlayerService = {
     const playerRating = rating?.rating || 1500;
     const userIsPremium = profile.is_premium || false;
 
-    // Only premium players are ranked
-    let rank: number | null = null;
-    if (userIsPremium) {
-      // Count how many PREMIUM players have a higher rating
-      const higherRatedResult = await query(
-        `SELECT COUNT(*) as count
-         FROM player_ratings pr
-         JOIN player_profiles pp ON pp.id = pr.player_id
-         WHERE pr.ladder_id = $1
-           AND pr.rating > $2
-           AND pp.is_premium = true`,
-        [DEFAULT_LADDER_ID, playerRating]
-      );
+    // Calculate rank among ALL players
+    const higherRatedResult = await query(
+      `SELECT COUNT(*) as count
+       FROM player_ratings pr
+       WHERE pr.ladder_id = $1 AND pr.rating > $2`,
+      [DEFAULT_LADDER_ID, playerRating]
+    );
 
-      const higherRatedCount = parseInt(higherRatedResult.rows[0].count, 10);
-      rank = higherRatedCount + 1;
-    }
+    const higherRatedCount = parseInt(higherRatedResult.rows[0].count, 10);
+    const actualRank = higherRatedCount + 1;
 
-    // Get total PREMIUM player count
+    // Get total player count (ALL players)
     const totalPlayersResult = await query(
       `SELECT COUNT(DISTINCT pr.player_id) as count
        FROM player_ratings pr
-       JOIN player_profiles pp ON pp.id = pr.player_id
-       WHERE pr.ladder_id = $1 AND pp.is_premium = true`,
+       WHERE pr.ladder_id = $1`,
       [DEFAULT_LADDER_ID]
     );
 
     const totalPlayers = parseInt(totalPlayersResult.rows[0].count, 10);
 
+    // Soft wall: only premium users can see their rank
     return {
-      rank, // null if not premium
+      rank: userIsPremium ? actualRank : null,
       total_players: totalPlayers,
       rating: playerRating,
     };

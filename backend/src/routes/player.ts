@@ -332,29 +332,26 @@ router.get('/:playerId/profile', authMiddleware, async (req: AuthRequest, res: R
     const rating = await PlayerRatingModel.findByPlayerAndLadder(targetPlayerId, 1);
     const playerRating = rating?.rating || 1500;
 
-    // Get rank if player is premium (only premium players are ranked)
-    let rank = null;
-    if (profile.is_premium) {
-      // Count only PREMIUM players with higher rating
-      const rankResult = await query(
-        `SELECT COUNT(*) + 1 as rank
-         FROM player_ratings pr
-         JOIN player_profiles pp ON pp.id = pr.player_id
-         WHERE pr.ladder_id = 1 AND pr.rating > $1 AND pp.is_premium = true`,
-        [playerRating]
-      );
-      rank = parseInt(rankResult.rows[0].rank, 10);
-    }
+    // Get rank among ALL players
+    const rankResult = await query(
+      `SELECT COUNT(*) + 1 as rank
+       FROM player_ratings pr
+       WHERE pr.ladder_id = 1 AND pr.rating > $1`,
+      [playerRating]
+    );
+    const actualRank = parseInt(rankResult.rows[0].rank, 10);
 
-    // Get total PREMIUM players for context
+    // Get total ALL players for context
     const totalResult = await query(
       `SELECT COUNT(*) as total 
        FROM player_ratings pr
-       JOIN player_profiles pp ON pp.id = pr.player_id
-       WHERE pr.ladder_id = 1 AND pp.is_premium = true`,
+       WHERE pr.ladder_id = 1`,
       []
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
+
+    // Soft wall: only show rank if player is premium
+    const rank = profile.is_premium ? actualRank : null;
 
     res.json({
       player_id: profile.id,
