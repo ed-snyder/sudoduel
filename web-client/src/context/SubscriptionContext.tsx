@@ -91,15 +91,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
               // Update local state
               setIsPremium(true);
               localStorage.setItem(STORAGE_KEY, 'true');
-              setIsUpgradeModalOpen(false);
               console.log('[Subscription] Premium validated with backend');
-              return result;
+              return { ...result, success: true };
             } else {
               console.error('[Subscription] Backend validation failed:', validation.error);
-              return {
-                success: false,
-                error: validation.error || 'Failed to validate purchase with server',
-              };
+              // Still mark as premium locally since Apple accepted the purchase
+              playPurchaseSound();
+              setIsPremium(true);
+              localStorage.setItem(STORAGE_KEY, 'true');
+              return { ...result, success: true };
             }
           } catch (error: any) {
             console.error('[Subscription] Failed to validate with backend:', error);
@@ -108,8 +108,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
             playPurchaseSound();
             setIsPremium(true);
             localStorage.setItem(STORAGE_KEY, 'true');
-            setIsUpgradeModalOpen(false);
-            return result;
+            return { ...result, success: true };
           }
         } else {
           // No receipt available (shouldn't happen on real device)
@@ -117,7 +116,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           playPurchaseSound();
           setIsPremium(true);
           localStorage.setItem(STORAGE_KEY, 'true');
-          setIsUpgradeModalOpen(false);
+          return { ...result, success: true };
         }
       }
       
@@ -148,8 +147,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
             setIsPremium(true);
             localStorage.setItem(STORAGE_KEY, 'true');
             console.log('[Subscription] Premium restored and validated with backend');
-            return result;
+            return { ...result, success: true };
           } else {
+            // Backend says no active subscription
             return {
               success: false,
               error: validation.error || 'No active subscription found',
@@ -161,7 +161,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           playPurchaseSound();
           setIsPremium(true);
           localStorage.setItem(STORAGE_KEY, 'true');
-          return result;
+          return { ...result, success: true };
         }
       } else if (result.success) {
         // Restore succeeded but no receipt
@@ -169,7 +169,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         playPurchaseSound();
         setIsPremium(true);
         localStorage.setItem(STORAGE_KEY, 'true');
-        return result;
+        return { ...result, success: true };
       }
       
       return result;
