@@ -1,6 +1,149 @@
 import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import '../components/GameCountdown.css';
 import { log } from '../utils/logger';
+
+// Memoized cell component to prevent unnecessary re-renders
+interface CellProps {
+  rowIndex: number;
+  colIndex: number;
+  cell: number;
+  isInitial: boolean;
+  cellBg: string;
+  cellShadow: string;
+  cellBorder: string;
+  cellClassName: string;
+  isCompleted: boolean;
+  isAlmostComplete: boolean;
+  lockedOut: boolean;
+  showNotes: boolean;
+  cellNotes: number[];
+  isJustScored: boolean;
+  shouldAnimateNumber: boolean;
+  animationDelay: number | null;
+  onCellClick: (row: number, col: number) => void;
+  touchHandledRef: React.MutableRefObject<boolean>;
+}
+
+const Cell = memo(function Cell({
+  rowIndex,
+  colIndex,
+  cell,
+  isInitial,
+  cellBg,
+  cellShadow,
+  cellBorder,
+  cellClassName,
+  isCompleted,
+  isAlmostComplete,
+  lockedOut,
+  showNotes,
+  cellNotes,
+  isJustScored,
+  shouldAnimateNumber,
+  animationDelay,
+  onCellClick,
+  touchHandledRef,
+}: CellProps) {
+  const hasValue = cell !== 0;
+  
+  const buttonStyle: CSSProperties = {
+    background: cellBg,
+    boxShadow: cellShadow,
+    border: cellBorder,
+    zIndex: isAlmostComplete ? 20 : 1,
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
+  };
+
+  const handleClick = useCallback(() => {
+    // Skip if touch already handled this interaction
+    if (touchHandledRef.current) {
+      touchHandledRef.current = false;
+      return;
+    }
+    if (!lockedOut) {
+      onCellClick(rowIndex, colIndex);
+    }
+  }, [lockedOut, onCellClick, rowIndex, colIndex, touchHandledRef]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Prevent the 300ms touch delay on mobile by handling touch immediately
+    if (!lockedOut) {
+      e.preventDefault();
+      touchHandledRef.current = true;
+      onCellClick(rowIndex, colIndex);
+    }
+  }, [lockedOut, onCellClick, rowIndex, colIndex, touchHandledRef]);
+
+  return (
+    <button
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      disabled={lockedOut}
+      className={`
+        relative flex items-center justify-center
+        transition-colors duration-75 touch-manipulation
+        ${isCompleted ? 'completion-flash' : ''}
+        ${isAlmostComplete ? 'almost-complete-glow' : ''}
+        ${cellClassName}
+        ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
+      `}
+      style={buttonStyle}
+    >
+      {hasValue ? (
+        <span
+          className={`
+            font-heading font-bold 
+            ${isJustScored ? 'cell-score-pop' : ''} 
+            ${isInitial ? 'breathing-text' : 'breathing-cyan-text'}
+            ${shouldAnimateNumber ? 'cell-number-animate cell-number-slam' : ''}
+          `}
+          style={{ 
+            fontSize: 'clamp(1.8rem, 7.2vw, 2.52rem)',
+            lineHeight: 1,
+            fontFamily: 'Industry, Orbitron, sans-serif',
+            color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            pointerEvents: 'none',
+            transform: 'translateY(-4%)',
+            ...(shouldAnimateNumber && animationDelay !== null ? {
+              animationDelay: `${animationDelay}s`,
+              animationFillMode: 'forwards',
+            } : {}),
+          }}
+        >
+          {cell}
+        </span>
+      ) : showNotes ? (
+        <div 
+          className="absolute inset-0 grid grid-cols-3 gap-0 w-full h-full place-items-center"
+          style={{ pointerEvents: 'none' }}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+            <span
+              key={num}
+              className={`w-full h-full flex items-center justify-center font-heading font-medium ${
+                cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{
+                fontSize: 'clamp(0.6rem, 2.4vw, 0.75rem)',
+                lineHeight: 1,
+                color: 'rgba(255, 255, 255, 0.7)',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+              }}
+            >
+              {num}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </button>
+  );
+});
 
 interface SudokuGridProps {
   grid: number[][];
@@ -386,103 +529,31 @@ function SudokuGrid({
             }
             // If isAnimatingIn is true, cellBg stays 'transparent', cellShadow stays 'none'
 
+            const animationDelay = getNumberAnimationDelay(rowIndex, colIndex);
+            const shouldAnimateNumber = animateIn && isInitial && animationDelay !== null && !numbersAnimationComplete;
+
             return (
-              <button
+              <Cell
                 key={cellKey}
-                onClick={() => {
-                  // Skip if touch already handled this interaction
-                  if (touchHandledRef.current) {
-                    touchHandledRef.current = false;
-                    return;
-                  }
-                  if (!lockedOut) {
-                    onCellClick(rowIndex, colIndex);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  // Prevent the 300ms touch delay on mobile by handling touch immediately
-                  if (!lockedOut) {
-                    e.preventDefault();
-                    touchHandledRef.current = true;
-                    onCellClick(rowIndex, colIndex);
-                  }
-                }}
-                disabled={lockedOut}
-                className={`
-                  relative flex items-center justify-center
-                  transition-colors duration-75 touch-manipulation
-                  ${isCompleted ? 'completion-flash' : ''}
-                  ${isAlmostComplete ? 'almost-complete-glow' : ''}
-                  ${cellClassName}
-                  ${!lockedOut ? 'cursor-pointer' : 'cursor-default'}
-                `}
-                style={{
-                  background: cellBg,
-                  boxShadow: cellShadow,
-                  border: cellBorder,
-                  zIndex: isAlmostComplete ? 20 : 1,
-                  WebkitUserSelect: 'none',
-                  userSelect: 'none',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                {hasValue ? (
-                  (() => {
-                    const animationDelay = getNumberAnimationDelay(rowIndex, colIndex);
-                    const shouldAnimateNumber = animateIn && isInitial && animationDelay !== null && !numbersAnimationComplete;
-                    
-                    return (
-                      <span
-                        className={`
-                          font-heading font-bold 
-                          ${isJustScored ? 'cell-score-pop' : ''} 
-                          ${isInitial ? 'breathing-text' : 'breathing-cyan-text'}
-                          ${shouldAnimateNumber ? 'cell-number-animate cell-number-slam' : ''}
-                        `}
-                        style={{ 
-                          fontSize: 'clamp(1.8rem, 7.2vw, 2.52rem)',
-                          lineHeight: 1,
-                          fontFamily: 'Industry, Orbitron, sans-serif',
-                          color: isInitial ? 'rgba(255, 255, 255, 0.95)' : '#00FFFF',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                          pointerEvents: 'none',
-                          transform: 'translateY(-4%)',
-                          ...(shouldAnimateNumber && animationDelay !== null ? {
-                            animationDelay: `${animationDelay}s`,
-                            animationFillMode: 'forwards',
-                          } : {}),
-                        }}
-                      >
-                        {cell}
-                      </span>
-                    );
-                  })()
-                ) : showNotes ? (
-                  <div 
-                    className="absolute inset-0 grid grid-cols-3 gap-0 w-full h-full place-items-center"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                      <span
-                        key={num}
-                        className={`w-full h-full flex items-center justify-center font-heading font-medium ${
-                          cellNotes.includes(num) ? 'opacity-100' : 'opacity-0'
-                        }`}
-                        style={{
-                          fontSize: 'clamp(0.6rem, 2.4vw, 0.75rem)',
-                          lineHeight: 1,
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                        }}
-                      >
-                        {num}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </button>
+                rowIndex={rowIndex}
+                colIndex={colIndex}
+                cell={cell}
+                isInitial={isInitial}
+                cellBg={cellBg}
+                cellShadow={cellShadow}
+                cellBorder={cellBorder}
+                cellClassName={cellClassName}
+                isCompleted={isCompleted}
+                isAlmostComplete={isAlmostComplete}
+                lockedOut={lockedOut}
+                showNotes={showNotes}
+                cellNotes={cellNotes}
+                isJustScored={isJustScored}
+                shouldAnimateNumber={shouldAnimateNumber}
+                animationDelay={animationDelay}
+                onCellClick={onCellClick}
+                touchHandledRef={touchHandledRef}
+              />
             );
           })
         )}

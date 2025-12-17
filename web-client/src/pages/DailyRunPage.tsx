@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue, memo } from 'react';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useHaptics } from '../hooks/useHaptics';
 import SudokuGrid from '../components/SudokuGrid';
@@ -10,6 +10,73 @@ import { log } from '../utils/logger';
 
 // Forfeit time constant (99:99.9 in milliseconds)
 const FORFEIT_TIME = 5999900;
+
+// Isolated timer display component - updates independently without triggering parent re-renders
+const TimerDisplay = memo(function TimerDisplay({ 
+  startTimeRef, 
+  penaltyTimeMsRef,
+  isRunning 
+}: { 
+  startTimeRef: React.MutableRefObject<number>;
+  penaltyTimeMsRef: React.MutableRefObject<number>;
+  isRunning: boolean;
+}) {
+  const [displayTime, setDisplayTime] = useState(0);
+  const rafRef = useRef<number>(0);
+  const lastUpdateRef = useRef<number>(0);
+  
+  useEffect(() => {
+    if (!isRunning) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    
+    const updateTimer = (timestamp: number) => {
+      // Throttle updates to ~10fps (100ms) for smooth display without excessive updates
+      if (timestamp - lastUpdateRef.current >= 100) {
+        const elapsed = Date.now() - startTimeRef.current;
+        const total = elapsed + penaltyTimeMsRef.current;
+        setDisplayTime(total);
+        lastUpdateRef.current = timestamp;
+      }
+      rafRef.current = requestAnimationFrame(updateTimer);
+    };
+    
+    rafRef.current = requestAnimationFrame(updateTimer);
+    
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [isRunning, startTimeRef, penaltyTimeMsRef]);
+  
+  const formatTime = (ms: number) => {
+    if (ms >= FORFEIT_TIME) return 'Forfeit';
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    const tenths = Math.floor((ms % 1000) / 100);
+    return `${mins}:${secs.toString().padStart(2, '0')}.${tenths}`;
+  };
+  
+  const penaltyMs = penaltyTimeMsRef.current;
+  
+  return (
+    <div className="text-center">
+      <div className="text-xs text-muted font-body uppercase tracking-wider">Daily Challenge</div>
+      <div 
+        className="text-2xl font-mono font-bold text-player"
+        style={{ textShadow: '0 0 15px rgba(0, 255, 255, 0.5)' }}
+      >
+        {formatTime(displayTime)}
+      </div>
+      {penaltyMs > 0 && (
+        <div className="text-xs text-error font-mono">
+          +{Math.floor(penaltyMs / 1000)}s total time penalty
+        </div>
+      )}
+    </div>
+  );
+});
 
 interface DailyRunPageProps {
   onExit: () => void;
@@ -32,18 +99,16 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   const [isLocked, setIsLocked] = useState(false);
   const [error, setError] = useState('');
   
-  // Timer state - COUNTS UP in milliseconds
-  const [elapsedTimeMs, setElapsedTimeMs] = useState(0);
-  const [penaltyTimeMs, setPenaltyTimeMs] = useState(0);
+  // Timer state - use refs to avoid triggering re-renders
   const startTimeRef = useRef<number>(0);
   const penaltyTimeMsRef = useRef(0); // Ref to track penalty for win calculation
+  const [timerRunning, setTimerRunning] = useState(false);
+  // Penalty state only for triggering UI update when penalty is added
+  const [penaltyTrigger, setPenaltyTrigger] = useState(0);
   
   // Result state
   const [previousResult, setPreviousResult] = useState<{ time_ms: number; rank: number } | null>(null);
   const [finalResult, setFinalResult] = useState<{ rank: number; total_players: number; time_ms: number } | null>(null);
-  
-  // Total time for display
-  const totalTimeMs = elapsedTimeMs + penaltyTimeMs;
   
   // Visual feedback state
   const [lastMoveResult, setLastMoveResult] = useState<{ correct: boolean; row: number; col: number } | null>(null);
@@ -69,8 +134,6 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   const myStreakRef = useRef(0);
   const [_longestStreak, setLongestStreak] = useState(0);
   
-  // Timer ref
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCellPlacementRef = useRef(0);
   
   // Initialize audio on mount
@@ -107,9 +170,6 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   // Load puzzle on mount
   useEffect(() => {
     loadPuzzle();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, []);
   
   const parseGridString = (str: string): number[][] => {
@@ -151,9 +211,8 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
       
       setGameStatus('playing');
       setIsLocked(false);
-      setElapsedTimeMs(0);
-      setPenaltyTimeMs(0);
       penaltyTimeMsRef.current = 0;
+      setPenaltyTrigger(0);
       setSelectedCell(null);
       setNotes(new Map());
       setNotesMode(false);
@@ -173,12 +232,8 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   };
   
   const startTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
     startTimeRef.current = Date.now();
-    
-    timerRef.current = setInterval(() => {
-      setElapsedTimeMs(Date.now() - startTimeRef.current);
-    }, 100); // Update every 100ms for smooth display
+    setTimerRunning(true);
   };
   
   // Synchronized feedback function
@@ -444,7 +499,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
           const newCount = prev + (wasEmpty && !isInitialClue ? 1 : 0);
           // Check for win (all 81 cells filled correctly)
           if (newCount >= 81) {
-            if (timerRef.current) clearInterval(timerRef.current);
+            setTimerRunning(false);
             
             const finalTime = (Date.now() - startTimeRef.current) + penaltyTimeMsRef.current;
             
@@ -481,8 +536,8 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
         setSelectedCell(null);
         
         // ADD 30 seconds penalty
-        setPenaltyTimeMs(prev => prev + 30000);
         penaltyTimeMsRef.current += 30000;
+        setPenaltyTrigger(prev => prev + 1); // Trigger UI update for penalty display
       }
     }
   }, [selectedCell, gameStatus, isLocked, notesMode, initialGrid, solutionGrid, myGrid, erroredCells, triggerScoreFeedback, playIncorrect, hapticError, clearRelatedNotes, checkCompletions]);
@@ -544,7 +599,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   
   // Handle forfeit - submit with max time
   const handleForfeit = async () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    setTimerRunning(false);
     
     try {
       const result = await dailyAPI.submitResult(FORFEIT_TIME);
@@ -626,7 +681,7 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
   
   return (
     <div className="min-h-screen bg-void flex flex-col relative overflow-hidden">
-      <BackgroundEffects />
+      <BackgroundEffects performanceMode={gameStatus === 'playing'} />
       
       {/* Header */}
       <div className="flex-shrink-0" style={{ marginTop: '48px', paddingBottom: '0px' }}>
@@ -641,20 +696,12 @@ export default function DailyRunPage({ onExit }: DailyRunPageProps) {
             </svg>
           </button>
           
-          <div className="text-center">
-            <div className="text-xs text-muted font-body uppercase tracking-wider">Daily Challenge</div>
-            <div 
-              className="text-2xl font-mono font-bold text-player"
-              style={{ textShadow: '0 0 15px rgba(0, 255, 255, 0.5)' }}
-            >
-              {formatTime(totalTimeMs)}
-            </div>
-            {penaltyTimeMs > 0 && (
-              <div className="text-xs text-error font-mono">
-                +{Math.floor(penaltyTimeMs / 1000)}s total time penalty
-              </div>
-            )}
-          </div>
+          <TimerDisplay 
+            startTimeRef={startTimeRef}
+            penaltyTimeMsRef={penaltyTimeMsRef}
+            isRunning={timerRunning}
+            key={penaltyTrigger} // Force update when penalty changes
+          />
           
           <div className="w-12" />
         </div>
