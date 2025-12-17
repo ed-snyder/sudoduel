@@ -55,7 +55,7 @@ function LandingPage() {
         {/* Description */}
         <div className="w-full max-w-md mb-8 text-center">
           <p className="text-primary font-body text-base leading-relaxed mb-4">
-            Sudoduel is a multiplayer, competitive 1v1 twist on the classic Sudoku puzzle. Challenge players worldwide and play real-time matches.
+            Sudoduel is a multiplayer, competitive 1v1 twist on the classic Sudoku puzzle. Challenge players worldwide and play real-time matches to beat the competition, and win higher rankings and glory on the leaderboard.
           </p>
         </div>
 
