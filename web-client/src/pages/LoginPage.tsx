@@ -57,9 +57,6 @@ function LandingPage() {
           <p className="text-primary font-body text-base leading-relaxed mb-4">
             Sudoduel is a competitive, head-to-head Sudoku experience that transforms the classic puzzle into an adrenaline-fueled multiplayer game. Challenge players worldwide in real-time. Race to solve puzzles and climb the leaderboard.
           </p>
-          <p className="text-secondary font-body text-xs leading-relaxed">
-            Forget everything about leisurely Sudoku. Sudoduel pits players against real opponents in a race against the clock and each other. Both players receive an identical puzzle grid and compete to decide the fastest and most accurate. Every cell completed is visible to both players in real-time. Every mistake costs dearly. Sudoduel has a leaderboard system, where players can view public rankings and ratings. Players can also send friend and rematch requests. Players communicate in-game via a customizable emote system.
-          </p>
         </div>
 
         {/* App Store Links */}
