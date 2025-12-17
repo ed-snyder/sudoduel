@@ -55,7 +55,7 @@ function LandingPage() {
         {/* Description */}
         <div className="w-full max-w-md mb-8 text-center">
           <p className="text-primary font-body text-base leading-relaxed mb-4">
-            Sudoduel is a competitive, head-to-head Sudoku experience that transforms the classic puzzle into an adrenaline-fueled multiplayer game. Challenge players worldwide in real-time. Race to solve puzzles and climb the leaderboard.
+            Sudoduel is a competitive, head-to-head Sudoku experience that transforms the classic puzzle into an adrenaline-fueled multiplayer game. Challenge players worldwide in real-time. Race to solve grids, beat opponents, and climb the rankings.
           </p>
         </div>
 
@@ -124,8 +124,8 @@ function LandingPage() {
             <RoadmapItem done label="Friends System & Private Matches" />
             <RoadmapItem label="Web Browser Version" />
             <RoadmapItem label="Android Version" />
-            <RoadmapItem label="iPad Support" />
             <RoadmapItem label="More Difficulty Levels & Rankings (Medium, Hard, Expert, etc.)" />
+            <RoadmapItem label="iPad Support" />
             <RoadmapItem label="Tournaments & Seasons" />
           </div>
         </div>
@@ -177,8 +177,8 @@ function LandingPage() {
         <div className="mt-auto pt-8 text-center">
           <p className="text-xs text-muted/50 font-mono">
             © Axo Labs LLC 2025 • 
-            <a href="https://sudoduel.com/privacy" className="hover:text-muted ml-1">Privacy</a> • 
-            <a href="https://sudoduel.com/terms" className="hover:text-muted ml-1">Terms</a>
+            <a href="https://www.notion.so/Sudoduel-Privacy-Policy-2c3c4dad9ac880758129d0d10ab5d59b" className="hover:text-muted ml-1">Privacy</a> • 
+            <a href="https://www.notion.so/Sudoduel-Terms-of-Service-2c3c4dad9ac8808ab570cc280a115aaf?source=copy_link" className="hover:text-muted ml-1">Terms</a>
           </p>
         </div>
       </div>
