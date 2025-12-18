@@ -210,6 +210,18 @@ export const GameStateManager = {
     
     const player = p1Id === searchId ? game.player1 : game.player2;
     const opponent = p1Id === searchId ? game.player2 : game.player1;
+    
+    // CRITICAL: If this player was marked as disconnected but is now making moves,
+    // they've reconnected - clear the disconnect state to resume timers
+    if (game.disconnectedPlayerId === playerId) {
+      console.log(`[MATCH ${matchId}] Player ${playerId} making move while marked disconnected - clearing disconnect state`);
+      game.disconnectedPlayerId = null;
+      game.disconnectTime = null;
+      if (game.gracePeriodTimer) {
+        clearTimeout(game.gracePeriodTimer);
+        game.gracePeriodTimer = null;
+      }
+    }
 
     // Can't move if locked
     if (player.isLocked) {
@@ -254,12 +266,27 @@ export const GameStateManager = {
       // Check for puzzle completion (all 81 cells filled)
       if (player.cellsCompleted === 81) {
         player.isSolved = true;
+        // CRITICAL: Clear any disconnect state since game is ending normally
+        // This prevents disconnect state from interfering with game end
+        game.disconnectedPlayerId = null;
+        game.disconnectTime = null;
+        if (game.gracePeriodTimer) {
+          clearTimeout(game.gracePeriodTimer);
+          game.gracePeriodTimer = null;
+        }
         // Don't set status here - let endGame handle it
         return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
       }
 
       // Check if opponent is locked and we've surpassed their score
       if (opponent.isLocked && player.score > opponent.score) {
+        // CRITICAL: Clear any disconnect state since game is ending normally
+        game.disconnectedPlayerId = null;
+        game.disconnectTime = null;
+        if (game.gracePeriodTimer) {
+          clearTimeout(game.gracePeriodTimer);
+          game.gracePeriodTimer = null;
+        }
         // Don't set status here - let endGame handle it
         return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
       }
@@ -292,6 +319,13 @@ export const GameStateManager = {
         
         // If both players locked, game ends
         if (opponent.isLocked) {
+          // CRITICAL: Clear any disconnect state since game is ending normally
+          game.disconnectedPlayerId = null;
+          game.disconnectTime = null;
+          if (game.gracePeriodTimer) {
+            clearTimeout(game.gracePeriodTimer);
+            game.gracePeriodTimer = null;
+          }
           const winner = player.score > opponent.score ? player.slot :
                          opponent.score > player.score ? opponent.slot : null;
           return { success: true, correct: false, player, gameEnded: true, winner };
@@ -300,6 +334,13 @@ export const GameStateManager = {
         // Otherwise, opponent can continue playing
         // Check if opponent has already surpassed our score
         if (opponent.score > player.score) {
+          // CRITICAL: Clear any disconnect state since game is ending normally
+          game.disconnectedPlayerId = null;
+          game.disconnectTime = null;
+          if (game.gracePeriodTimer) {
+            clearTimeout(game.gracePeriodTimer);
+            game.gracePeriodTimer = null;
+          }
           return { success: true, correct: false, player, gameEnded: true, winner: opponent.slot };
         }
       }
