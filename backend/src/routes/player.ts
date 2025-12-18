@@ -59,6 +59,9 @@ router.patch('/profile', authMiddleware, async (req: AuthRequest, res: Response)
       [trimmedName, req.userId]
     );
 
+    // Invalidate cache so refreshUser() gets the new name immediately
+    cache.delete(CacheKeys.playerProfile(req.userId!));
+
     res.json({ success: true, display_name: trimmedName });
   } catch (error: any) {
     console.error('Update profile error:', error);
