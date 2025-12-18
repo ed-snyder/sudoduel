@@ -242,6 +242,7 @@ export const setupWebSocketServer = (server: Server) => {
         
         // Send countdown to both players
         const countdownStartTime = Date.now();
+        console.log(`[TIMING] Match ${matchId} sending GAME_COUNTDOWN at ${countdownStartTime}`);
         broadcastToMatch(matchId, {
           type: 'GAME_COUNTDOWN',
           data: { 
@@ -255,8 +256,11 @@ export const setupWebSocketServer = (server: Server) => {
           const currentGame = GameStateManager.getGame(matchId);
           if (!currentGame) return;
           
+          const preDbTime = Date.now();
           GameStateManager.startGame(matchId, handleTimeout, handleTimerUpdate);
           await MatchModel.updateStatus(matchId, 'IN_PROGRESS');
+          const postDbTime = Date.now();
+          console.log(`[TIMING] Match ${matchId} DB update took ${postDbTime - preDbTime}ms`);
           
           const now = Date.now();
           // Calculate when gameplay should actually start (after client countdown animation)
@@ -265,6 +269,7 @@ export const setupWebSocketServer = (server: Server) => {
           const NETWORK_BUFFER_MS = 200;
           const playAtTimestamp = now + COUNTDOWN_ANIMATION_MS + NETWORK_BUFFER_MS;
           
+          console.log(`[TIMING] Match ${matchId} sending GAME_START at ${now}, play_at: ${playAtTimestamp} (${playAtTimestamp - now}ms from now)`);
           broadcastToMatch(matchId, {
             type: 'GAME_START',
             data: {
