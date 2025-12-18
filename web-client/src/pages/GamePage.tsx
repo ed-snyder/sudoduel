@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue, startTransition } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useSoundEffects } from '../hooks/useSoundEffects';
@@ -1014,28 +1014,24 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
 
         // Update timers from timer_update (authoritative source for both players)
-        // Use startTransition to prevent timer updates from blocking input
+        // Process immediately to prevent timer freezes
         if (timer_update) {
-          startTransition(() => {
-            if (mySlotRef.current === 1) {
-              setMyTimeRemaining(timer_update.player1_time_remaining);
-              setOpponentTimeRemaining(timer_update.player2_time_remaining);
-            } else if (mySlotRef.current === 2) {
-              setMyTimeRemaining(timer_update.player2_time_remaining);
-              setOpponentTimeRemaining(timer_update.player1_time_remaining);
-            }
-          });
+          if (mySlotRef.current === 1) {
+            setMyTimeRemaining(timer_update.player1_time_remaining);
+            setOpponentTimeRemaining(timer_update.player2_time_remaining);
+          } else if (mySlotRef.current === 2) {
+            setMyTimeRemaining(timer_update.player2_time_remaining);
+            setOpponentTimeRemaining(timer_update.player1_time_remaining);
+          }
         } else {
           // Fallback: if timer_update not provided, use player_state.time_remaining
           // This should rarely happen since we always include timer_update now
           // But keep as safety net - TIME_SYNC will correct any drift on next update
-          startTransition(() => {
-            if (isMyMove && player_state.time_remaining !== undefined) {
-              setMyTimeRemaining(player_state.time_remaining);
-            } else if (!isMyMove && player_state.time_remaining !== undefined) {
-              setOpponentTimeRemaining(player_state.time_remaining);
-            }
-          });
+          if (isMyMove && player_state.time_remaining !== undefined) {
+            setMyTimeRemaining(player_state.time_remaining);
+          } else if (!isMyMove && player_state.time_remaining !== undefined) {
+            setOpponentTimeRemaining(player_state.time_remaining);
+          }
         }
         
         // Check if game ended - trigger end game handling immediately
@@ -1047,7 +1043,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
 
       case 'TIME_SYNC':
         // Always process TIME_SYNC - it's the authoritative source for timer values
-        // Removed throttling to ensure timers stay synchronized
+        // Process immediately (no startTransition) to prevent timer freezes during heavy rendering
         
         // Update both timers and lock status from server
         // Don't update state if mySlot hasn't been set yet (wait for GAME_STATE)
@@ -1056,113 +1052,110 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           break;
         }
         
-        // Use startTransition to mark timer updates as non-urgent
-        // This prevents timer updates from blocking user input
-        startTransition(() => {
-          if (mySlotRef.current === 1) {
-            const myServerTime = message.data.player1_time;
-            const myLocked = message.data.player1_locked;
-            const myScore = message.data.player1_score;
-            const myCells = message.data.player1_cells_completed;
-            const opponentLocked = message.data.player2_locked;
-            const opponentScore = message.data.player2_score;
-            const opponentCells = message.data.player2_cells_completed;
+        // Process timer updates immediately - deferred updates cause timer freezes
+        if (mySlotRef.current === 1) {
+          const myServerTime = message.data.player1_time;
+          const myLocked = message.data.player1_locked;
+          const myScore = message.data.player1_score;
+          const myCells = message.data.player1_cells_completed;
+          const opponentLocked = message.data.player2_locked;
+          const opponentScore = message.data.player2_score;
+          const opponentCells = message.data.player2_cells_completed;
+          
+          // Always use server time as authoritative (no client-side countdown)
+          setMyTimeRemaining(myServerTime);
+          setOpponentTimeRemaining(message.data.player2_time);
+          
+          // Only update state if values actually changed to avoid unnecessary re-renders
+          setMyState(prev => {
+            // Quick reference equality check first
+            if (
+              prev.is_locked === myLocked &&
+              prev.score === (myScore !== undefined ? myScore : prev.score) &&
+              prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
+            ) {
+              return prev; // No change, skip re-render
+            }
             
-            // Always use server time as authoritative (no client-side countdown)
-            setMyTimeRemaining(myServerTime);
-            setOpponentTimeRemaining(message.data.player2_time);
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: myLocked,
+              score: myScore !== undefined ? myScore : prev.score,
+              cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
+            };
+          });
+          
+          setOpponentState(prev => {
+            // Quick reference equality check first
+            if (
+              prev.is_locked === opponentLocked &&
+              prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
+              prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
+            ) {
+              return prev; // No change, skip re-render
+            }
             
-            // Only update state if values actually changed to avoid unnecessary re-renders
-            setMyState(prev => {
-              // Quick reference equality check first
-              if (
-                prev.is_locked === myLocked &&
-                prev.score === (myScore !== undefined ? myScore : prev.score) &&
-                prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
-              ) {
-                return prev; // No change, skip re-render
-              }
-              
-              // Values changed, update state
-              return {
-                ...prev,
-                is_locked: myLocked,
-                score: myScore !== undefined ? myScore : prev.score,
-                cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
-              };
-            });
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: opponentLocked,
+              score: opponentScore !== undefined ? opponentScore : prev.score,
+              cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
+            };
+          });
+        } else if (mySlotRef.current === 2) {
+          const myServerTime = message.data.player2_time;
+          const myLocked = message.data.player2_locked;
+          const myScore = message.data.player2_score;
+          const myCells = message.data.player2_cells_completed;
+          const opponentLocked = message.data.player1_locked;
+          const opponentScore = message.data.player1_score;
+          const opponentCells = message.data.player1_cells_completed;
+          
+          // Always use server time as authoritative (no client-side countdown)
+          setMyTimeRemaining(myServerTime);
+          setOpponentTimeRemaining(message.data.player1_time);
+          
+          // Only update state if values actually changed to avoid unnecessary re-renders
+          setMyState(prev => {
+            // Quick reference equality check first
+            if (
+              prev.is_locked === myLocked &&
+              prev.score === (myScore !== undefined ? myScore : prev.score) &&
+              prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
+            ) {
+              return prev; // No change, skip re-render
+            }
             
-            setOpponentState(prev => {
-              // Quick reference equality check first
-              if (
-                prev.is_locked === opponentLocked &&
-                prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
-                prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
-              ) {
-                return prev; // No change, skip re-render
-              }
-              
-              // Values changed, update state
-              return {
-                ...prev,
-                is_locked: opponentLocked,
-                score: opponentScore !== undefined ? opponentScore : prev.score,
-                cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
-              };
-            });
-          } else if (mySlotRef.current === 2) {
-            const myServerTime = message.data.player2_time;
-            const myLocked = message.data.player2_locked;
-            const myScore = message.data.player2_score;
-            const myCells = message.data.player2_cells_completed;
-            const opponentLocked = message.data.player1_locked;
-            const opponentScore = message.data.player1_score;
-            const opponentCells = message.data.player1_cells_completed;
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: myLocked,
+              score: myScore !== undefined ? myScore : prev.score,
+              cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
+            };
+          });
+          
+          setOpponentState(prev => {
+            // Quick reference equality check first
+            if (
+              prev.is_locked === opponentLocked &&
+              prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
+              prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
+            ) {
+              return prev; // No change, skip re-render
+            }
             
-            // Always use server time as authoritative (no client-side countdown)
-            setMyTimeRemaining(myServerTime);
-            setOpponentTimeRemaining(message.data.player1_time);
-            
-            // Only update state if values actually changed to avoid unnecessary re-renders
-            setMyState(prev => {
-              // Quick reference equality check first
-              if (
-                prev.is_locked === myLocked &&
-                prev.score === (myScore !== undefined ? myScore : prev.score) &&
-                prev.cells_completed === (myCells !== undefined ? myCells : prev.cells_completed)
-              ) {
-                return prev; // No change, skip re-render
-              }
-              
-              // Values changed, update state
-              return {
-                ...prev,
-                is_locked: myLocked,
-                score: myScore !== undefined ? myScore : prev.score,
-                cells_completed: myCells !== undefined ? myCells : prev.cells_completed,
-              };
-            });
-            
-            setOpponentState(prev => {
-              // Quick reference equality check first
-              if (
-                prev.is_locked === opponentLocked &&
-                prev.score === (opponentScore !== undefined ? opponentScore : prev.score) &&
-                prev.cells_completed === (opponentCells !== undefined ? opponentCells : prev.cells_completed)
-              ) {
-                return prev; // No change, skip re-render
-              }
-              
-              // Values changed, update state
-              return {
-                ...prev,
-                is_locked: opponentLocked,
-                score: opponentScore !== undefined ? opponentScore : prev.score,
-                cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
-              };
-            });
-          }
-        });
+            // Values changed, update state
+            return {
+              ...prev,
+              is_locked: opponentLocked,
+              score: opponentScore !== undefined ? opponentScore : prev.score,
+              cells_completed: opponentCells !== undefined ? opponentCells : prev.cells_completed,
+            };
+          });
+        }
         break;
 
       case 'ERASE_RESULT':
