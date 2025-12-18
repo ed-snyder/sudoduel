@@ -726,13 +726,32 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
 
 function broadcastToMatch(matchId: number, message: any) {
   const matchClients = clients.get(matchId);
-  if (matchClients) {
-    const messageStr = JSON.stringify(message);
-    matchClients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(messageStr);
-      }
-    });
+  if (!matchClients) {
+    console.log(`[BROADCAST] Match ${matchId} - NO CLIENTS in map for message type: ${message.type}`);
+    return;
+  }
+  
+  const messageStr = JSON.stringify(message);
+  let sentCount = 0;
+  let closedCount = 0;
+  
+  matchClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messageStr);
+      sentCount++;
+    } else {
+      closedCount++;
+    }
+  });
+  
+  // Log TIME_SYNC delivery (but not every second - only if there's an issue)
+  if (message.type === 'TIME_SYNC' && (sentCount === 0 || closedCount > 0)) {
+    console.log(`[BROADCAST] Match ${matchId} TIME_SYNC - sent: ${sentCount}, closed: ${closedCount}, total: ${matchClients.size}`);
+  }
+  
+  // Always log non-TIME_SYNC important messages
+  if (message.type !== 'TIME_SYNC') {
+    console.log(`[BROADCAST] Match ${matchId} ${message.type} - sent to ${sentCount}/${matchClients.size} clients`);
   }
 }
 
