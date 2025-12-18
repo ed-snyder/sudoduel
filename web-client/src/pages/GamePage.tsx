@@ -1619,10 +1619,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         
         log.perf(`Before setMyGrid: ${(performance.now() - startTime).toFixed(2)}ms`);
         // Create new grid with the number placed
-        const newGrid = myGrid.map((r) => [...r]);
-        newGrid[row][col] = num;
+        // IMPORTANT: Use functional update to avoid stale closure issues
+        // Capture the computed grid for use in completion check
+        let computedGrid: number[][] | null = null;
         const beforeSetState = performance.now();
-        setMyGrid(newGrid);
+        setMyGrid(prev => {
+          const newGrid = prev.map((r) => [...r]);
+          newGrid[row][col] = num;
+          computedGrid = newGrid;
+          return newGrid;
+        });
         // Track cell placement time for TIME_SYNC throttling
         lastCellPlacementRef.current = Date.now();
         log.perf(`After setMyGrid (scheduled): ${(performance.now() - startTime).toFixed(2)}ms`);
@@ -1642,7 +1648,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Use requestIdleCallback to run after paint, or setTimeout as fallback
         const deferCompletionCheck = () => {
           log.perf(`Deferred checkCompletions START: ${(performance.now() - startTime).toFixed(2)}ms`);
-          checkCompletions(newGrid, row, col);
+          if (computedGrid) {
+            checkCompletions(computedGrid, row, col);
+          }
           log.perf(`Deferred checkCompletions END: ${(performance.now() - startTime).toFixed(2)}ms`);
         };
         
