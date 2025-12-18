@@ -108,14 +108,19 @@ export const GameStateManager = {
     const game = gameStates.get(matchId);
     if (!game) return;
 
+    console.log(`🎮 Match ${matchId} starting - player1: ${game.player1.playerId}, player2: ${game.player2.playerId}`);
+    
     game.status = 'IN_PROGRESS';
     game.startedAt = Date.now();
     game.player1.lastMoveTime = Date.now();
     game.player2.lastMoveTime = Date.now();
 
+    console.log(`⏱️ Match ${matchId} timer interval starting`);
+    
     // Start per-player timer countdown (every 1 second)
     game.timerInterval = setInterval(() => {
       if (game.status !== 'IN_PROGRESS') {
+        console.log(`[TIMER] Match ${matchId} stopping - status: ${game.status}`);
         if (game.timerInterval) {
           clearInterval(game.timerInterval);
           game.timerInterval = null;
@@ -127,6 +132,7 @@ export const GameStateManager = {
       if (game.disconnectedPlayerId !== null) {
         // Don't decrement any timers during disconnect grace period
         // The disconnected player will auto-forfeit after 15 seconds via gracePeriodTimer
+        console.log(`[TIMER] Match ${matchId} paused - disconnectedPlayerId: ${game.disconnectedPlayerId} (type: ${typeof game.disconnectedPlayerId})`);
         return;
       }
 
