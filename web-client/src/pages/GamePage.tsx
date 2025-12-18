@@ -1246,6 +1246,50 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         break;
       }
 
+      case 'RATING_UPDATE':
+        // Update pending game result with actual rating data from server
+        // This comes after GAME_END once DB operations complete
+        setPendingGameResult((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            is_ranked: message.data.is_ranked,
+            player1: {
+              ...prev.player1,
+              rating_before: message.data.player1.rating_before,
+              rating_after: message.data.player1.rating_after,
+              rating_change: message.data.player1.rating_change,
+            },
+            player2: {
+              ...prev.player2,
+              rating_before: message.data.player2.rating_before,
+              rating_after: message.data.player2.rating_after,
+              rating_change: message.data.player2.rating_change,
+            },
+          };
+        });
+        // Also update gameResult if it's already been set (overlay finished)
+        setGameResult((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            is_ranked: message.data.is_ranked,
+            player1: {
+              ...prev.player1,
+              rating_before: message.data.player1.rating_before,
+              rating_after: message.data.player1.rating_after,
+              rating_change: message.data.player1.rating_change,
+            },
+            player2: {
+              ...prev.player2,
+              rating_before: message.data.player2.rating_before,
+              rating_after: message.data.player2.rating_after,
+              rating_change: message.data.player2.rating_change,
+            },
+          };
+        });
+        break;
+
       case 'OPPONENT_DISCONNECTED':
         setOpponentDisconnected(true);
         setGraceTimeRemaining(message.data.grace_period_seconds);

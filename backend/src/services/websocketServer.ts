@@ -1009,8 +1009,43 @@ async function endGame(matchId: number) {
 
   console.log(`🏁 Match ${matchId} ended. Winner: ${results.winnerId || 'DRAW'}`);
 
+  // IMMEDIATE: Send preliminary GAME_END so client shows "GAME OVER!" instantly
+  // Rating data will be sent in a follow-up message after DB operations complete
+  const preliminaryWinnerSlot = results.winnerId === results.player1.playerId ? 1 
+    : results.winnerId === results.player2.playerId ? 2 
+    : null;
+  const preliminaryReason = preliminaryWinnerSlot === null ? 'DRAW' 
+    : (results.player1.isSolved || results.player2.isSolved) ? 'PUZZLE_SOLVED' 
+    : 'TIMEOUT_SCORE';
+  
+  broadcastToMatch(matchId, {
+    type: 'GAME_END',
+    data: {
+      winner_slot: preliminaryWinnerSlot,
+      reason: preliminaryReason,
+      is_ranked: true, // Will be confirmed after DB check
+      final_scores: {
+        player1: results.player1.score,
+        player2: results.player2.score,
+      },
+      player1: {
+        ...results.player1,
+        // Preliminary - rating data will come in RATING_UPDATE
+        rating_before: 0,
+        rating_after: 0,
+        rating_change: 0,
+      },
+      player2: {
+        ...results.player2,
+        rating_before: 0,
+        rating_after: 0,
+        rating_change: 0,
+      },
+    },
+  });
+
   try {
-    // Check if match is ranked and if it's a bot match
+    // Now do all the DB operations (client already has GAME_END)
     const match = await MatchModel.findById(matchId);
     const isRanked = match?.is_ranked !== false; // Default to ranked if not set
     const isBotMatch = botMatches.get(matchId) || (match as any).is_bot_match === true;
@@ -1158,26 +1193,18 @@ async function endGame(matchId: number) {
         reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
       }
 
-      // Broadcast GAME_END for bot match
+      // Send RATING_UPDATE with final rating data (GAME_END already sent at start of endGame)
       broadcastToMatch(matchId, {
-        type: 'GAME_END',
+        type: 'RATING_UPDATE',
         data: {
-          winner_slot: winnerSlot,
-          reason,
           is_ranked: isBotMatchRanked,
           is_bot_match: true,
-          final_scores: {
-            player1: results.player1.score,
-            player2: results.player2.score,
-          },
           player1: {
-            ...results.player1,
             rating_before: rating1.rating,
             rating_after: newRatings.player1.rating,
             rating_change: newRatings.player1.rating - rating1.rating,
           },
           player2: {
-            ...results.player2,
             rating_before: Math.round(botRatingForDisplay),
             rating_after: Math.round(newRatings.player2.rating),
             rating_change: isBotMatchRanked ? newRatings.player2.rating - botRatingForDisplay : 0,
@@ -1369,24 +1396,17 @@ async function endGame(matchId: number) {
       reason = winnerResult.finalState === 'SOLVED' ? 'PUZZLE_SOLVED' : 'TIMEOUT_SCORE';
     }
     
+    // Send RATING_UPDATE with final rating data (GAME_END already sent at start of endGame)
     broadcastToMatch(matchId, {
-      type: 'GAME_END',
+      type: 'RATING_UPDATE',
       data: {
-        winner_slot: winnerSlot,
-        reason,
         is_ranked: isRanked,
-        final_scores: {
-          player1: results.player1.score,
-          player2: results.player2.score,
-        },
         player1: {
-          ...results.player1,
           rating_before: rating1.rating,
           rating_after: newRatings.player1.rating,
           rating_change: newRatings.player1.rating - rating1.rating,
         },
         player2: {
-          ...results.player2,
           rating_before: rating2.rating,
           rating_after: newRatings.player2.rating,
           rating_change: newRatings.player2.rating - rating2.rating,
