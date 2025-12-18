@@ -494,13 +494,30 @@ function makeBotMove(
 
   const game = GameStateManager.getGame(matchId);
   if (!game || game.status !== 'IN_PROGRESS') {
+    console.log(`🤖 [MATCH ${matchId}] Game not in progress, stopping bot`);
     stopBotLoop(matchId);
     return;
   }
 
   const botPlayer = game.player1.playerId === state.botPlayerId ? game.player1 : game.player2;
+  const opponent = botPlayer === game.player1 ? game.player2 : game.player1;
+  
+  // CRITICAL: Check if opponent has already won (solved puzzle or surpassed score while bot locked)
+  if (opponent.isSolved) {
+    console.log(`🤖 [MATCH ${matchId}] Opponent already solved puzzle, stopping bot`);
+    stopBotLoop(matchId);
+    return;
+  }
   
   if (botPlayer.isLocked || botPlayer.isSolved) {
+    console.log(`🤖 [MATCH ${matchId}] Bot is locked or solved, stopping`);
+    stopBotLoop(matchId);
+    return;
+  }
+  
+  // Also check if opponent has surpassed bot's score while bot is locked
+  if (botPlayer.isLocked && opponent.score > botPlayer.score) {
+    console.log(`🤖 [MATCH ${matchId}] Bot locked and opponent ahead, stopping`);
     stopBotLoop(matchId);
     return;
   }
