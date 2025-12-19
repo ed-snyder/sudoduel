@@ -249,7 +249,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* About */}
           <div className="px-4 py-4">
-            <span className="font-body text-muted text-sm">SudoDuel v1.0.0</span>
+            <span className="font-body text-muted text-sm">SudoDuel v1.0.2</span>
           </div>
 
           {/* Logout */}

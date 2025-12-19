@@ -138,7 +138,7 @@ function LandingPage() {
           <div className="flex flex-col gap-3">
             {/* Discord */}
             <a
-              href="https://discord.gg/sudoduel"
+              href="https://discord.gg/24u2NKcQ"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 px-6 py-3 bg-surface border-2 rounded-lg font-body font-semibold transition-all duration-200 hover:scale-[1.02]"
