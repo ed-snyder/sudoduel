@@ -119,9 +119,16 @@ export const GameStateManager = {
     
     // Start per-player timer countdown (every 1 second)
     game.timerInterval = setInterval(() => {
+      const now = Date.now();
+      const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0; // Queue-based bot has real player ID
+      
       if (game.status !== 'IN_PROGRESS') {
+        const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
         console.log(`[TIMER] Match ${matchId} stopping - status: ${game.status}`);
         if (game.timerInterval) {
+          if (isBotMatch) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ CLEARING TIMER INTERVAL - status changed to ${game.status}`);
+          }
           clearInterval(game.timerInterval);
           game.timerInterval = null;
         }
@@ -141,9 +148,18 @@ export const GameStateManager = {
       // Queue-based bots (real player IDs) are treated exactly like human opponents
       const isLegacyBotMatch = Number(game.player2.playerId) === -1;
       
+      // Log timer state every 10 seconds for bot matches, or on state changes
+      const shouldLog = isBotMatch && (now % 10000 < 1000);
+      
+      if (shouldLog) {
+        console.log(`[TIMER] Match ${matchId} TICK: P1(time=${game.player1.timeRemaining}, locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}/81, score=${game.player1.score}) P2(time=${game.player2.timeRemaining}, locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}/81, score=${game.player2.score})`);
+      }
+      
       if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
+        const oldTime = game.player1.timeRemaining;
         game.player1.timeRemaining--;
         if (game.player1.timeRemaining <= 0) {
+          console.log(`[TIMER] Match ${matchId} P1 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player1.timeRemaining}`);
           // Legacy first-match bot: end game immediately when human runs out of time
           if (isLegacyBotMatch) {
             game.player1.isLocked = true;
@@ -156,19 +172,28 @@ export const GameStateManager = {
           }
           // All other matches (human vs human, queue-based bot): lock the player
           game.player1.isLocked = true;
+          console.log(`[TIMER] Match ${matchId} P1 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved})`);
         }
       }
       if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0) {
+        const oldTime = game.player2.timeRemaining;
         game.player2.timeRemaining--;
         if (game.player2.timeRemaining <= 0) {
+          console.log(`[TIMER] Match ${matchId} P2 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player2.timeRemaining}`);
           game.player2.isLocked = true;
+          console.log(`[TIMER] Match ${matchId} P2 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved})`);
         }
       }
 
       // Check if game should end (both locked or one solved)
       const ended = this.checkVictoryConditions(game);
       if (ended) {
+        const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
+        console.log(`[TIMER] Match ${matchId} VICTORY CONDITIONS MET! Ending game. P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted})`);
         if (game.timerInterval) {
+          if (isBotMatch) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ CLEARING TIMER INTERVAL - victory conditions met`);
+          }
           clearInterval(game.timerInterval);
           game.timerInterval = null;
         }
@@ -273,16 +298,22 @@ export const GameStateManager = {
 
       // Check for puzzle completion (all 81 cells filled)
       if (player.cellsCompleted === 81) {
-        console.log(`[applyMove] Match ${matchId} Player ${playerId} REACHED 81 CELLS! Setting isSolved=true, returning gameEnded=true`);
+        console.log(`[applyMove] 🎯 Match ${matchId} Player ${playerId} (slot ${player.slot}) REACHED 81 CELLS! Setting isSolved=true, returning gameEnded=true`);
+        console.log(`[applyMove] 🎯 Match ${matchId} Game state BEFORE solve: status=${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted})`);
         player.isSolved = true;
         // CRITICAL: Clear any disconnect state since game is ending normally
         // This prevents disconnect state from interfering with game end
+        const hadDisconnect = game.disconnectedPlayerId !== null;
         game.disconnectedPlayerId = null;
         game.disconnectTime = null;
         if (game.gracePeriodTimer) {
           clearTimeout(game.gracePeriodTimer);
           game.gracePeriodTimer = null;
         }
+        if (hadDisconnect) {
+          console.log(`[applyMove] 🎯 Match ${matchId} Cleared disconnect state (was: ${game.disconnectedPlayerId})`);
+        }
+        console.log(`[applyMove] 🎯 Match ${matchId} Game state AFTER solve: status=${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted})`);
         // Don't set status here - let endGame handle it
         return { success: true, correct: true, player, gameEnded: true, winner: player.slot };
       }
@@ -664,15 +695,24 @@ export const GameStateManager = {
    * Forfeit handling must be done separately via getFinalResults().
    */
   checkVictoryConditions(game: GameState): boolean {
+    const matchId = Array.from(gameStates.entries()).find(([_, g]) => g === game)?.[0] ?? 'UNKNOWN';
+    const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
+    
     // CRITICAL: If someone is disconnected, do NOT end game normally
     // Wait for grace period - disconnected player will forfeit
     if (game.disconnectedPlayerId !== null) {
+      if (isBotMatch) {
+        console.log(`[checkVictoryConditions] Match ${matchId} BLOCKED: disconnectedPlayerId=${game.disconnectedPlayerId}`);
+      }
       return false;
     }
     
     // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
     // Forfeit must be handled separately to ensure forfeiting player always loses
     if (game.forfeitingPlayerId != null) {
+      if (isBotMatch) {
+        console.log(`[checkVictoryConditions] Match ${matchId} BLOCKED: forfeitingPlayerId=${game.forfeitingPlayerId}`);
+      }
       return false;
     }
 
@@ -681,14 +721,23 @@ export const GameStateManager = {
 
     // Condition 1: Someone has solved the puzzle
     if (p1.isSolved || p2.isSolved) {
+      if (isBotMatch) {
+        console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P1(solved=${p1.isSolved}, cells=${p1.cellsCompleted}), P2(solved=${p2.isSolved}, cells=${p2.cellsCompleted})`);
+      }
       return true;
     }
 
     // Condition 2 & 3: One player is locked and the other has surpassed their score
     if (p1.isLocked && !p2.isLocked && p2.score > p1.score) {
+      if (isBotMatch) {
+        console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P1 locked, P2 ahead (P1: score=${p1.score}, P2: score=${p2.score})`);
+      }
       return true;
     }
     if (p2.isLocked && !p1.isLocked && p1.score > p2.score) {
+      if (isBotMatch) {
+        console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P2 locked, P1 ahead (P1: score=${p1.score}, P2: score=${p2.score})`);
+      }
       return true;
     }
 

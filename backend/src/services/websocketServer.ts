@@ -317,7 +317,15 @@ export const setupWebSocketServer = (server: Server) => {
                 botMatch.botPlayerId,
                 botMatch.botRating,
                 handleBotMove,
-                () => {} // onGameEnd - endGame handles cleanup
+                async () => {
+                  // CRITICAL: When bot completes puzzle, trigger game end
+                  console.log(`🤖 [MATCH ${matchId}] Bot completed puzzle, triggering game end via onGameEnd callback`);
+                  try {
+                    await endGame(matchId);
+                  } catch (error) {
+                    console.error(`[WS] CRITICAL: Error in endGame for bot match ${matchId} via onGameEnd:`, error);
+                  }
+                }
               );
             } else {
               // Legacy first-match bot: use old bot system
@@ -442,6 +450,13 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           return;
         }
 
+        const gameBeforeMove = GameStateManager.getGame(matchId);
+        const isBotMatch = gameBeforeMove && Number(gameBeforeMove.player2.playerId) !== -1 && Number(gameBeforeMove.player2.playerId) > 0;
+        
+        if (isBotMatch) {
+          console.log(`[PLACE_NUMBER] 🎮 Match ${matchId} HUMAN MOVE BEFORE: P1(locked=${gameBeforeMove?.player1.isLocked}, solved=${gameBeforeMove?.player1.isSolved}, cells=${gameBeforeMove?.player1.cellsCompleted}/81, time=${gameBeforeMove?.player1.timeRemaining}), P2(locked=${gameBeforeMove?.player2.isLocked}, solved=${gameBeforeMove?.player2.isSolved}, cells=${gameBeforeMove?.player2.cellsCompleted}/81, time=${gameBeforeMove?.player2.timeRemaining}), status=${gameBeforeMove?.status}, timerInterval=${gameBeforeMove?.timerInterval !== null}`);
+        }
+        
         const result = GameStateManager.applyMove(matchId, playerId, row, col, value);
 
         if (result.success) {
@@ -450,6 +465,10 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           
           // Get opponent state for the broadcast (compare by slot, not object reference)
           const opponent = game ? (result.player.slot === 1 ? game.player2 : game.player1) : null;
+          
+          if (isBotMatch) {
+            console.log(`[PLACE_NUMBER] 🎮 Match ${matchId} HUMAN MOVE AFTER: correct=${result.correct}, P1(locked=${game?.player1.isLocked}, solved=${game?.player1.isSolved}, cells=${game?.player1.cellsCompleted}/81, time=${game?.player1.timeRemaining}), P2(locked=${game?.player2.isLocked}, solved=${game?.player2.isSolved}, cells=${game?.player2.cellsCompleted}/81, time=${game?.player2.timeRemaining}), gameEnded=${result.gameEnded}, winner=${result.winner}, status=${game?.status}, timerInterval=${game?.timerInterval !== null}`);
+          }
           
           broadcastToMatch(matchId, {
             type: 'MOVE_RESULT',
@@ -487,8 +506,10 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
           });
 
           if (result.gameEnded) {
+            console.log(`[PLACE_NUMBER] 🎯 Match ${matchId} GAME ENDED! Calling endGame... winner=${result.winner}, playerId=${playerId}, slot=${result.player.slot}`);
             try {
               await endGame(matchId);
+              console.log(`[PLACE_NUMBER] 🎯 Match ${matchId} endGame completed successfully`);
             } catch (error) {
               console.error(`[WS] CRITICAL: Error in endGame for match ${matchId}:`, error);
               // Try to send GAME_END message even if endGame fails
@@ -790,7 +811,15 @@ async function handleTimeout(matchId: number) {
 
 function handleTimerUpdate(matchId: number) {
   const game = GameStateManager.getGame(matchId);
+  const isBotMatch = game && Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
+  
   if (game) {
+    // Log timer update every 10 seconds for bot matches
+    const shouldLog = isBotMatch && (Date.now() % 10000 < 1000);
+    if (shouldLog) {
+      console.log(`[TIMER] Match ${matchId} BROADCASTING TIME_SYNC: P1(time=${game.player1.timeRemaining}, locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}), P2(time=${game.player2.timeRemaining}, locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}), timerInterval=${game.timerInterval !== null}`);
+    }
+    
     // Include score and other state in TIME_SYNC so frontend stays in sync
     broadcastToMatch(matchId, {
       type: 'TIME_SYNC',
@@ -806,6 +835,10 @@ function handleTimerUpdate(matchId: number) {
         player2_cells_completed: game.player2.cellsCompleted,
       },
     });
+  } else {
+    if (isBotMatch) {
+      console.log(`[TIMER] Match ${matchId} ⚠️ handleTimerUpdate called but game not found!`);
+    }
   }
 }
 
@@ -951,6 +984,9 @@ async function handleBotMove(
   col: number,
   value: number
 ) {
+  const gameBeforeMove = GameStateManager.getGame(matchId);
+  console.log(`🤖 [MATCH ${matchId}] BOT MOVE BEFORE: row=${row}, col=${col}, value=${value}, P1(locked=${gameBeforeMove?.player1.isLocked}, solved=${gameBeforeMove?.player1.isSolved}, cells=${gameBeforeMove?.player1.cellsCompleted}/81, time=${gameBeforeMove?.player1.timeRemaining}), P2(locked=${gameBeforeMove?.player2.isLocked}, solved=${gameBeforeMove?.player2.isSolved}, cells=${gameBeforeMove?.player2.cellsCompleted}/81, time=${gameBeforeMove?.player2.timeRemaining}), status=${gameBeforeMove?.status}, timerInterval=${gameBeforeMove?.timerInterval !== null}`);
+  
   const result = GameStateManager.applyMove(matchId, botPlayerId, row, col, value);
 
   if (!result.success) {
@@ -959,7 +995,7 @@ async function handleBotMove(
   }
   
   // Log bot progress toward puzzle completion
-  console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=${result.player.cellsCompleted}/81, score=${result.player.score}, gameEnded=${result.gameEnded}`);
+  console.log(`🤖 [MATCH ${matchId}] Bot move SUCCESS: correct=${result.correct}, cellsCompleted=${result.player.cellsCompleted}/81, score=${result.player.score}, gameEnded=${result.gameEnded}`);
 
   // CRITICAL: Manually verify bot's actual grid state vs cellsCompleted
   // Count actual filled cells in bot's grid
@@ -973,13 +1009,13 @@ async function handleBotMove(
   }
   
   if (actualFilledCells !== result.player.cellsCompleted) {
-    console.log(`🤖 [MATCH ${matchId}] MISMATCH: Bot actualFilledCells=${actualFilledCells} but cellsCompleted=${result.player.cellsCompleted}`);
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ MISMATCH: Bot actualFilledCells=${actualFilledCells} but cellsCompleted=${result.player.cellsCompleted}`);
   }
   
   // CRITICAL: Manually check if bot has completed puzzle (similar to legacy bot system)
   // This handles cases where cellsCompleted might not be accurate due to race conditions
   if (!result.gameEnded && (result.player.cellsCompleted >= 81 || actualFilledCells >= 81)) {
-    console.log(`🤖 [MATCH ${matchId}] Bot puzzle complete! cellsCompleted=${result.player.cellsCompleted}, actualFilledCells=${actualFilledCells}, gameEnded=${result.gameEnded} - manually triggering game end`);
+    console.log(`🤖 [MATCH ${matchId}] 🎯 Bot puzzle complete! cellsCompleted=${result.player.cellsCompleted}, actualFilledCells=${actualFilledCells}, gameEnded=${result.gameEnded} - manually triggering game end`);
     result.player.isSolved = true;
     result.player.cellsCompleted = Math.max(result.player.cellsCompleted, actualFilledCells);
     result.gameEnded = true;
@@ -987,7 +1023,12 @@ async function handleBotMove(
   }
 
   const game = GameStateManager.getGame(matchId);
-  if (!game) return;
+  if (!game) {
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ Game not found after bot move!`);
+    return;
+  }
+  
+  console.log(`🤖 [MATCH ${matchId}] BOT MOVE AFTER: P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}/81, time=${game.player1.timeRemaining}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}/81, time=${game.player2.timeRemaining}), gameEnded=${result.gameEnded}, winner=${result.winner}, status=${game.status}, timerInterval=${game.timerInterval !== null}`);
 
   // Get opponent (human) state for the broadcast (compare by slot, not object reference)
   const opponent = result.player.slot === 1 ? game.player2 : game.player1;
@@ -1042,31 +1083,47 @@ async function handleBotMove(
 }
 
 async function endGame(matchId: number) {
-  console.log(`[endGame] Called for match ${matchId}`);
+  console.log(`[endGame] 🏁 Called for match ${matchId}`);
   const game = GameStateManager.getGame(matchId);
+  const isBotMatch = game && Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
 
   if (!game) {
-    console.log(`[endGame] Match ${matchId}: game not found in gameStates!`);
+    console.log(`[endGame] ❌ Match ${matchId}: game not found in gameStates!`);
     return;
+  }
+
+  if (isBotMatch) {
+    console.log(`[endGame] 🏁 Match ${matchId} STATE: status=${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}/81, score=${game.player1.score}, time=${game.player1.timeRemaining}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}/81, score=${game.player2.score}, time=${game.player2.timeRemaining}), timerInterval=${game.timerInterval !== null}, disconnectedPlayerId=${game.disconnectedPlayerId}, forfeitingPlayerId=${game.forfeitingPlayerId}`);
   }
 
   // Only proceed if game is still IN_PROGRESS (allow multiple calls but only process once)
   if (game.status === 'COMPLETED') {
-    console.log(`[endGame] Match ${matchId}: game already COMPLETED, skipping`);
+    console.log(`[endGame] ⚠️ Match ${matchId}: game already COMPLETED, skipping`);
     return;
   }
 
   // Set status to COMPLETED immediately to prevent race conditions
-  console.log(`[endGame] Match ${matchId}: setting status to COMPLETED (was ${game.status})`);
+  console.log(`[endGame] 🏁 Match ${matchId}: setting status to COMPLETED (was ${game.status})`);
   game.status = 'COMPLETED';
+  
+  // Stop timer interval if still running
+  if (game.timerInterval) {
+    console.log(`[endGame] 🏁 Match ${matchId}: Stopping timer interval`);
+    clearInterval(game.timerInterval);
+    game.timerInterval = null;
+  }
 
   const results = GameStateManager.getFinalResults(matchId);
 
   if (!results) {
-    console.log(`[endGame] Match ${matchId}: getFinalResults returned null!`);
+    console.log(`[endGame] ❌ Match ${matchId}: getFinalResults returned null!`);
     return;
   }
 
+  if (isBotMatch) {
+    console.log(`[endGame] 🏁 Match ${matchId} FINAL RESULTS: winnerId=${results.winnerId || 'DRAW'}, resultCode=${results.resultCode}, P1(score=${results.player1.score}, cells=${results.player1.cellsCompleted}, isWinner=${results.player1.isWinner}), P2(score=${results.player2.score}, cells=${results.player2.cellsCompleted}, isWinner=${results.player2.isWinner})`);
+  }
+  
   console.log(`🏁 Match ${matchId} ended. Winner: ${results.winnerId || 'DRAW'}`);
 
   // IMMEDIATE: Send preliminary GAME_END so client shows "GAME OVER!" instantly

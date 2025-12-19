@@ -404,10 +404,14 @@ function scheduleNextMove(
   onGameEnd: () => void
 ): void {
   const state = botMatchStates.get(matchId);
-  if (!state) return;
+  if (!state) {
+    console.log(`🤖 [MATCH ${matchId}] scheduleNextMove: No bot state found!`);
+    return;
+  }
 
   const game = GameStateManager.getGame(matchId);
   if (!game || game.status !== 'IN_PROGRESS') {
+    console.log(`🤖 [MATCH ${matchId}] scheduleNextMove: Game not in progress (status=${game?.status}), stopping bot loop`);
     stopBotLoop(matchId);
     return;
   }
@@ -417,7 +421,7 @@ function scheduleNextMove(
   
   // Don't make moves if bot is locked or solved
   if (botPlayer.isLocked || botPlayer.isSolved) {
-    console.log(`🤖 Bot ${state.botPlayerId} is locked or solved, stopping loop`);
+    console.log(`🤖 [MATCH ${matchId}] scheduleNextMove: Bot ${state.botPlayerId} is locked or solved (locked=${botPlayer.isLocked}, solved=${botPlayer.isSolved}), stopping loop`);
     stopBotLoop(matchId);
     return;
   }
@@ -425,7 +429,7 @@ function scheduleNextMove(
   // Check if opponent has already won
   const opponent = botPlayer === game.player1 ? game.player2 : game.player1;
   if (opponent.isSolved) {
-    console.log(`🤖 Opponent already won, stopping bot loop`);
+    console.log(`🤖 [MATCH ${matchId}] scheduleNextMove: Opponent already won (solved=${opponent.isSolved}, cells=${opponent.cellsCompleted}), stopping bot loop`);
     stopBotLoop(matchId);
     return;
   }
@@ -493,7 +497,10 @@ function makeBotMove(
   const startTime = Date.now();
   console.log(`🤖 [MATCH ${matchId}] makeBotMove called at ${startTime}`);
   const state = botMatchStates.get(matchId);
-  if (!state) return;
+  if (!state) {
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ No bot state found!`);
+    return;
+  }
 
   const game = GameStateManager.getGame(matchId);
   if (!game || game.status !== 'IN_PROGRESS') {
@@ -505,22 +512,29 @@ function makeBotMove(
   const botPlayer = game.player1.playerId === state.botPlayerId ? game.player1 : game.player2;
   const opponent = botPlayer === game.player1 ? game.player2 : game.player1;
   
+  console.log(`🤖 [MATCH ${matchId}] makeBotMove STATE: Bot(locked=${botPlayer.isLocked}, solved=${botPlayer.isSolved}, cells=${botPlayer.cellsCompleted}/81, score=${botPlayer.score}, time=${botPlayer.timeRemaining}), Opponent(locked=${opponent.isLocked}, solved=${opponent.isSolved}, cells=${opponent.cellsCompleted}/81, score=${opponent.score}, time=${opponent.timeRemaining}), gameStatus=${game.status}, timerInterval=${game.timerInterval !== null}`);
+  
   // CRITICAL: Check if opponent has already won (solved puzzle or surpassed score while bot locked)
   if (opponent.isSolved) {
-    console.log(`🤖 [MATCH ${matchId}] Opponent already solved puzzle, stopping bot`);
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ Opponent already solved puzzle, stopping bot`);
     stopBotLoop(matchId);
     return;
   }
   
   if (botPlayer.isLocked || botPlayer.isSolved) {
-    console.log(`🤖 [MATCH ${matchId}] Bot is locked or solved, stopping`);
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ Bot is locked or solved, stopping. Bot(locked=${botPlayer.isLocked}, solved=${botPlayer.isSolved})`);
+    // CRITICAL: If bot is solved, trigger game end (in case it wasn't triggered before)
+    if (botPlayer.isSolved) {
+      console.log(`🤖 [MATCH ${matchId}] 🎯 Bot isSolved=true - triggering game end`);
+      onGameEnd();
+    }
     stopBotLoop(matchId);
     return;
   }
   
   // Also check if opponent has surpassed bot's score while bot is locked
   if (botPlayer.isLocked && opponent.score > botPlayer.score) {
-    console.log(`🤖 [MATCH ${matchId}] Bot locked and opponent ahead, stopping`);
+    console.log(`🤖 [MATCH ${matchId}] ⚠️ Bot locked and opponent ahead (Bot score=${botPlayer.score}, Opponent score=${opponent.score}), stopping`);
     stopBotLoop(matchId);
     return;
   }
@@ -562,16 +576,28 @@ function makeBotMove(
       console.log(`🤖 [MATCH ${matchId}] Bot grid has 81 filled cells but isSolved=false - manually setting isSolved and cellsCompleted, then triggering game end`);
       botPlayer.isSolved = true;
       botPlayer.cellsCompleted = 81;
-      // Manually trigger game end by calling handleBotMove with a dummy move that will trigger the check
-      // Actually, better to directly call endGame via the websocket handler
-      // But we don't have access to it here... let's use a different approach
-      // We'll set a flag and let the next check handle it
+      // Trigger game end via callback
+      onGameEnd();
+      stopBotLoop(matchId);
+      return;
     }
     
     // Also check if cellsCompleted says 81 but game didn't end
     if (botPlayer.cellsCompleted === 81 && !botPlayer.isSolved) {
-      console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=81 but isSolved=false - manually setting isSolved`);
+      console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=81 but isSolved=false - manually setting isSolved and triggering game end`);
       botPlayer.isSolved = true;
+      // Trigger game end via callback
+      onGameEnd();
+      stopBotLoop(matchId);
+      return;
+    }
+    
+    // If bot is already solved but game hasn't ended, trigger game end
+    if (botPlayer.isSolved) {
+      console.log(`🤖 [MATCH ${matchId}] Bot isSolved=true but game hasn't ended - triggering game end`);
+      onGameEnd();
+      stopBotLoop(matchId);
+      return;
     }
     
     stopBotLoop(matchId);

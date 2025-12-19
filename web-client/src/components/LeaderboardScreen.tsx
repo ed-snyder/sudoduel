@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useMemo, useCallback } from 'react';
 import { leaderboardAPI } from '../services/api';
 import type { LeaderboardEntry } from '../services/api';
 
@@ -7,36 +7,49 @@ interface LeaderboardScreenProps {
   onClose: () => void;
 }
 
+const ROW_HEIGHT = 60; // Height of each row in pixels
+
 export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreenProps) {
-  const [top100, setTop100] = useState<LeaderboardEntry[]>([]);
-  const [neighborhood, setNeighborhood] = useState<LeaderboardEntry[]>([]);
+  const [allPlayers, setAllPlayers] = useState<LeaderboardEntry[]>([]);
   const [yourRank, setYourRank] = useState<number>(0);
   const [totalPlayers, setTotalPlayers] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const yourRowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       loadLeaderboard();
+      setScrollTop(0); // Reset scroll position when opening
     } else {
       // Reset state when closed
-      setTop100([]);
-      setNeighborhood([]);
+      setAllPlayers([]);
       setYourRank(0);
       setTotalPlayers(0);
       setError('');
+      setScrollTop(0);
     }
   }, [isOpen]);
+
+  // Auto-scroll to user's rank when leaderboard loads
+  useEffect(() => {
+    if (!loading && allPlayers.length > 0 && yourRank > 0 && scrollContainerRef.current) {
+      // Calculate scroll position for user's rank
+      const targetScrollTop = (yourRank - 1) * ROW_HEIGHT - (scrollContainerRef.current.clientHeight / 2) + ROW_HEIGHT;
+      scrollContainerRef.current.scrollTop = Math.max(0, targetScrollTop);
+      setScrollTop(Math.max(0, targetScrollTop));
+    }
+  }, [loading, allPlayers.length, yourRank]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
     setError('');
     try {
       const data = await leaderboardAPI.getLeaderboard();
-      setTop100(data.top100);
-      setNeighborhood(data.neighborhood);
-      setYourRank(data.your_rank);
+      setAllPlayers(data.top100); // Now contains all players
+      setYourRank(data.your_rank || 0);
       setTotalPlayers(data.total_players);
     } catch (err: any) {
       console.error('[LeaderboardScreen] Error loading leaderboard:', err);
@@ -45,6 +58,27 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       setLoading(false);
     }
   };
+
+  // Calculate visible range for virtualization
+  const virtualizedData = useMemo(() => {
+    const containerHeight = scrollContainerRef.current?.clientHeight || 600; // Default height if not measured yet
+    const startIdx = Math.floor(scrollTop / ROW_HEIGHT);
+    const endIdx = Math.min(
+      startIdx + Math.ceil(containerHeight / ROW_HEIGHT) + 2, // +2 for buffer
+      allPlayers.length
+    );
+    const actualStartIdx = Math.max(0, startIdx - 1); // -1 for buffer
+    
+    return {
+      startIndex: actualStartIdx,
+      endIndex: endIdx,
+      visiblePlayers: allPlayers.slice(actualStartIdx, endIdx),
+    };
+  }, [scrollTop, allPlayers]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
 
   const scrollToYourRank = () => {
     yourRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -91,13 +125,18 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto"
+        onScroll={handleScroll}
+      >
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12">
             <div 
-              className="w-10 h-10 border-4 border-surface border-t-player rounded-full animate-spin"
+              className="w-10 h-10 border-4 border-surface border-t-player rounded-full animate-spin mb-4"
               style={{ boxShadow: '0 0 15px rgba(0,255,255,0.3)' }} 
             />
+            <p className="text-muted font-display text-sm">Loading leaderboard...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12">
@@ -109,38 +148,35 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
               Retry
             </button>
           </div>
+        ) : allPlayers.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted font-display">No players found</p>
+          </div>
         ) : (
-          <div className="pb-24"> {/* Padding for sticky footer */}
-            {/* Top 100 */}
+          <div 
+            className="relative pb-24"
+            style={{ height: allPlayers.length * ROW_HEIGHT }}
+          >
+            {/* Spacer for items before visible range */}
+            <div style={{ height: virtualizedData.startIndex * ROW_HEIGHT }} />
+            
+            {/* Visible rows */}
             <div className="px-4 py-2">
-              {top100.map((entry) => (
-                <LeaderboardRow 
-                  key={entry.player_id} 
-                  entry={entry} 
-                  ref={entry.is_you ? yourRowRef : undefined}
-                />
+              {virtualizedData.visiblePlayers.map((entry) => (
+                <div
+                  key={entry.player_id}
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  <LeaderboardRow 
+                    entry={entry} 
+                    ref={entry.is_you ? yourRowRef : undefined}
+                  />
+                </div>
               ))}
             </div>
-
-            {/* Neighborhood Section (if user rank > 100) */}
-            {neighborhood.length > 0 && (
-              <>
-                <div className="px-4 py-3 bg-elevated/30 border-y border-grid-line/50">
-                  <p className="text-xs font-display font-black text-muted uppercase tracking-wider text-center">
-                    ─ ─ ─  Your Neighborhood  ─ ─ ─
-                  </p>
-                </div>
-                <div className="px-4 py-2">
-                  {neighborhood.map((entry) => (
-                    <LeaderboardRow 
-                      key={entry.player_id} 
-                      entry={entry}
-                      ref={entry.is_you ? yourRowRef : undefined}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+            
+            {/* Spacer for items after visible range */}
+            <div style={{ height: (allPlayers.length - virtualizedData.endIndex) * ROW_HEIGHT }} />
           </div>
         )}
       </div>
@@ -198,11 +234,12 @@ const LeaderboardRow = forwardRef<HTMLDivElement, LeaderboardRowProps>(
     return (
       <div
         ref={ref}
-        className={`flex items-center justify-between py-3 px-2 rounded-lg mb-1 transition-colors ${
+        className={`flex items-center justify-between px-2 rounded-lg transition-colors ${
           entry.is_you 
             ? 'bg-player/20 border border-player/50' 
             : 'hover:bg-elevated/30'
         }`}
+        style={{ minHeight: ROW_HEIGHT }}
       >
         <div className="flex items-center gap-3">
           {/* Rank */}

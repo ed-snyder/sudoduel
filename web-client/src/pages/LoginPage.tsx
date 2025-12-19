@@ -354,7 +354,7 @@ function NativeLoginPage() {
           Create an account anytime to sync across devices.
         </p>
         
-        <p className="absolute bottom-4 text-xs text-muted/50 font-mono">v1.0.0</p>
+        <p className="absolute bottom-4 text-xs text-muted/50 font-mono">v1.0.2</p>
       </div>
     </div>
   );

@@ -23,8 +23,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const currentUserRating = userRating?.rating || 1500;
     const userIsPremium = profile.is_premium || false;
 
-    // Get top 100 players (ALL players)
-    const top100Result = await query(
+    // Get ALL players (no limit)
+    const allPlayersResult = await query(
       `SELECT 
         pp.id as player_id,
         pp.display_name,
@@ -33,8 +33,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
        FROM player_ratings pr
        JOIN player_profiles pp ON pp.id = pr.player_id
        WHERE pr.ladder_id = $1
-       ORDER BY pr.rating DESC
-       LIMIT 100`,
+       ORDER BY pr.rating DESC`,
       [DEFAULT_LADDER_ID]
     );
 
@@ -56,8 +55,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
 
-    // Format top 100
-    const top100 = top100Result.rows.map(row => ({
+    // Format all players
+    const allPlayers = allPlayersResult.rows.map(row => ({
       rank: parseInt(row.rank, 10),
       player_id: row.player_id,
       display_name: row.display_name,
@@ -65,38 +64,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       is_you: row.player_id === profile.id,
     }));
 
-    // If user is outside top 100, get their neighborhood (±5 players) - only if premium
-    let neighborhood: any[] = [];
-    if (userIsPremium && actualUserRank > 100) {
-      const neighborhoodResult = await query(
-        `WITH ranked_players AS (
-          SELECT 
-            pp.id as player_id,
-            pp.display_name,
-            pr.rating,
-            RANK() OVER (ORDER BY pr.rating DESC) as rank
-          FROM player_ratings pr
-          JOIN player_profiles pp ON pp.id = pr.player_id
-          WHERE pr.ladder_id = $1
-        )
-        SELECT * FROM ranked_players
-        WHERE rank BETWEEN $2 AND $3
-        ORDER BY rank ASC`,
-        [DEFAULT_LADDER_ID, Math.max(1, actualUserRank - 5), actualUserRank + 5]
-      );
-
-      neighborhood = neighborhoodResult.rows.map(row => ({
-        rank: parseInt(row.rank, 10),
-        player_id: row.player_id,
-        display_name: row.display_name,
-        rating: Math.round(parseFloat(row.rating)),
-        is_you: row.player_id === profile.id,
-      }));
-    }
-
     res.json({
-      top100,
-      neighborhood,
+      top100: allPlayers, // Keep field name for backwards compatibility
+      neighborhood: [], // No longer needed since we show all players
       your_rank: userIsPremium ? actualUserRank : null, // Soft wall: only premium can see their rank
       total_players: totalPlayers,
     });
