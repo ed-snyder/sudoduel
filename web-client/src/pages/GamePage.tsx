@@ -139,7 +139,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [gameResult, setGameResult] = useState<any>(null);
   const [showLockoutSplash, setShowLockoutSplash] = useState(false);
   const [showLockoutMessage, setShowLockoutMessage] = useState(false);
-  const lockoutAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lockoutAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const warmUpDoneRef = useRef(false);
   const lastCellPlacementRef = useRef(0);
