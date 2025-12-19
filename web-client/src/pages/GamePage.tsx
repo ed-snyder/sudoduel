@@ -542,12 +542,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         clearTimeout(lockoutAnimationTimeoutRef.current);
       }
       
-      // After 2s, hide splash and show persistent message
+      // After 4s, hide splash and show persistent message
       lockoutAnimationTimeoutRef.current = setTimeout(() => {
         setShowLockoutSplash(false);
         setShowLockoutMessage(true);
         lockoutAnimationTimeoutRef.current = null;
-      }, 2000);
+      }, 4000);
     }
     
     // Reset when game starts
@@ -2058,11 +2058,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         <LockoutSplash />
       )}
 
-      {/* Lockout Persistent Message - Shows after splash completes */}
-      {!showGameEndOverlay && gameStatus === 'playing' && showLockoutMessage && (
-        <LockoutMessage />
-      )}
-
       {/* Countdown overlay */}
       {countdown !== null && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -2474,6 +2469,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               {bannerMessage.text}
             </span>
+          ) : showLockoutMessage && !showGameEndOverlay && gameStatus === 'playing' ? (
+            <LockoutMessage />
           ) : null}
         </div>
       </div>

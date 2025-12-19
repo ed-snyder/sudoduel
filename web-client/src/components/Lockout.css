@@ -20,7 +20,7 @@
   line-height: 1;
   white-space: nowrap;
   will-change: transform, opacity;
-  animation: lockout-slide 2s ease-out forwards;
+  animation: lockout-slide 4s ease-out forwards;
 }
 
 .lockout-splash-layer,
@@ -36,22 +36,22 @@
     transform: translateX(-100vw);
     opacity: 0;
   }
-  12.5% {
+  6.25% {
     opacity: 1;
   }
-  25% {
+  12.5% {
     transform: translateX(0); /* Arrived at center - 0.5s */
     opacity: 1;
   }
-  75% {
-    transform: translateX(0); /* Hold - until 1.5s */
+  87.5% {
+    transform: translateX(0); /* Hold - until 3.5s */
     opacity: 1;
   }
-  87.5% {
+  93.75% {
     opacity: 0;
   }
   100% {
-    transform: translateX(100vw); /* Exit right - 2s */
+    transform: translateX(100vw); /* Exit right - 4s */
     opacity: 0;
   }
 }
@@ -59,13 +59,13 @@
 /* PERSISTENT LOCKOUT MESSAGE */
 
 .lockout-message {
-  position: fixed;
-  top: 30%; /* Position above grid (grid is at 50%) */
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px; /* Match h-10 container height */
   z-index: 40; /* Below GameEndOverlay (z-index: 50) but above game elements */
   pointer-events: none; /* Allow clicks to pass through */
-  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;

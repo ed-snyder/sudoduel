@@ -23,7 +23,7 @@ export default function LockoutSplash() {
             color: 'transparent',
             WebkitTextStroke: `8px ${glowColor}`,
             filter: 'blur(12px)',
-            opacity: 0.5,
+            opacity: 0.8,
           }}
           aria-hidden="true"
         >
@@ -41,7 +41,7 @@ export default function LockoutSplash() {
             color: 'transparent',
             WebkitTextStroke: `5px ${glowColor}`,
             filter: 'blur(4px)',
-            opacity: 0.7,
+            opacity: 0.9,
           }}
           aria-hidden="true"
         >
@@ -57,7 +57,7 @@ export default function LockoutSplash() {
             fontStyle: 'italic',
             letterSpacing: '-0.02em',
             color: 'transparent',
-            WebkitTextStroke: '3px rgba(255,255,255,0.9)',
+            WebkitTextStroke: '4px rgba(255,255,255,1)',
           }}
           aria-hidden="true"
         >
