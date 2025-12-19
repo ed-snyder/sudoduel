@@ -73,6 +73,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   
   // Function to show a banner message
   const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000, type?: 'positive' | 'negative' | 'neutral') => {
+    // Don't show banner messages when locked out - lockout message takes priority
+    if (showLockoutMessage || myState?.is_locked) {
+      return;
+    }
+    
     // Clear any existing timeout
     if (bannerTimeoutRef.current) {
       clearTimeout(bannerTimeoutRef.current);
@@ -91,7 +96,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     bannerTimeoutRef.current = setTimeout(() => {
       setBannerMessage(null);
     }, duration);
-  }, []);
+  }, [showLockoutMessage, myState?.is_locked]);
   
   // Synchronized feedback function - all feedback fires together
   const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
@@ -537,6 +542,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       // Start lockout splash animation
       setShowLockoutSplash(true);
       
+      // Clear any existing banner messages immediately when lockout starts
+      setBannerMessage(null);
+      if (bannerTimeoutRef.current) {
+        clearTimeout(bannerTimeoutRef.current);
+        bannerTimeoutRef.current = null;
+      }
+      
       // Clear any existing timeout
       if (lockoutAnimationTimeoutRef.current) {
         clearTimeout(lockoutAnimationTimeoutRef.current);
@@ -546,6 +558,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       lockoutAnimationTimeoutRef.current = setTimeout(() => {
         setShowLockoutSplash(false);
         setShowLockoutMessage(true);
+        // Clear any banner messages when lockout message appears
+        setBannerMessage(null);
+        if (bannerTimeoutRef.current) {
+          clearTimeout(bannerTimeoutRef.current);
+          bannerTimeoutRef.current = null;
+        }
         lockoutAnimationTimeoutRef.current = null;
       }, 4000);
     }
@@ -2455,6 +2473,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
                 </div>
               )}
             </div>
+          ) : showLockoutMessage && !showGameEndOverlay && gameStatus === 'playing' ? (
+            <LockoutMessage />
           ) : bannerMessage ? (
             <span 
               className={`font-heading font-bold text-lg uppercase tracking-wider ${
@@ -2469,8 +2489,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               {bannerMessage.text}
             </span>
-          ) : showLockoutMessage && !showGameEndOverlay && gameStatus === 'playing' ? (
-            <LockoutMessage />
           ) : null}
         </div>
       </div>
