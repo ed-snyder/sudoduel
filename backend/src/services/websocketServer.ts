@@ -994,23 +994,28 @@ async function handleBotMove(
 }
 
 async function endGame(matchId: number) {
+  console.log(`[endGame] Called for match ${matchId}`);
   const game = GameStateManager.getGame(matchId);
 
   if (!game) {
+    console.log(`[endGame] Match ${matchId}: game not found in gameStates!`);
     return;
   }
 
   // Only proceed if game is still IN_PROGRESS (allow multiple calls but only process once)
   if (game.status === 'COMPLETED') {
+    console.log(`[endGame] Match ${matchId}: game already COMPLETED, skipping`);
     return;
   }
 
   // Set status to COMPLETED immediately to prevent race conditions
+  console.log(`[endGame] Match ${matchId}: setting status to COMPLETED (was ${game.status})`);
   game.status = 'COMPLETED';
 
   const results = GameStateManager.getFinalResults(matchId);
 
   if (!results) {
+    console.log(`[endGame] Match ${matchId}: getFinalResults returned null!`);
     return;
   }
 

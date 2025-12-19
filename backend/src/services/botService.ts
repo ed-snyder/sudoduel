@@ -497,7 +497,7 @@ function makeBotMove(
 
   const game = GameStateManager.getGame(matchId);
   if (!game || game.status !== 'IN_PROGRESS') {
-    console.log(`🤖 [MATCH ${matchId}] Game not in progress, stopping bot`);
+    console.log(`🤖 [MATCH ${matchId}] Game not in progress (status=${game?.status}), stopping bot`);
     stopBotLoop(matchId);
     return;
   }
