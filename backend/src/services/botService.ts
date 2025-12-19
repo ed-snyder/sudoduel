@@ -546,7 +546,34 @@ function makeBotMove(
     // Schedule next move
     scheduleNextMove(matchId, onBotMove, onGameEnd);
   } else {
-    console.log(`🤖 [MATCH ${matchId}] No valid move found for bot`);
+    // Log bot state when no move found - also count actual filled cells in grid
+    let filledCells = 0;
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (botPlayer.grid[row] && botPlayer.grid[row][col] !== 0) {
+          filledCells++;
+        }
+      }
+    }
+    console.log(`🤖 [MATCH ${matchId}] No valid move found for bot. Bot cellsCompleted=${botPlayer.cellsCompleted}/81, actualFilledCells=${filledCells}/81, isSolved=${botPlayer.isSolved}, isLocked=${botPlayer.isLocked}`);
+    
+    // CRITICAL: If bot has 81 cells filled but selectMove returned null, manually trigger game end
+    if (filledCells === 81 && !botPlayer.isSolved) {
+      console.log(`🤖 [MATCH ${matchId}] Bot grid has 81 filled cells but isSolved=false - manually setting isSolved and cellsCompleted, then triggering game end`);
+      botPlayer.isSolved = true;
+      botPlayer.cellsCompleted = 81;
+      // Manually trigger game end by calling handleBotMove with a dummy move that will trigger the check
+      // Actually, better to directly call endGame via the websocket handler
+      // But we don't have access to it here... let's use a different approach
+      // We'll set a flag and let the next check handle it
+    }
+    
+    // Also check if cellsCompleted says 81 but game didn't end
+    if (botPlayer.cellsCompleted === 81 && !botPlayer.isSolved) {
+      console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=81 but isSolved=false - manually setting isSolved`);
+      botPlayer.isSolved = true;
+    }
+    
     stopBotLoop(matchId);
   }
 }

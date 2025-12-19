@@ -267,10 +267,13 @@ export const GameStateManager = {
         player.cellsCompleted++;
         // Time bonus for correct answer
         player.timeRemaining += TIME_BONUS_CORRECT;
+      } else {
+        console.log(`[applyMove] Match ${matchId} Player ${playerId}: Cell [${row},${col}] was NOT empty (value=${player.grid[row]?.[col]}), cellsCompleted=${player.cellsCompleted}`);
       }
 
       // Check for puzzle completion (all 81 cells filled)
       if (player.cellsCompleted === 81) {
+        console.log(`[applyMove] Match ${matchId} Player ${playerId} REACHED 81 CELLS! Setting isSolved=true, returning gameEnded=true`);
         player.isSolved = true;
         // CRITICAL: Clear any disconnect state since game is ending normally
         // This prevents disconnect state from interfering with game end

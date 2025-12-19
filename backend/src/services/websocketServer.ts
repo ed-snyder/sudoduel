@@ -937,6 +937,30 @@ async function handleBotMove(
   // Log bot progress toward puzzle completion
   console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=${result.player.cellsCompleted}/81, score=${result.player.score}, gameEnded=${result.gameEnded}`);
 
+  // CRITICAL: Manually verify bot's actual grid state vs cellsCompleted
+  // Count actual filled cells in bot's grid
+  let actualFilledCells = 0;
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      if (result.player.grid[row] && result.player.grid[row][col] !== 0) {
+        actualFilledCells++;
+      }
+    }
+  }
+  
+  if (actualFilledCells !== result.player.cellsCompleted) {
+    console.log(`🤖 [MATCH ${matchId}] MISMATCH: Bot actualFilledCells=${actualFilledCells} but cellsCompleted=${result.player.cellsCompleted}`);
+  }
+  
+  // CRITICAL: Manually check if bot has completed puzzle (similar to legacy bot system)
+  // This handles cases where cellsCompleted might not be accurate due to race conditions
+  if (!result.gameEnded && (result.player.cellsCompleted >= 81 || actualFilledCells >= 81)) {
+    console.log(`🤖 [MATCH ${matchId}] Bot puzzle complete! cellsCompleted=${result.player.cellsCompleted}, actualFilledCells=${actualFilledCells}, gameEnded=${result.gameEnded} - manually triggering game end`);
+    result.player.isSolved = true;
+    result.player.cellsCompleted = Math.max(result.player.cellsCompleted, actualFilledCells);
+    result.gameEnded = true;
+    result.winner = result.player.slot;
+  }
 
   const game = GameStateManager.getGame(matchId);
   if (!game) return;
