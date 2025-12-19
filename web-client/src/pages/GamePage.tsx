@@ -147,6 +147,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const [showLockoutSplash, setShowLockoutSplash] = useState(false);
   const [showLockoutMessage, setShowLockoutMessage] = useState(false);
   const lockoutAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const warmUpDoneRef = useRef(false);
   const lastCellPlacementRef = useRef(0);
@@ -269,7 +270,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const emotePickerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const myEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentEmoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [notesMode, setNotesMode] = useState(false);
+  // Notes mode - state kept for handleNumberClick logic, but UI button removed
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [notesMode, _setNotesMode] = useState(false);
   const [notes, setNotes] = useState<Map<string, number[]>>(new Map()); // key: "row-col", value: number[]
   // Connection status removed - no longer displayed in UI
   const [opponentName, setOpponentName] = useState<string>('Opponent');
@@ -905,6 +908,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setShowLockoutMessage(false);
         showLockoutMessageRef.current = false;
         isLockedRef.current = false;
+        setShowForfeitConfirm(false);
         
         // START COUNTDOWN ANIMATION
         setShowGameCountdown(true);
@@ -1813,53 +1817,45 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [selectedCell, gameStatus, myState?.is_locked, notesMode, initialGrid, solutionGrid, wsRef, clearRelatedNotes, triggerScoreFeedback, playIncorrect, hapticError, countdownPhase]);
 
-  const handleErase = () => {
-    if (!selectedCell || gameStatus !== 'playing' || myState?.is_locked) return;
+  // handleErase and handleToggleNotes removed - Erase and Notes buttons removed from toolbar
+
+  const handleForfeitClick = () => {
+    if (gameStatus !== 'playing' || showGameEndOverlay) return;
     playToolbarButton();
-    
-    // Check if cell is initial clue - can't erase those
-    if (initialGrid[selectedCell.row] && initialGrid[selectedCell.row][selectedCell.col] !== 0) {
-      return;
-    }
-
-    // Check if cell has a value - can only erase if it's incorrect
-    const currentValue = myGrid[selectedCell.row]?.[selectedCell.col];
-    if (currentValue === 0) {
-      // Clear notes if any
-      const cellKey = `${selectedCell.row}-${selectedCell.col}`;
-      setNotes((prev) => {
-        const newNotes = new Map(prev);
-        newNotes.delete(cellKey);
-        return newNotes;
-      });
-      return;
-    }
-
-    // Send erase request to server
-    wsRef.current?.send(
-      JSON.stringify({
-        type: 'ERASE_CELL',
-        data: {
-          row: selectedCell.row,
-          col: selectedCell.col,
-        },
-      })
-    );
-
-    // Also clear notes for this cell
-    const cellKey = `${selectedCell.row}-${selectedCell.col}`;
-    setNotes((prev) => {
-      const newNotes = new Map(prev);
-      newNotes.delete(cellKey);
-      return newNotes;
-    });
-    
-    setSelectedCell(null);
+    setShowForfeitConfirm(true);
   };
 
-  const handleToggleNotes = () => {
-    playToolbarButton();
-    setNotesMode((prev) => !prev);
+  const handleForfeitConfirm = () => {
+    if (gameStatus !== 'playing') return;
+    
+    setShowForfeitConfirm(false);
+    
+    // Send forfeit message to server
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'FORFEIT' }));
+    }
+    
+    // For now, set opponent's cells_completed to 81 to trigger game end locally
+    // This is a temporary solution until server handles FORFEIT message
+    // Calculate what the opponent's score should be (maintain the difference)
+    const currentOpponentScore = opponentState.score;
+    const currentOpponentCells = opponentState.cells_completed;
+    const initialClues = currentOpponentCells - currentOpponentScore; // Assume this is consistent
+    const newOpponentScore = 81 - initialClues;
+    
+    setOpponentState(prev => ({
+      ...prev,
+      cells_completed: 81,
+      is_solved: true,
+      score: Math.max(newOpponentScore, prev.score), // Ensure score doesn't decrease
+    }));
+    
+    // The server should send GAME_END message, but setting opponent to solved
+    // should help trigger any local checks for game end
+  };
+
+  const handleForfeitCancel = () => {
+    setShowForfeitConfirm(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -2594,47 +2590,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       >
         {!showEmotePicker ? (
           <>
-            {/* Normal Toolbar - during game end overlay, only show emote button */}
+            {/* Toolbar - Emote and Forfeit buttons */}
             <div className="flex justify-center gap-3 max-w-md mx-auto">
-            {/* Erase Button - hidden during game end overlay */}
-            {!showGameEndOverlay && (
-            <button
-              onClick={handleErase}
-              disabled={!selectedCell || gameStatus !== 'playing' || myState.is_locked}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation disabled:opacity-40"
-              style={{
-                background: 'rgba(20, 12, 30, 0.8)',
-                border: '2px solid rgba(139, 0, 255, 0.5)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Erase
-            </button>
-            )}
-
-            {/* Notes Button - hidden during game end overlay */}
-            {!showGameEndOverlay && (
-            <button
-              onClick={handleToggleNotes}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation"
-              style={{
-                background: notesMode ? 'rgba(0, 255, 255, 0.2)' : 'rgba(20, 12, 30, 0.8)',
-                border: notesMode ? '2px solid #00FFFF' : '2px solid rgba(139, 0, 255, 0.5)',
-                color: notesMode ? '#00FFFF' : 'rgba(255, 255, 255, 0.9)',
-                boxShadow: notesMode ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {notesMode ? 'Notes ON' : 'Notes'}
-            </button>
-            )}
-
-            {/* Emote Button - ALWAYS visible (including during game end overlay) */}
+            {/* Emote Button - pulsing with current colors */}
             <button
               onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
-              disabled={countdownPhase !== 'complete'}
-              className={`${showGameEndOverlay ? 'w-48' : 'flex-1'} py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40`}
+              disabled={countdownPhase !== 'complete' || showGameEndOverlay}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse"
               style={{
                 background: 'rgba(20, 12, 30, 0.8)',
                 border: '2px solid rgba(139, 0, 255, 0.5)',
@@ -2644,6 +2606,23 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             >
               Emote
             </button>
+
+            {/* Forfeit Button - red, only visible during active game */}
+            {!showGameEndOverlay && gameStatus === 'playing' && (
+            <button
+              onClick={handleForfeitClick}
+              disabled={countdownPhase !== 'complete'}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
+              style={{
+                background: 'rgba(220, 38, 38, 0.2)',
+                border: '2px solid rgba(220, 38, 38, 0.8)',
+                color: '#FF4444',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              Forfeit
+            </button>
+            )}
           </div>
           </>
         ) : (
@@ -2693,7 +2672,50 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         )}
       </div>
 
-      {/* ForfeitModal removed - forfeit only happens via disconnect */}
+      {/* Forfeit Confirmation Modal */}
+      {showForfeitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={handleForfeitCancel}>
+          <div 
+            className="bg-surface border-2 border-error rounded-xl p-6 max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(13, 2, 33, 0.95)',
+              borderColor: '#DC2626',
+            }}
+          >
+            <h3 className="text-xl font-bold text-error mb-4 text-center font-body">
+              Are you sure?
+            </h3>
+            <p className="text-primary mb-6 text-center font-body">
+              Forfeiting will end the game and you will lose.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleForfeitCancel}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
+                style={{
+                  background: 'rgba(20, 12, 30, 0.8)',
+                  border: '2px solid rgba(139, 0, 255, 0.5)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForfeitConfirm}
+                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
+                style={{
+                  background: 'rgba(220, 38, 38, 0.2)',
+                  border: '2px solid rgba(220, 38, 38, 0.8)',
+                  color: '#FF4444',
+                }}
+              >
+                Yes, Forfeit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

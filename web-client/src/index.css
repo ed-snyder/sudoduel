@@ -561,6 +561,22 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
+/* Emote Button Pulsing Animation */
+.emote-button-pulse {
+  animation: emote-pulse 2s ease-in-out infinite;
+}
+
+@keyframes emote-pulse {
+  0%, 100% {
+    border-color: rgba(139, 0, 255, 0.5);
+    box-shadow: 0 0 0px rgba(139, 0, 255, 0);
+  }
+  50% {
+    border-color: rgba(139, 0, 255, 0.9);
+    box-shadow: 0 0 15px rgba(139, 0, 255, 0.4);
+  }
+}
+
 /* Non-Premium Player Name - Solid Cyan (no animation) */
 .non-premium-player-name {
   font-family: 'Industry', 'Orbitron', sans-serif;
