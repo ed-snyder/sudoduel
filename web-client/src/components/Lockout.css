@@ -10,30 +10,25 @@
   pointer-events: none; /* Allow clicks to pass through */
 }
 
-.lockout-splash-text {
-  font-size: clamp(2.5rem, 12vw, 5rem);
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  
-  /* Cyan metallic sheen gradient */
-  background: linear-gradient(180deg, #00FFFF 0%, #00CCCC 50%, #00FFFF 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  
-  /* White outline */
-  -webkit-text-stroke: 2px white;
-  
-  /* Magenta glow */
-  text-shadow: 
-    0 0 10px #FF3366,
-    0 0 20px #FF3366,
-    0 0 40px #FF3366;
-  
-  /* Slide animation */
+.lockout-splash-text-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  font-size: clamp(3rem, 15vw, 6rem);
+  line-height: 1;
+  white-space: nowrap;
+  will-change: transform, opacity;
   animation: lockout-slide 2s ease-out forwards;
-  will-change: transform;
+}
+
+.lockout-splash-layer,
+.lockout-splash-fill {
+  font-size: clamp(3rem, 15vw, 6rem);
+  line-height: 1;
+  white-space: nowrap;
+  will-change: transform, opacity;
 }
 
 @keyframes lockout-slide {
@@ -65,43 +60,23 @@
 
 .lockout-message {
   position: fixed;
-  top: 50%;
+  top: 30%; /* Position above grid (grid is at 50%) */
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 40; /* Below GameEndOverlay (z-index: 50) but above game elements */
   pointer-events: none; /* Allow clicks to pass through */
-  margin-top: 120px; /* Position below grid, above number pad */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .lockout-message-text {
-  font-family: var(--font-body, system-ui, -apple-system, sans-serif);
-  font-weight: bold;
-  font-size: clamp(1.125rem, 4vw, 1.5rem);
-  color: #FF3366;
+  font-size: clamp(1rem, 3vw, 1.25rem);
   text-align: center;
   white-space: nowrap;
-  
-  /* Pulsing magenta glow */
-  animation: pulse-glow 1.5s ease-in-out infinite;
-  will-change: transform, text-shadow;
-  
-  text-shadow: 
-    0 0 10px #FF3366,
-    0 0 20px #FF3366;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    transform: scale(1.0);
-    text-shadow: 
-      0 0 10px #FF3366,
-      0 0 20px #FF3366;
-  }
-  50% {
-    transform: scale(1.05);
-    text-shadow: 
-      0 0 15px #FF3366,
-      0 0 30px #FF3366,
-      0 0 45px #FF3366;
-  }
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

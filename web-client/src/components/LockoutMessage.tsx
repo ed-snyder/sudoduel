@@ -3,7 +3,9 @@ import './Lockout.css';
 export default function LockoutMessage() {
   return (
     <div className="lockout-message">
-      <div className="lockout-message-text">Out of time! Spam emotes to distract!</div>
+      <span className="lockout-message-text banner-message-magenta">
+        Spam emotes to distract!
+      </span>
     </div>
   );
 }
