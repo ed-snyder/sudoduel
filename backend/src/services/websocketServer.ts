@@ -565,7 +565,31 @@ async function handleMessage(ws: AuthenticatedWebSocket, message: any) {
         console.error(`❌ Error erasing cell:`, error);
       }
       break;
-    // FORFEIT case removed - forfeit only happens via disconnect (grace period expiry)
+    case 'FORFEIT':
+      try {
+        const game = GameStateManager.getGame(matchId);
+        if (!game || game.status !== 'IN_PROGRESS') {
+          console.log(`[FORFEIT] Match ${matchId} not in progress, ignoring forfeit`);
+          return;
+        }
+
+        // Use cached playerId - NO DB lookup needed!
+        if (!playerId) {
+          console.error(`❌ No cached playerId for user ${userId}`);
+          return;
+        }
+
+        console.log(`[FORFEIT] Player ${playerId} (user ${userId}) forfeiting match ${matchId}`);
+        
+        // Mark the player as forfeiting
+        GameStateManager.forfeit(matchId, playerId);
+        
+        // End the game immediately
+        await endGame(matchId);
+      } catch (error) {
+        console.error(`❌ Error handling forfeit:`, error);
+      }
+      break;
     case 'PING':
       ws.send(JSON.stringify({ type: 'PONG' }));
       break;

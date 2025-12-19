@@ -1830,28 +1830,12 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     setShowForfeitConfirm(false);
     
-    // Send forfeit message to server
+    // Send forfeit message to server - server will handle game end
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'FORFEIT' }));
+    } else {
+      console.error('[FORFEIT] WebSocket not connected, cannot send forfeit');
     }
-    
-    // For now, set opponent's cells_completed to 81 to trigger game end locally
-    // This is a temporary solution until server handles FORFEIT message
-    // Calculate what the opponent's score should be (maintain the difference)
-    const currentOpponentScore = opponentState.score;
-    const currentOpponentCells = opponentState.cells_completed;
-    const initialClues = currentOpponentCells - currentOpponentScore; // Assume this is consistent
-    const newOpponentScore = 81 - initialClues;
-    
-    setOpponentState(prev => ({
-      ...prev,
-      cells_completed: 81,
-      is_solved: true,
-      score: Math.max(newOpponentScore, prev.score), // Ensure score doesn't decrease
-    }));
-    
-    // The server should send GAME_END message, but setting opponent to solved
-    // should help trigger any local checks for game end
   };
 
   const handleForfeitCancel = () => {
@@ -2590,23 +2574,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       >
         {!showEmotePicker ? (
           <>
-            {/* Toolbar - Emote and Forfeit buttons */}
+            {/* Toolbar - Forfeit and Emote buttons */}
             <div className="flex justify-center gap-3 max-w-md mx-auto">
-            {/* Emote Button - pulsing with current colors */}
-            <button
-              onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
-              disabled={countdownPhase !== 'complete' || showGameEndOverlay}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse"
-              style={{
-                background: 'rgba(20, 12, 30, 0.8)',
-                border: '2px solid rgba(139, 0, 255, 0.5)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Emote
-            </button>
-
             {/* Forfeit Button - red, only visible during active game */}
             {!showGameEndOverlay && gameStatus === 'playing' && (
             <button
@@ -2623,6 +2592,21 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               Forfeit
             </button>
             )}
+
+            {/* Emote Button - pulsing with current colors */}
+            <button
+              onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
+              disabled={countdownPhase !== 'complete' || showGameEndOverlay}
+              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse"
+              style={{
+                background: 'rgba(20, 12, 30, 0.8)',
+                border: '2px solid rgba(139, 0, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              Emote
+            </button>
           </div>
           </>
         ) : (
