@@ -296,7 +296,10 @@ export function selectMove(
     }
   }
 
-  if (emptyCells.length === 0) return null;
+  if (emptyCells.length === 0) {
+    console.log(`🤖 selectMove: No empty cells remaining on bot grid`);
+    return null;
+  }
 
   // ALWAYS prioritize forced moves (1 candidate) - highest intelligence move
   // Forced moves are ALWAYS correct (no mistakes on obvious moves)

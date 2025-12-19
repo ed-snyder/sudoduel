@@ -930,8 +930,13 @@ async function handleBotMove(
   const result = GameStateManager.applyMove(matchId, botPlayerId, row, col, value);
 
   if (!result.success) {
+    console.log(`🤖 [MATCH ${matchId}] Bot move FAILED: row=${row}, col=${col}, value=${value}`);
     return;
   }
+  
+  // Log bot progress toward puzzle completion
+  console.log(`🤖 [MATCH ${matchId}] Bot cellsCompleted=${result.player.cellsCompleted}/81, score=${result.player.score}, gameEnded=${result.gameEnded}`);
+
 
   const game = GameStateManager.getGame(matchId);
   if (!game) return;
@@ -978,8 +983,10 @@ async function handleBotMove(
   });
 
   if (result.gameEnded) {
+    console.log(`🤖 [MATCH ${matchId}] Bot triggered game end! Calling endGame...`);
     try {
       await endGame(matchId);
+      console.log(`🤖 [MATCH ${matchId}] endGame completed successfully`);
     } catch (error) {
       console.error(`[WS] CRITICAL: Error in endGame for bot match ${matchId}:`, error);
     }
