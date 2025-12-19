@@ -2576,13 +2576,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           <>
             {/* Toolbar - Forfeit and Emote buttons */}
             <div className="flex justify-center gap-3 max-w-md mx-auto">
-            {/* Forfeit Button - red, only visible during active game */}
+            {/* Forfeit Button - red, only visible during active game, 50% size */}
             {!showGameEndOverlay && gameStatus === 'playing' && (
             <button
               onClick={handleForfeitClick}
               disabled={countdownPhase !== 'complete'}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
+              className="py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40"
               style={{
+                flex: '0.5',
                 background: 'rgba(220, 38, 38, 0.2)',
                 border: '2px solid rgba(220, 38, 38, 0.8)',
                 color: '#FF4444',
@@ -2593,14 +2594,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
             </button>
             )}
 
-            {/* Emote Button - pulsing with current colors */}
+            {/* Emote Button - pulsing cyan blue, 1.5x size, on the right */}
             <button
               onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
               disabled={countdownPhase !== 'complete' || showGameEndOverlay}
-              className="flex-1 py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse"
+              className="py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse-cyan"
               style={{
+                flex: '1.5',
                 background: 'rgba(20, 12, 30, 0.8)',
-                border: '2px solid rgba(139, 0, 255, 0.5)',
+                border: '2px solid rgba(0, 255, 255, 0.5)',
                 color: 'rgba(255, 255, 255, 0.9)',
                 WebkitTapHighlightColor: 'transparent',
               }}
