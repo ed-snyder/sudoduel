@@ -48,6 +48,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
     setError('');
     try {
       const data = await leaderboardAPI.getLeaderboard();
+      console.log('[LeaderboardScreen] Loaded players:', data.top100.length, 'Total players:', data.total_players);
       setAllPlayers(data.top100); // Now contains all players
       setYourRank(data.your_rank || 0);
       setTotalPlayers(data.total_players);
@@ -61,13 +62,33 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
 
   // Calculate visible range for virtualization
   const virtualizedData = useMemo(() => {
+    if (allPlayers.length === 0) {
+      return {
+        startIndex: 0,
+        endIndex: 0,
+        visiblePlayers: [],
+      };
+    }
+    
     const containerHeight = scrollContainerRef.current?.clientHeight || 600; // Default height if not measured yet
-    const startIdx = Math.floor(scrollTop / ROW_HEIGHT);
+    const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT));
+    const visibleRowCount = Math.ceil(containerHeight / ROW_HEIGHT);
     const endIdx = Math.min(
-      startIdx + Math.ceil(containerHeight / ROW_HEIGHT) + 2, // +2 for buffer
+      startIdx + visibleRowCount + 3, // +3 for buffer above and below
       allPlayers.length
     );
-    const actualStartIdx = Math.max(0, startIdx - 1); // -1 for buffer
+    const actualStartIdx = Math.max(0, startIdx - 1); // -1 for buffer above
+    
+    console.log('[LeaderboardScreen] Virtualization:', {
+      totalPlayers: allPlayers.length,
+      containerHeight,
+      scrollTop: Math.round(scrollTop),
+      startIdx,
+      endIdx,
+      visibleRowCount,
+      maxScroll: (allPlayers.length - 1) * ROW_HEIGHT,
+      containerScrollHeight: scrollContainerRef.current?.scrollHeight,
+    });
     
     return {
       startIndex: actualStartIdx,
@@ -128,6 +149,7 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
       <div 
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"
+        style={{ minHeight: 0 }} // Important for flex scrolling
         onScroll={handleScroll}
       >
         {loading ? (
@@ -154,11 +176,16 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
           </div>
         ) : (
           <div 
-            className="relative pb-24"
-            style={{ height: allPlayers.length * ROW_HEIGHT }}
+            className="relative"
+            style={{ 
+              height: `${allPlayers.length * ROW_HEIGHT + 96}px`, // +96 for footer padding
+              minHeight: '100%',
+            }}
           >
             {/* Spacer for items before visible range */}
-            <div style={{ height: virtualizedData.startIndex * ROW_HEIGHT }} />
+            {virtualizedData.startIndex > 0 && (
+              <div style={{ height: virtualizedData.startIndex * ROW_HEIGHT }} />
+            )}
             
             {/* Visible rows */}
             <div className="px-4 py-2">
@@ -175,8 +202,21 @@ export default function LeaderboardScreen({ isOpen, onClose }: LeaderboardScreen
               ))}
             </div>
             
-            {/* Spacer for items after visible range */}
-            <div style={{ height: (allPlayers.length - virtualizedData.endIndex) * ROW_HEIGHT }} />
+            {/* Spacer for items after visible range + bottom padding */}
+            {virtualizedData.endIndex < allPlayers.length && (
+              <div style={{ height: (allPlayers.length - virtualizedData.endIndex) * ROW_HEIGHT + 96 }} />
+            )}
+            
+            {/* Debug info - remove in production */}
+            {import.meta.env.DEV && (
+              <div className="fixed bottom-20 right-4 bg-black/80 text-white text-xs p-2 rounded z-50">
+                Total: {allPlayers.length} | Visible: {virtualizedData.visiblePlayers.length} | 
+                Range: {virtualizedData.startIndex}-{virtualizedData.endIndex} | 
+                Scroll: {Math.round(scrollTop)} | 
+                Max: {Math.round((allPlayers.length - 1) * ROW_HEIGHT + 96)} |
+                Container: {scrollContainerRef.current?.scrollHeight || 0}
+              </div>
+            )}
           </div>
         )}
       </div>

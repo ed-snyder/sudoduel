@@ -23,7 +23,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const currentUserRating = userRating?.rating || 1500;
     const userIsPremium = profile.is_premium || false;
 
-    // Get ALL players (no limit)
+    // Get ALL players (no limit) - explicitly ensure we get all rows
     const allPlayersResult = await query(
       `SELECT 
         pp.id as player_id,
@@ -33,9 +33,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
        FROM player_ratings pr
        JOIN player_profiles pp ON pp.id = pr.player_id
        WHERE pr.ladder_id = $1
-       ORDER BY pr.rating DESC`,
+       ORDER BY pr.rating DESC
+       -- No LIMIT - fetch ALL players`,
       [DEFAULT_LADDER_ID]
     );
+    
+    console.log(`[Leaderboard] Query returned ${allPlayersResult.rowCount} rows, array length: ${allPlayersResult.rows.length}`);
 
     // Calculate user's actual rank among ALL players
     const userRankResult = await query(
@@ -63,6 +66,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       rating: Math.round(parseFloat(row.rating)),
       is_you: row.player_id === profile.id,
     }));
+
+    console.log(`[Leaderboard] Returning ${allPlayers.length} players to client (total_players: ${totalPlayers})`);
 
     res.json({
       top100: allPlayers, // Keep field name for backwards compatibility
