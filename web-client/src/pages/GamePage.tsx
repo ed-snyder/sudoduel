@@ -2574,9 +2574,25 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       >
         {!showEmotePicker ? (
           <>
-            {/* Toolbar - Forfeit and Emote buttons */}
+            {/* Toolbar - Emote and Forfeit buttons */}
             <div className="flex justify-center gap-3 max-w-md mx-auto">
-            {/* Forfeit Button - red, only visible during active game, 50% size */}
+            {/* Emote Button - pulsing cyan blue, 1.5x size, on the left */}
+            <button
+              onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
+              disabled={countdownPhase !== 'complete' || showGameEndOverlay}
+              className="py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse-cyan"
+              style={{
+                flex: '1.5',
+                background: 'rgba(20, 12, 30, 0.8)',
+                border: '2px solid rgba(0, 255, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              Emote
+            </button>
+
+            {/* Forfeit Button - red, only visible during active game, 50% size, on the right */}
             {!showGameEndOverlay && gameStatus === 'playing' && (
             <button
               onClick={handleForfeitClick}
@@ -2593,22 +2609,6 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
               Forfeit
             </button>
             )}
-
-            {/* Emote Button - pulsing cyan blue, 1.5x size, on the right */}
-            <button
-              onClick={() => { playToolbarButton(); setShowEmotePicker(true); }}
-              disabled={countdownPhase !== 'complete' || showGameEndOverlay}
-              className="py-4 rounded-xl font-body font-semibold text-base transition-all touch-manipulation flex items-center justify-center disabled:opacity-40 emote-button-pulse-cyan"
-              style={{
-                flex: '1.5',
-                background: 'rgba(20, 12, 30, 0.8)',
-                border: '2px solid rgba(0, 255, 255, 0.5)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Emote
-            </button>
           </div>
           </>
         ) : (
