@@ -70,11 +70,13 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }
   const [bannerMessage, setBannerMessage] = useState<BannerMessage | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showLockoutMessageRef = useRef(false);
+  const isLockedRef = useRef(false);
   
   // Function to show a banner message
   const showBanner = useCallback((text: string, colorClass: string, priority: number, duration: number = 2000, type?: 'positive' | 'negative' | 'neutral') => {
     // Don't show banner messages when locked out - lockout message takes priority
-    if (showLockoutMessage || myState?.is_locked) {
+    if (showLockoutMessageRef.current || isLockedRef.current) {
       return;
     }
     
@@ -96,7 +98,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     bannerTimeoutRef.current = setTimeout(() => {
       setBannerMessage(null);
     }, duration);
-  }, [showLockoutMessage, myState?.is_locked]);
+  }, []);
   
   // Synchronized feedback function - all feedback fires together
   const triggerScoreFeedback = useCallback((streak: number, row: number, col: number) => {
@@ -558,6 +560,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       lockoutAnimationTimeoutRef.current = setTimeout(() => {
         setShowLockoutSplash(false);
         setShowLockoutMessage(true);
+        showLockoutMessageRef.current = true;
         // Clear any banner messages when lockout message appears
         setBannerMessage(null);
         if (bannerTimeoutRef.current) {
@@ -900,6 +903,8 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         }
         setShowLockoutSplash(false);
         setShowLockoutMessage(false);
+        showLockoutMessageRef.current = false;
+        isLockedRef.current = false;
         
         // START COUNTDOWN ANIMATION
         setShowGameCountdown(true);
