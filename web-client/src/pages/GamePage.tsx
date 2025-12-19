@@ -14,6 +14,9 @@ import GameCountdown, { type CountdownPhase } from '../components/GameCountdown'
 import '../components/GameCountdown.css';
 import GameEndOverlay from '../components/GameEndOverlay';
 import '../components/GameEndOverlay.css';
+import LockoutSplash from '../components/LockoutSplash';
+import LockoutMessage from '../components/LockoutMessage';
+import '../components/Lockout.css';
 import { createGameSocket } from '../config';
 import { STARTING_TIME_SECONDS } from '../constants';
 import { useMobileDetect } from '../hooks/useMobileDetect';
@@ -134,6 +137,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const serverTimeOffsetRef = useRef<number>(0);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
+  const [showLockoutSplash, setShowLockoutSplash] = useState(false);
+  const [showLockoutMessage, setShowLockoutMessage] = useState(false);
+  const lockoutAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [emotes, setEmotes] = useState<string[]>(DEFAULT_EMOTES);
   const warmUpDoneRef = useRef(false);
   const lastCellPlacementRef = useRef(0);
@@ -519,7 +525,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     }
   }, [gameStatus, gameResult, mySlot, hapticVictory, hapticDefeat]);
 
-  // Play lockout sound when player's timer hits 0 (but game continues)
+  // Play lockout sound and show animation when player's timer hits 0 (but game continues)
   const hasPlayedLockoutRef = useRef(false);
   useEffect(() => {
     // Only trigger for MY lockout during active game
@@ -527,6 +533,21 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       console.log('[GamePage] Playing lockout sound - my time ran out');
       playLockout();
       hasPlayedLockoutRef.current = true;
+      
+      // Start lockout splash animation
+      setShowLockoutSplash(true);
+      
+      // Clear any existing timeout
+      if (lockoutAnimationTimeoutRef.current) {
+        clearTimeout(lockoutAnimationTimeoutRef.current);
+      }
+      
+      // After 2s, hide splash and show persistent message
+      lockoutAnimationTimeoutRef.current = setTimeout(() => {
+        setShowLockoutSplash(false);
+        setShowLockoutMessage(true);
+        lockoutAnimationTimeoutRef.current = null;
+      }, 2000);
     }
     
     // Reset when game starts
@@ -644,7 +665,15 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
       if (bannerTimeoutRef.current) {
         clearTimeout(bannerTimeoutRef.current);
         bannerTimeoutRef.current = null;
-    }
+      }
+      
+      // Clean up lockout animation on game end
+      if (lockoutAnimationTimeoutRef.current) {
+        clearTimeout(lockoutAnimationTimeoutRef.current);
+        lockoutAnimationTimeoutRef.current = null;
+      }
+      setShowLockoutSplash(false);
+      setShowLockoutMessage(false);
     }
   }, [gameStatus]);
 
@@ -845,6 +874,14 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         setBannerMessage(null);
         setIsDownToWire(false);
         setShownLowTimeWarning(false);
+        
+        // Reset lockout animation state
+        if (lockoutAnimationTimeoutRef.current) {
+          clearTimeout(lockoutAnimationTimeoutRef.current);
+          lockoutAnimationTimeoutRef.current = null;
+        }
+        setShowLockoutSplash(false);
+        setShowLockoutMessage(false);
         
         // START COUNTDOWN ANIMATION
         setShowGameCountdown(true);
@@ -2014,6 +2051,16 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         reason={gameEndReason}
         onComplete={handleGameEndOverlayComplete}
       />
+      )}
+
+      {/* Lockout Splash Animation - Shows when timer hits 0 */}
+      {!showGameEndOverlay && gameStatus === 'playing' && showLockoutSplash && (
+        <LockoutSplash />
+      )}
+
+      {/* Lockout Persistent Message - Shows after splash completes */}
+      {!showGameEndOverlay && gameStatus === 'playing' && showLockoutMessage && (
+        <LockoutMessage />
       )}
 
       {/* Countdown overlay */}

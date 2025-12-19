@@ -1,0 +1,107 @@
+/* LOCKOUT SPLASH ANIMATION */
+
+.lockout-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 40; /* Below GameEndOverlay (z-index: 50) but above game elements */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+.lockout-splash-text {
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  
+  /* Cyan metallic sheen gradient */
+  background: linear-gradient(180deg, #00FFFF 0%, #00CCCC 50%, #00FFFF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  /* White outline */
+  -webkit-text-stroke: 2px white;
+  
+  /* Magenta glow */
+  text-shadow: 
+    0 0 10px #FF3366,
+    0 0 20px #FF3366,
+    0 0 40px #FF3366;
+  
+  /* Slide animation */
+  animation: lockout-slide 2s ease-out forwards;
+  will-change: transform;
+}
+
+@keyframes lockout-slide {
+  0% {
+    transform: translateX(-100vw);
+    opacity: 0;
+  }
+  12.5% {
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(0); /* Arrived at center - 0.5s */
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(0); /* Hold - until 1.5s */
+    opacity: 1;
+  }
+  87.5% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(100vw); /* Exit right - 2s */
+    opacity: 0;
+  }
+}
+
+/* PERSISTENT LOCKOUT MESSAGE */
+
+.lockout-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40; /* Below GameEndOverlay (z-index: 50) but above game elements */
+  pointer-events: none; /* Allow clicks to pass through */
+  margin-top: 120px; /* Position below grid, above number pad */
+}
+
+.lockout-message-text {
+  font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+  font-weight: bold;
+  font-size: clamp(1.125rem, 4vw, 1.5rem);
+  color: #FF3366;
+  text-align: center;
+  white-space: nowrap;
+  
+  /* Pulsing magenta glow */
+  animation: pulse-glow 1.5s ease-in-out infinite;
+  will-change: transform, text-shadow;
+  
+  text-shadow: 
+    0 0 10px #FF3366,
+    0 0 20px #FF3366;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1.0);
+    text-shadow: 
+      0 0 10px #FF3366,
+      0 0 20px #FF3366;
+  }
+  50% {
+    transform: scale(1.05);
+    text-shadow: 
+      0 0 15px #FF3366,
+      0 0 30px #FF3366,
+      0 0 45px #FF3366;
+  }
+}
