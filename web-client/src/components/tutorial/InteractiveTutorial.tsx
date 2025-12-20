@@ -268,15 +268,14 @@ export default function InteractiveTutorial({
       }
     } else if (phase === 'force-mistake') {
       if (num === TUTORIAL_CELLS.mistakeCell.wrongAnswer) {
-        // Forced mistake
+        // Forced mistake - handle feedback ourselves, don't pass to SudokuGrid
+        // (SudokuGrid would play its own sounds and show -30s animation)
         playIncorrect();
         hapticError();
         setShowShake(true);
         setTimeout(() => setShowShake(false), 400);
         
-        setLastMoveResult({ row, col, correct: false });
-        
-        // Show timer decrease
+        // Show timer decrease (tutorial uses -5s, not -30s like real game)
         timerDeltaKeyRef.current++;
         setShowTimerDelta({ value: -5, key: timerDeltaKeyRef.current });
         setFakeTimer(prev => Math.max(0, prev - 5));
@@ -285,7 +284,6 @@ export default function InteractiveTutorial({
         setPhase('mistake-feedback');
         
         autoAdvanceTimeoutRef.current = setTimeout(() => {
-          setLastMoveResult(null);
           setSelectedCell(null);
         }, 2000);
       }
@@ -406,7 +404,7 @@ export default function InteractiveTutorial({
       case 'mistake-feedback':
         return (
           <TutorialMessage 
-            message="Mistakes cost 5 seconds!"
+            message="Mistakes cost you time!"
             subMessage="But don't worry—the cell resets so you can try again"
             showNext
             onNext={() => advancePhase('timer-explanation')}
