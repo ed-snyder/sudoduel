@@ -135,10 +135,10 @@ export default function InteractiveTutorial({
         clearTimeout(box3Timeout);
       };
     } else if (phase === 'sudoku-rules-practice') {
-      // Auto-advance to tap-cell after 1.5s
+      // Auto-advance to tap-cell after 3.5s
       const timeout = setTimeout(() => {
         setPhase('tap-cell');
-      }, 1500);
+      }, 3500);
       return () => clearTimeout(timeout);
     }
   }, [phase]);
@@ -438,7 +438,7 @@ export default function InteractiveTutorial({
             subMessage="The goal: Fill every cell with numbers 1-9"
             showNext
             onNext={() => setPhase('sudoku-rules-rows')}
-            position="bottom"
+            position="bottom-low"
           />
         );
 
@@ -449,7 +449,7 @@ export default function InteractiveTutorial({
             subMessage="No repeats allowed in any row or column"
             showNext
             onNext={() => setPhase('sudoku-rules-boxes')}
-            position="bottom"
+            position="bottom-low"
           />
         );
 
@@ -460,7 +460,7 @@ export default function InteractiveTutorial({
             subMessage="That's it! Rows, columns, and boxes — no repeats"
             showNext
             onNext={() => setPhase('sudoku-rules-practice')}
-            position="bottom"
+            position="bottom-low"
           />
         );
 
