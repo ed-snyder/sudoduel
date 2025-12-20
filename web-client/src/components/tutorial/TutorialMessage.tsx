@@ -8,7 +8,7 @@ interface TutorialMessageProps {
   onNext?: () => void;
   nextLabel?: string;
   children?: ReactNode;
-  position?: 'top' | 'bottom' | 'center';
+  position?: 'top' | 'bottom' | 'bottom-low' | 'center';
 }
 
 function TutorialMessage({ 
@@ -23,6 +23,7 @@ function TutorialMessage({
   const positionClasses = {
     top: 'top-24',
     bottom: 'bottom-32',
+    'bottom-low': 'bottom-8',
     center: 'top-1/2 -translate-y-1/2',
   };
 
