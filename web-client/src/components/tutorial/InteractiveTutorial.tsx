@@ -125,24 +125,35 @@ export default function InteractiveTutorial({
   useEffect(() => {
     if (phase === 'lockout-demo') {
       setFakeTimer(10);
+      setShowLockoutSplash(false);
       
-      lockoutIntervalRef.current = setInterval(() => {
+      const intervalId = setInterval(() => {
         setFakeTimer(prev => {
           if (prev <= 1) {
-            if (lockoutIntervalRef.current) clearInterval(lockoutIntervalRef.current);
-            playLockout();
-            hapticError();
+            clearInterval(intervalId);
+            // Use refs to call these without adding to dependencies
             setShowLockoutSplash(true);
             return 0;
           }
           return prev - 1;
         });
       }, 300); // Fast countdown for demo
+      
+      lockoutIntervalRef.current = intervalId;
+      
+      return () => {
+        clearInterval(intervalId);
+      };
     }
-    return () => {
-      if (lockoutIntervalRef.current) clearInterval(lockoutIntervalRef.current);
-    };
-  }, [phase, playLockout, hapticError]);
+  }, [phase]);
+  
+  // Play lockout sound when splash shows
+  useEffect(() => {
+    if (showLockoutSplash && phase === 'lockout-demo') {
+      playLockout();
+      hapticError();
+    }
+  }, [showLockoutSplash, phase, playLockout, hapticError]);
 
   // Opponent progress demo animation
   useEffect(() => {
