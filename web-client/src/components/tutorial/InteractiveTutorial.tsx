@@ -81,16 +81,14 @@ export default function InteractiveTutorial({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  // Auto-advance for intro phase
+  // Auto-advance for intro phase only
   useEffect(() => {
     if (phase === 'intro') {
-      autoAdvanceTimeoutRef.current = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setPhase('tap-cell');
       }, 2000);
+      return () => clearTimeout(timeoutId);
     }
-    return () => {
-      if (autoAdvanceTimeoutRef.current) clearTimeout(autoAdvanceTimeoutRef.current);
-    };
   }, [phase]);
 
   // Set up highlights based on phase
@@ -643,14 +641,14 @@ export default function InteractiveTutorial({
   return (
     <div className={`interactive-tutorial ${showShake ? 'tutorial-shake' : ''}`}>
       {/* Progress dots */}
-      <div className="fixed top-4 left-0 right-0 z-[2520]">
+      <div className="fixed top-12 left-0 right-0 z-[2520]">
         <TutorialProgress currentPhase={phase} />
       </div>
 
       {/* Skip button */}
       <button
         onClick={() => setShowSkipConfirm(true)}
-        className="fixed top-4 right-4 z-[2520] px-4 py-2 rounded-lg font-body text-sm text-muted tutorial-skip-button"
+        className="fixed top-12 right-4 z-[2520] px-4 py-2 rounded-lg font-body text-sm text-muted tutorial-skip-button"
         style={{
           background: 'rgba(26, 6, 64, 0.6)',
           border: '1px solid rgba(139, 0, 255, 0.3)',
@@ -660,7 +658,7 @@ export default function InteractiveTutorial({
       </button>
 
       {/* Main game layout */}
-      <div className="h-full flex flex-col pt-16">
+      <div className="h-full flex flex-col pt-24">
         {/* Header with names and progress */}
         <div className="flex-shrink-0 px-3 py-2">
           {/* Names row */}
