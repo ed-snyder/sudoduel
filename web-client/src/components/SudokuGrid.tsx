@@ -164,6 +164,12 @@ interface SudokuGridProps {
   countdownPhase?: 'hidden' | 'countdown' | 'go' | 'complete'; // NEW: Track countdown phase
   // Text to show for correct cell feedback (e.g. "+1!" or "+5s!")
   correctFeedbackText?: string;
+  // Tutorial highlighting props
+  highlightRow?: number | null;         // Highlight entire row (0-8)
+  highlightCol?: number | null;         // Highlight entire column (0-8)
+  highlightBox?: number | null;         // Highlight 3x3 box (0-8, left-to-right, top-to-bottom)
+  highlightEntireGrid?: boolean;        // Subtle highlight on entire grid
+  dimNonHighlighted?: boolean;          // Dim cells that aren't highlighted
 }
 
 interface FloatingFeedback {
@@ -239,6 +245,11 @@ function SudokuGrid({
   animateIn = false,
   countdownPhase = 'complete',
   correctFeedbackText = '+1!',
+  highlightRow = null,
+  highlightCol = null,
+  highlightBox = null,
+  highlightEntireGrid = false,
+  dimNonHighlighted = false,
 }: SudokuGridProps) {
 
   // Pre-initialize error audio context on first user interaction
@@ -349,6 +360,26 @@ function SudokuGrid({
     const boxCol = Math.floor(selectedCell.col / 3);
     return Math.floor(row / 3) === boxRow && Math.floor(col / 3) === boxCol;
   };
+
+  // Check if cell is in the highlighted box (0-8, left-to-right, top-to-bottom)
+  const isInHighlightedBox = (row: number, col: number) => {
+    if (highlightBox === null) return false;
+    const boxRowStart = Math.floor(highlightBox / 3) * 3;
+    const boxColStart = (highlightBox % 3) * 3;
+    return row >= boxRowStart && row < boxRowStart + 3 && col >= boxColStart && col < boxColStart + 3;
+  };
+
+  // Check if cell should be highlighted (for tutorial)
+  const isTutorialHighlighted = (row: number, col: number) => {
+    if (highlightEntireGrid) return true;
+    if (highlightRow !== null && row === highlightRow) return true;
+    if (highlightCol !== null && col === highlightCol) return true;
+    if (isInHighlightedBox(row, col)) return true;
+    return false;
+  };
+
+  // Check if any tutorial highlighting is active
+  const hasTutorialHighlighting = highlightRow !== null || highlightCol !== null || highlightBox !== null || highlightEntireGrid;
 
   const isSameRowOrCol = (row: number, col: number) => {
     if (!selectedCell || !hasSelectedValue) return false;
@@ -501,7 +532,19 @@ function SudokuGrid({
                 isSameRowOrCol(rowIndex, colIndex)
               );
               
-              if (lockedOut) {
+              // Tutorial highlighting takes priority when active
+              const isCellHighlighted = isTutorialHighlighted(rowIndex, colIndex);
+              
+              if (hasTutorialHighlighting) {
+                // Tutorial mode - apply highlight or dim
+                if (isCellHighlighted) {
+                  cellBg = 'rgba(0, 255, 255, 0.25)';
+                  cellShadow = 'inset 0 0 15px rgba(0, 255, 255, 0.4)';
+                  cellClassName = 'tutorial-cell-highlight';
+                } else if (dimNonHighlighted) {
+                  cellClassName = 'tutorial-cell-dimmed';
+                }
+              } else if (lockedOut) {
                 cellBg = 'rgba(100, 100, 100, 0.2)';
               } else if (isError) {
                 cellBg = 'rgba(255, 51, 102, 0.4)';

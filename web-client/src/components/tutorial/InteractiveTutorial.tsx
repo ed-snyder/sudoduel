@@ -12,6 +12,7 @@ import {
   TUTORIAL_SOLUTION, 
   TUTORIAL_INITIAL_GRID,
   TUTORIAL_CELLS,
+  SOLVED_DEMO_GRID,
 } from './tutorialData';
 import './InteractiveTutorial.css';
 
@@ -49,6 +50,12 @@ export default function InteractiveTutorial({
   const [highlightedNumber, setHighlightedNumber] = useState<number | null>(null);
   const [highlightedCell, setHighlightedCell] = useState<{ row: number; col: number } | null>(null);
   
+  // Sudoku rules phases highlighting state
+  const [highlightRow, setHighlightRow] = useState<number | null>(null);
+  const [highlightCol, setHighlightCol] = useState<number | null>(null);
+  const [highlightBox, setHighlightBox] = useState<number | null>(null);
+  const [highlightEntireGrid, setHighlightEntireGrid] = useState(false);
+  
   // Refs
   const timerDeltaKeyRef = useRef(0);
   const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,9 +92,54 @@ export default function InteractiveTutorial({
   useEffect(() => {
     if (phase === 'intro') {
       const timeoutId = setTimeout(() => {
-        setPhase('tap-cell');
+        setPhase('sudoku-rules-grid');
       }, 2000);
       return () => clearTimeout(timeoutId);
+    }
+  }, [phase]);
+
+  // Sudoku rules phases animations
+  useEffect(() => {
+    // Reset highlight states when phase changes
+    setHighlightRow(null);
+    setHighlightCol(null);
+    setHighlightBox(null);
+    setHighlightEntireGrid(false);
+    
+    if (phase === 'sudoku-rules-grid') {
+      // Subtle glow on entire grid
+      setHighlightEntireGrid(true);
+    } else if (phase === 'sudoku-rules-rows') {
+      // Animate row highlight, then column highlight
+      setHighlightRow(4); // Highlight middle row
+      
+      // After 1.5s, switch to column highlight
+      const colTimeout = setTimeout(() => {
+        setHighlightRow(null);
+        setHighlightCol(4); // Highlight middle column
+      }, 1500);
+      
+      return () => clearTimeout(colTimeout);
+    } else if (phase === 'sudoku-rules-boxes') {
+      // Highlight center box, then animate through a few boxes
+      setHighlightBox(4); // Center box
+      
+      // Animate through boxes
+      const box1Timeout = setTimeout(() => setHighlightBox(0), 1200);
+      const box2Timeout = setTimeout(() => setHighlightBox(8), 2000);
+      const box3Timeout = setTimeout(() => setHighlightBox(4), 2800);
+      
+      return () => {
+        clearTimeout(box1Timeout);
+        clearTimeout(box2Timeout);
+        clearTimeout(box3Timeout);
+      };
+    } else if (phase === 'sudoku-rules-practice') {
+      // Auto-advance to tap-cell after 1.5s
+      const timeout = setTimeout(() => {
+        setPhase('tap-cell');
+      }, 1500);
+      return () => clearTimeout(timeout);
     }
   }, [phase]);
 
@@ -360,6 +412,14 @@ export default function InteractiveTutorial({
     return Math.round((filledCells / 81) * 100);
   }, [grid]);
 
+  // Determine which grid to show based on phase
+  const isRulesPhase = phase === 'intro' || phase === 'sudoku-rules-grid' || 
+                       phase === 'sudoku-rules-rows' || phase === 'sudoku-rules-boxes' ||
+                       phase === 'sudoku-rules-practice';
+  
+  const displayGrid = isRulesPhase ? SOLVED_DEMO_GRID : grid;
+  const displayInitialGrid = isRulesPhase ? SOLVED_DEMO_GRID : TUTORIAL_INITIAL_GRID;
+
   // Render phase-specific content
   const renderPhaseContent = () => {
     switch (phase) {
@@ -367,6 +427,48 @@ export default function InteractiveTutorial({
         return (
           <TutorialMessage 
             message="Let's learn how to play Sudoduel"
+            position="center"
+          />
+        );
+
+      case 'sudoku-rules-grid':
+        return (
+          <TutorialMessage 
+            message="This is a Sudoku puzzle"
+            subMessage="The goal: Fill every cell with numbers 1-9"
+            showNext
+            onNext={() => setPhase('sudoku-rules-rows')}
+            position="bottom"
+          />
+        );
+
+      case 'sudoku-rules-rows':
+        return (
+          <TutorialMessage 
+            message="Each row and column has the numbers 1-9"
+            subMessage="No repeats allowed in any row or column"
+            showNext
+            onNext={() => setPhase('sudoku-rules-boxes')}
+            position="bottom"
+          />
+        );
+
+      case 'sudoku-rules-boxes':
+        return (
+          <TutorialMessage 
+            message="Each 3×3 box also has the numbers 1-9"
+            subMessage="That's it! Rows, columns, and boxes — no repeats"
+            showNext
+            onNext={() => setPhase('sudoku-rules-practice')}
+            position="bottom"
+          />
+        );
+
+      case 'sudoku-rules-practice':
+        return (
+          <TutorialMessage 
+            message="Now let's practice!"
+            subMessage="You'll race against an opponent to fill in the empty cells"
             position="center"
           />
         );
@@ -755,19 +857,24 @@ export default function InteractiveTutorial({
             }`}
             style={{ pointerEvents: isGridDimmed ? 'none' : 'auto' }}
           >
-            <div className="w-full flex justify-center">
+            <div className={`w-full flex justify-center ${highlightEntireGrid ? 'tutorial-grid-glow' : ''}`}>
               <SudokuGrid
-                grid={grid}
-                initialGrid={TUTORIAL_INITIAL_GRID}
-                selectedCell={selectedCell}
+                grid={displayGrid}
+                initialGrid={displayInitialGrid}
+                selectedCell={isRulesPhase ? null : selectedCell}
                 onCellClick={handleCellClick}
                 notes={notes}
                 notesMode={false}
-                lockedOut={isGridDimmed}
+                lockedOut={isGridDimmed || isRulesPhase}
                 animateIn={false}
                 countdownPhase="complete"
                 lastMoveResult={lastMoveResult}
                 correctFeedbackText="+5s!"
+                highlightRow={highlightRow}
+                highlightCol={highlightCol}
+                highlightBox={highlightBox}
+                highlightEntireGrid={highlightEntireGrid}
+                dimNonHighlighted={highlightRow !== null || highlightCol !== null || highlightBox !== null}
               />
             </div>
             
