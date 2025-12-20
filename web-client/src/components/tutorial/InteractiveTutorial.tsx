@@ -501,26 +501,34 @@ export default function InteractiveTutorial({
             message="How to win"
             position="center"
           >
-            <div className="mt-4 space-y-2 text-left">
-              <div className="win-condition-item">
-                <span className="win-condition-check">✓</span>
-                <span className="win-condition-text">Complete the puzzle first → Instant win</span>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-success text-xl">✓</span>
+                <span className="font-heading font-bold text-primary" style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.3)' }}>
+                  Complete the puzzle first → Instant win
+                </span>
               </div>
-              <div className="win-condition-item">
-                <span className="win-condition-check">✓</span>
-                <span className="win-condition-text">Opponent times out + you have more cells → You win</span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-success text-xl">✓</span>
+                <span className="font-heading font-bold text-primary" style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.3)' }}>
+                  Opponent times out + you have more cells → You win
+                </span>
               </div>
-              <div className="win-condition-item">
-                <span className="win-condition-check">✓</span>
-                <span className="win-condition-text">Both timeout → Higher score wins</span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-success text-xl">✓</span>
+                <span className="font-heading font-bold text-primary" style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.3)' }}>
+                  Both timeout → Higher score wins
+                </span>
               </div>
-              <div className="win-condition-item">
-                <span className="win-condition-check">✓</span>
-                <span className="win-condition-text">Same score at timeout → Draw</span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-success text-xl">✓</span>
+                <span className="font-heading font-bold text-primary" style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.3)' }}>
+                  Same score at timeout → Draw
+                </span>
               </div>
             </div>
             <button
-              onClick={() => advancePhase('tools-notes')}
+              onClick={() => advancePhase('tools-emotes')}
               className="w-full mt-4 py-3 px-6 rounded-xl font-body font-semibold transition-all active:scale-[0.98]"
               style={{
                 background: 'rgba(0, 255, 255, 0.1)',
@@ -533,17 +541,6 @@ export default function InteractiveTutorial({
           </TutorialMessage>
         );
 
-      case 'tools-notes':
-        return (
-          <TutorialMessage 
-            message="Notes mode lets you mark possible numbers"
-            subMessage="Tap to toggle notes on/off"
-            showNext
-            onNext={() => advancePhase('tools-emotes')}
-            position="bottom"
-          />
-        );
-
       case 'tools-emotes':
         return (
           <TutorialMessage 
@@ -552,7 +549,7 @@ export default function InteractiveTutorial({
             showNext
             onNext={() => isReplay ? handleComplete() : advancePhase('skill-selection')}
             nextLabel={isReplay ? "Done" : "Next"}
-            position="bottom"
+            position="top"
           />
         );
 

@@ -49,7 +49,6 @@ export type TutorialPhase =
   | 'opponent-intro'
   | 'opponent-progress-demo'
   | 'win-conditions'
-  | 'tools-notes'
   | 'tools-emotes'
   | 'skill-selection'
   | 'ready';
@@ -68,7 +67,6 @@ export const TUTORIAL_PHASES: TutorialPhase[] = [
   'opponent-intro',
   'opponent-progress-demo',
   'win-conditions',
-  'tools-notes',
   'tools-emotes',
   'skill-selection',
   'ready',
