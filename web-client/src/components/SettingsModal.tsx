@@ -7,9 +7,10 @@ import { authAPI } from '../services/api';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onReplayTutorial?: () => void;
 }
 
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, onReplayTutorial }: SettingsModalProps) {
   const { logout } = useAuth();
   const { playModalOpen, playModalClose, playButtonTap } = useSoundEffects(0.8);
   const { setVolume: setMusicVolumeDirectly } = useMusic();
@@ -251,6 +252,27 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="px-4 py-4">
             <span className="font-body text-muted text-sm">SudoDuel v1.0.2</span>
           </div>
+
+          {/* Replay Tutorial */}
+          {onReplayTutorial && (
+            <div className="px-4 py-4">
+              <button
+                onClick={() => {
+                  playButtonTap();
+                  handleClose();
+                  onReplayTutorial();
+                }}
+                className="w-full py-3 px-4 rounded-xl font-body text-sm text-secondary text-left transition-all active:scale-[0.98] flex items-center justify-between"
+                style={{ background: 'rgba(26, 6, 64, 0.4)' }}
+              >
+                <span>Replay Tutorial</span>
+                <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* Logout */}
           <div className="px-4 py-4">

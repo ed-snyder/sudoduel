@@ -6,7 +6,7 @@ import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 import DailyRunPage from './pages/DailyRunPage';
-import TutorialFlow from './components/TutorialFlow';
+import InteractiveTutorial from './components/tutorial/InteractiveTutorial';
 import UpgradeModal from './components/UpgradeModal';
 import DisplayNameSetup from './components/DisplayNameSetup';
 // GuestBanner removed - inline guest indicator now in LobbyPage
@@ -29,6 +29,7 @@ function AppContent() {
   const [matchId, setMatchId] = useState<number | null>(null);
   const [dailyRun, setDailyRun] = useState(false);
   const [showSecureModal, setShowSecureModal] = useState(false);
+  const [replayTutorial, setReplayTutorial] = useState(false);
 
   // Hide splash screen when app is ready
   useEffect(() => {
@@ -183,11 +184,21 @@ function AppContent() {
   // JUST signed up - show tutorial BEFORE lobby
   if (justSignedUp && !user.tutorial_completed) {
     return (
-      <TutorialFlow 
+      <InteractiveTutorial 
         onComplete={handleTutorialComplete}
         onSkip={handleTutorialSkip}
         onSkillSelect={handleSkillSelect}
-        gameMode="duel"
+      />
+    );
+  }
+
+  // Replay tutorial mode
+  if (replayTutorial) {
+    return (
+      <InteractiveTutorial 
+        onComplete={() => setReplayTutorial(false)}
+        onSkip={() => setReplayTutorial(false)}
+        isReplay={true}
       />
     );
   }
@@ -216,6 +227,7 @@ function AppContent() {
         onMatchFound={setMatchId} 
         onStartSoloMode={() => setDailyRun(true)}
         onSecureAccount={() => setShowSecureModal(true)}
+        onReplayTutorial={() => setReplayTutorial(true)}
       />
       <SecureAccountModal 
         isOpen={showSecureModal}

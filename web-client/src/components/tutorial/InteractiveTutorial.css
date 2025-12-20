@@ -1,0 +1,253 @@
+/* Interactive Tutorial Styles */
+
+.interactive-tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0D0221 0%, #1A0640 50%, #0D0221 100%);
+}
+
+/* Spotlight pulsing animation */
+@keyframes spotlight-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.tutorial-spotlight-pulse {
+  animation: spotlight-pulse 1.5s ease-in-out infinite;
+}
+
+/* Message fade in */
+@keyframes tutorial-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tutorial-message-enter {
+  animation: tutorial-fade-in 0.3s ease-out forwards;
+}
+
+/* Timer countdown animation */
+@keyframes timer-countdown-flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.timer-countdown-flash {
+  animation: timer-countdown-flash 0.5s ease-in-out;
+}
+
+/* Number pad highlight pulse */
+@keyframes number-highlight-pulse {
+  0%, 100% {
+    text-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 25px rgba(0, 255, 255, 1), 0 0 35px rgba(0, 255, 255, 0.5);
+    transform: scale(1.1);
+  }
+}
+
+.number-highlight-pulse {
+  animation: number-highlight-pulse 1s ease-in-out infinite;
+}
+
+/* Error number highlight pulse (magenta) */
+@keyframes number-error-pulse {
+  0%, 100% {
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 25px rgba(255, 51, 102, 1), 0 0 35px rgba(255, 51, 102, 0.5);
+    transform: scale(1.1);
+  }
+}
+
+.number-error-pulse {
+  animation: number-error-pulse 1s ease-in-out infinite;
+}
+
+/* Cell highlight pulse */
+@keyframes cell-highlight-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.4), 0 0 15px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.6), 0 0 25px rgba(0, 255, 255, 0.5);
+  }
+}
+
+.cell-highlight-pulse {
+  animation: cell-highlight-pulse 1.2s ease-in-out infinite;
+}
+
+/* Timer delta animation */
+@keyframes timer-delta-float {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+.timer-delta-float {
+  animation: timer-delta-float 1.5s ease-out forwards;
+}
+
+/* Timer delta positive (green) */
+.timer-delta-positive {
+  color: #00FF88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+}
+
+/* Timer delta negative (red) */
+.timer-delta-negative {
+  color: #FF3366;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
+}
+
+/* Lockout splash animation */
+@keyframes lockout-splash {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lockout-splash-enter {
+  animation: lockout-splash 0.6s ease-out forwards;
+}
+
+/* Opponent progress bar fill animation */
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--target-width, 70%);
+  }
+}
+
+.progress-fill-animate {
+  animation: progress-fill 2s ease-out forwards;
+}
+
+/* Skip button hover effect */
+.tutorial-skip-button {
+  transition: all 0.2s ease;
+}
+
+.tutorial-skip-button:hover {
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(139, 0, 255, 0.5);
+}
+
+/* Win conditions card styling */
+.win-condition-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.win-condition-check {
+  color: #00FF88;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.win-condition-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* Skill selection buttons */
+.skill-button {
+  transition: all 0.2s ease;
+}
+
+.skill-button:active {
+  transform: scale(0.98);
+}
+
+/* Dimmed grid overlay */
+.grid-dimmed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Screen shake for error */
+@keyframes tutorial-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.tutorial-shake {
+  animation: tutorial-shake 0.4s ease-out;
+}
+
+/* Toolbar button highlight */
+@keyframes toolbar-highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+    border-color: rgba(0, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.7), 0 0 30px rgba(0, 255, 255, 0.4);
+    border-color: rgba(0, 255, 255, 0.9);
+  }
+}
+
+.toolbar-highlight-pulse {
+  animation: toolbar-highlight-pulse 1.2s ease-in-out infinite;
+}
+
+/* Timer highlight */
+@keyframes timer-highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), 0 0 40px rgba(0, 255, 255, 0.3);
+  }
+}
+
+.timer-highlight-pulse {
+  animation: timer-highlight-pulse 1.5s ease-in-out infinite;
+}
+

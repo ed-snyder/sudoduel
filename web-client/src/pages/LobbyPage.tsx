@@ -22,6 +22,7 @@ interface LobbyPageProps {
   onMatchFound: (matchId: number) => void;
   onStartSoloMode?: () => void;
   onSecureAccount?: () => void;
+  onReplayTutorial?: () => void;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'ultra';
@@ -35,7 +36,7 @@ function ModalLoader() {
   );
 }
 
-export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccount }: LobbyPageProps) {
+export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccount, onReplayTutorial }: LobbyPageProps) {
   const { user, token, isGuest } = useAuth();
   const { isPremium, openUpgradeModal } = useSubscription();
   const { playJoinQueue, playSearching, stopSearching, playMatchFound } = useSoundEffects(0.8);
@@ -596,6 +597,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
           <SettingsModal
             isOpen={showSettings}
             onClose={() => setShowSettings(false)}
+            onReplayTutorial={onReplayTutorial}
           />
         </Suspense>
       )}

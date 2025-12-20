@@ -119,29 +119,29 @@ export const GameStateManager = {
     
     // Start per-player timer countdown (every 1 second)
     game.timerInterval = setInterval(() => {
-      const now = Date.now();
-      const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0; // Queue-based bot has real player ID
-      
-      if (game.status !== 'IN_PROGRESS') {
-        const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
-        console.log(`[TIMER] Match ${matchId} stopping - status: ${game.status}`);
-        if (game.timerInterval) {
-          if (isBotMatch) {
-            console.log(`[TIMER] Match ${matchId} ⚠️ CLEARING TIMER INTERVAL - status changed to ${game.status}`);
+      try {
+        const now = Date.now();
+        const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0; // Queue-based bot has real player ID
+        
+        if (game.status !== 'IN_PROGRESS') {
+          console.log(`[TIMER] Match ${matchId} stopping - status: ${game.status}`);
+          if (game.timerInterval) {
+            if (isBotMatch) {
+              console.log(`[TIMER] Match ${matchId} ⚠️ CLEARING TIMER INTERVAL - status changed to ${game.status}`);
+            }
+            clearInterval(game.timerInterval);
+            game.timerInterval = null;
           }
-          clearInterval(game.timerInterval);
-          game.timerInterval = null;
+          return;
         }
-        return;
-      }
 
-      // If someone is disconnected, PAUSE BOTH TIMERS (game is effectively on hold)
-      if (game.disconnectedPlayerId !== null) {
-        // Don't decrement any timers during disconnect grace period
-        // The disconnected player will auto-forfeit after 15 seconds via gracePeriodTimer
-        console.log(`[TIMER] Match ${matchId} paused - disconnectedPlayerId: ${game.disconnectedPlayerId} (type: ${typeof game.disconnectedPlayerId})`);
-        return;
-      }
+        // If someone is disconnected, PAUSE BOTH TIMERS (game is effectively on hold)
+        if (game.disconnectedPlayerId !== null) {
+          // Don't decrement any timers during disconnect grace period
+          // The disconnected player will auto-forfeit after 15 seconds via gracePeriodTimer
+          console.log(`[TIMER] Match ${matchId} paused - disconnectedPlayerId: ${game.disconnectedPlayerId} (type: ${typeof game.disconnectedPlayerId})`);
+          return;
+        }
 
       // Normal gameplay - decrement timers for non-locked, non-solved players
       // Only legacy first-match bot (player2.playerId === -1) gets special treatment
@@ -155,33 +155,52 @@ export const GameStateManager = {
         console.log(`[TIMER] Match ${matchId} TICK: P1(time=${game.player1.timeRemaining}, locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}/81, score=${game.player1.score}) P2(time=${game.player2.timeRemaining}, locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}/81, score=${game.player2.score})`);
       }
       
-      if (!game.player1.isLocked && !game.player1.isSolved && game.player1.timeRemaining > 0) {
-        const oldTime = game.player1.timeRemaining;
-        game.player1.timeRemaining--;
-        if (game.player1.timeRemaining <= 0) {
-          console.log(`[TIMER] Match ${matchId} P1 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player1.timeRemaining}`);
-          // Legacy first-match bot: end game immediately when human runs out of time
-          if (isLegacyBotMatch) {
-            game.player1.isLocked = true;
-            if (game.timerInterval) {
-              clearInterval(game.timerInterval);
-              game.timerInterval = null;
+      // Check P1 timer
+      if (!game.player1.isLocked && !game.player1.isSolved) {
+        if (game.player1.timeRemaining > 0) {
+          const oldTime = game.player1.timeRemaining;
+          game.player1.timeRemaining--;
+          if (game.player1.timeRemaining <= 0) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ P1 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player1.timeRemaining}`);
+            // Legacy first-match bot: end game immediately when human runs out of time
+            if (isLegacyBotMatch) {
+              game.player1.isLocked = true;
+              if (game.timerInterval) {
+                clearInterval(game.timerInterval);
+                game.timerInterval = null;
+              }
+              onTimeout(matchId);
+              return;
             }
-            onTimeout(matchId);
-            return;
+            // All other matches (human vs human, queue-based bot): lock the player
+            game.player1.isLocked = true;
+            console.log(`[TIMER] Match ${matchId} ⚠️ P1 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, score=${game.player1.score}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, score=${game.player2.score})`);
           }
-          // All other matches (human vs human, queue-based bot): lock the player
-          game.player1.isLocked = true;
-          console.log(`[TIMER] Match ${matchId} P1 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved})`);
+        } else {
+          // Time already at 0 but not locked - lock now
+          if (!game.player1.isLocked) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ P1 TIME ALREADY AT 0 but not locked! Locking now.`);
+            game.player1.isLocked = true;
+          }
         }
       }
-      if (!game.player2.isLocked && !game.player2.isSolved && game.player2.timeRemaining > 0) {
-        const oldTime = game.player2.timeRemaining;
-        game.player2.timeRemaining--;
-        if (game.player2.timeRemaining <= 0) {
-          console.log(`[TIMER] Match ${matchId} P2 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player2.timeRemaining}`);
-          game.player2.isLocked = true;
-          console.log(`[TIMER] Match ${matchId} P2 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved})`);
+      
+      // Check P2 timer
+      if (!game.player2.isLocked && !game.player2.isSolved) {
+        if (game.player2.timeRemaining > 0) {
+          const oldTime = game.player2.timeRemaining;
+          game.player2.timeRemaining--;
+          if (game.player2.timeRemaining <= 0) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ P2 TIME EXPIRED! Locking player. Old time: ${oldTime}, New time: ${game.player2.timeRemaining}`);
+            game.player2.isLocked = true;
+            console.log(`[TIMER] Match ${matchId} ⚠️ P2 LOCKED. Status: ${game.status}, P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, score=${game.player1.score}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, score=${game.player2.score})`);
+          }
+        } else {
+          // Time already at 0 but not locked - lock now
+          if (!game.player2.isLocked) {
+            console.log(`[TIMER] Match ${matchId} ⚠️ P2 TIME ALREADY AT 0 but not locked! Locking now.`);
+            game.player2.isLocked = true;
+          }
         }
       }
 
@@ -189,7 +208,7 @@ export const GameStateManager = {
       const ended = this.checkVictoryConditions(game);
       if (ended) {
         const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
-        console.log(`[TIMER] Match ${matchId} VICTORY CONDITIONS MET! Ending game. P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted})`);
+        console.log(`[TIMER] Match ${matchId} ✅ VICTORY CONDITIONS MET! Ending game. P1(locked=${game.player1.isLocked}, solved=${game.player1.isSolved}, cells=${game.player1.cellsCompleted}, score=${game.player1.score}), P2(locked=${game.player2.isLocked}, solved=${game.player2.isSolved}, cells=${game.player2.cellsCompleted}, score=${game.player2.score})`);
         if (game.timerInterval) {
           if (isBotMatch) {
             console.log(`[TIMER] Match ${matchId} ⚠️ CLEARING TIMER INTERVAL - victory conditions met`);
@@ -199,13 +218,23 @@ export const GameStateManager = {
         }
         onTimeout(matchId);
         return;
+      } else {
+        // Log why victory conditions weren't met (for debugging)
+        const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
+        if (isBotMatch && (game.player1.isLocked || game.player2.isLocked)) {
+          console.log(`[TIMER] Match ${matchId} ⚠️ Victory conditions NOT met despite lock: P1(locked=${game.player1.isLocked}, score=${game.player1.score}), P2(locked=${game.player2.isLocked}, score=${game.player2.score}), disconnectedPlayerId=${game.disconnectedPlayerId}, forfeitingPlayerId=${game.forfeitingPlayerId}`);
+        }
       }
 
-      // Call timer update callback if provided (for broadcasting)
-      if (onTimerUpdate) {
-        onTimerUpdate(matchId);
+        // Call timer update callback if provided (for broadcasting)
+        if (onTimerUpdate) {
+          onTimerUpdate(matchId);
+        }
+      } catch (error: any) {
+        console.error(`[TIMER] Match ${matchId} ERROR in timer interval:`, error);
+        // Don't stop the timer on error - log and continue
       }
-    }, 1000);
+      }, 1000);
 
     // We no longer use a single global timeout timer; per-player timers are authoritative
     game.timeoutTimer = null;

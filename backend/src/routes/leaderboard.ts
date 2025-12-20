@@ -58,7 +58,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     );
     const totalPlayers = parseInt(totalResult.rows[0].total, 10);
 
-    // Format all players
+    // Format all players - use ALL rows, no slicing
     const allPlayers = allPlayersResult.rows.map(row => ({
       rank: parseInt(row.rank, 10),
       player_id: row.player_id,
@@ -67,10 +67,15 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       is_you: row.player_id === profile.id,
     }));
 
-    console.log(`[Leaderboard] Returning ${allPlayers.length} players to client (total_players: ${totalPlayers})`);
+    // Verify we have all players
+    if (allPlayers.length !== totalPlayers) {
+      console.warn(`[Leaderboard] ⚠️ MISMATCH: allPlayers.length=${allPlayers.length} but totalPlayers=${totalPlayers}`);
+    }
+
+    console.log(`[Leaderboard] Returning ${allPlayers.length} players to client (total_players: ${totalPlayers}, expected: ${totalPlayers})`);
 
     res.json({
-      top100: allPlayers, // Keep field name for backwards compatibility
+      top100: allPlayers, // Keep field name for backwards compatibility - but now contains ALL players
       neighborhood: [], // No longer needed since we show all players
       your_rank: userIsPremium ? actualUserRank : null, // Soft wall: only premium can see their rank
       total_players: totalPlayers,
