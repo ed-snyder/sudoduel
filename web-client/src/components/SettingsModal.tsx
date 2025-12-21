@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useMusic } from '../context/MusicContext';
 import { authAPI } from '../services/api';
+import { forceRequestReview, getDebugReviewStats, resetReviewStats } from '../services/reviewService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export default function SettingsModal({ isOpen, onClose, onReplayTutorial }: Set
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [showDevSection, setShowDevSection] = useState(false);
+  const [reviewStats, setReviewStats] = useState<string | null>(null);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -250,7 +253,7 @@ export default function SettingsModal({ isOpen, onClose, onReplayTutorial }: Set
 
           {/* About */}
           <div className="px-4 py-4">
-            <span className="font-body text-muted text-sm">SudoDuel v1.0.2</span>
+            <span className="font-body text-muted text-sm">SudoDuel v1.0.3</span>
           </div>
 
           {/* Replay Tutorial */}
@@ -271,6 +274,82 @@ export default function SettingsModal({ isOpen, onClose, onReplayTutorial }: Set
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
+            </div>
+          )}
+
+          {/* Dev Section Toggle - tap version number 5 times to show */}
+          <div className="px-4 py-2">
+            <button
+              onClick={() => {
+                const taps = parseInt(localStorage.getItem('dev_tap_count') || '0', 10) + 1;
+                localStorage.setItem('dev_tap_count', taps.toString());
+                if (taps >= 5) {
+                  setShowDevSection(true);
+                  localStorage.removeItem('dev_tap_count');
+                }
+              }}
+              className="text-xs text-muted/30 font-body"
+            >
+              {showDevSection ? '🛠️ Dev Mode Active' : ''}
+            </button>
+          </div>
+
+          {/* Dev Section - Hidden by default */}
+          {showDevSection && (
+            <div className="mx-4 mb-4 p-4 rounded-xl border border-purple/30" style={{ background: 'rgba(139,0,255,0.1)' }}>
+              <h4 className="font-heading font-bold text-sm text-purple mb-3">🛠️ Developer Tools</h4>
+              
+              <div className="space-y-2">
+                <button
+                  onClick={async () => {
+                    playButtonTap();
+                    await forceRequestReview();
+                  }}
+                  className="w-full py-2 px-3 rounded-lg font-body text-xs text-left transition-all active:scale-[0.98]"
+                  style={{ background: 'rgba(26, 6, 64, 0.6)', border: '1px solid rgba(139,0,255,0.3)' }}
+                >
+                  🌟 Force Review Prompt
+                </button>
+                
+                <button
+                  onClick={() => {
+                    playButtonTap();
+                    const stats = getDebugReviewStats();
+                    setReviewStats(JSON.stringify(stats, null, 2));
+                  }}
+                  className="w-full py-2 px-3 rounded-lg font-body text-xs text-left transition-all active:scale-[0.98]"
+                  style={{ background: 'rgba(26, 6, 64, 0.6)', border: '1px solid rgba(139,0,255,0.3)' }}
+                >
+                  📊 Show Review Stats
+                </button>
+                
+                <button
+                  onClick={() => {
+                    playButtonTap();
+                    resetReviewStats();
+                    setReviewStats('Stats reset!');
+                    setTimeout(() => setReviewStats(null), 2000);
+                  }}
+                  className="w-full py-2 px-3 rounded-lg font-body text-xs text-left transition-all active:scale-[0.98]"
+                  style={{ background: 'rgba(26, 6, 64, 0.6)', border: '1px solid rgba(139,0,255,0.3)' }}
+                >
+                  🔄 Reset Review Stats
+                </button>
+                
+                <button
+                  onClick={() => setShowDevSection(false)}
+                  className="w-full py-2 px-3 rounded-lg font-body text-xs text-center transition-all active:scale-[0.98] text-muted"
+                  style={{ background: 'rgba(26, 6, 64, 0.3)' }}
+                >
+                  Hide Dev Tools
+                </button>
+              </div>
+              
+              {reviewStats && (
+                <pre className="mt-3 p-2 rounded bg-void/50 text-xs text-secondary overflow-auto max-h-32 font-mono">
+                  {reviewStats}
+                </pre>
+              )}
             </div>
           )}
 

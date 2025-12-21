@@ -10,6 +10,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import ReportModal from './ReportModal';
 import { reportUser, blockUser } from '../services/socialService';
 import { FitText } from './FitText';
+import { maybePromptReviewAfterWin } from '../services/reviewService';
 
 interface PlayerResult {
   playerId: number;
@@ -173,6 +174,21 @@ export default function ResultScreen({
       playVictory();
     }
   }, [isDraw, didWin, playVictory]);
+
+  // Trigger review prompt after victory (with delay for celebration moment)
+  const hasPromptedReview = useRef(false);
+  useEffect(() => {
+    if (didWin && !isDraw && !hasPromptedReview.current) {
+      hasPromptedReview.current = true;
+      
+      // Wait 2.5 seconds for victory celebration to sink in
+      const timer = setTimeout(() => {
+        maybePromptReviewAfterWin();
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [didWin, isDraw]);
 
   // Determine result type for ad logic
   const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
