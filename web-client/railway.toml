@@ -1,10 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install --legacy-peer-deps && npm run build"
+buildCommand = "npm ci --legacy-peer-deps && npm run build"
 
 [deploy]
 startCommand = "npx serve dist -s -l $PORT"
-
-[build.env]
-NIXPACKS_NO_LOCKFILE = "1"
 
