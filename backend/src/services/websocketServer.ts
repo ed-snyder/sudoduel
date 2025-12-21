@@ -166,6 +166,7 @@ export const setupWebSocketServer = (server: Server) => {
         // Initialize bot state if this is a bot match
         if (isBotMatch) {
           initBotState(matchId);
+          GameStateManager.setIsBotMatch(matchId, true);
         }
       }
 

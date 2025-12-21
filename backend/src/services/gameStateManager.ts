@@ -34,6 +34,8 @@ interface GameState {
   disconnectedPlayerId: number | null;
   disconnectTime: number | null;  // timestamp when disconnect occurred
   gracePeriodTimer: any | null;
+  // Bot match tracking
+  isBotMatch: boolean; // True if player2 is a bot
 }
 
 const gameStates = new Map<number, GameState>();
@@ -94,10 +96,19 @@ export const GameStateManager = {
       disconnectedPlayerId: null,
       disconnectTime: null,
       gracePeriodTimer: null,
+      isBotMatch: false,
     };
 
     gameStates.set(matchId, gameState);
     return gameState;
+  },
+
+  setIsBotMatch(matchId: number, isBotMatch: boolean): void {
+    const game = gameStates.get(matchId);
+    if (game) {
+      game.isBotMatch = isBotMatch;
+      console.log(`[MATCH ${matchId}] Set isBotMatch = ${isBotMatch}`);
+    }
   },
 
   getGame(matchId: number): GameState | undefined {
@@ -716,21 +727,21 @@ export const GameStateManager = {
    *
    * Win Conditions (checked in order):
    *  1. Complete the board (all 81 cells) → Instant win
-   *  2. Opponent locks out + your score > opponent's → Win
-   *  3. Opponent locks out + you surpass their score before you lock → Win
-   *  4. Both locked → Higher score wins (draw if equal)
+   *  2. BOT MATCH SPECIAL: If human (player1) locks out, bot wins immediately
+   *  3. Opponent locks out + your score > opponent's → Win
+   *  4. Opponent locks out + you surpass their score before you lock → Win
+   *  5. Both locked → Higher score wins (draw if equal)
    * 
    * CRITICAL: If a forfeit has occurred, return false to prevent normal game end logic.
    * Forfeit handling must be done separately via getFinalResults().
    */
   checkVictoryConditions(game: GameState): boolean {
     const matchId = Array.from(gameStates.entries()).find(([_, g]) => g === game)?.[0] ?? 'UNKNOWN';
-    const isBotMatch = Number(game.player2.playerId) !== -1 && Number(game.player2.playerId) > 0;
     
     // CRITICAL: If someone is disconnected, do NOT end game normally
     // Wait for grace period - disconnected player will forfeit
     if (game.disconnectedPlayerId !== null) {
-      if (isBotMatch) {
+      if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} BLOCKED: disconnectedPlayerId=${game.disconnectedPlayerId}`);
       }
       return false;
@@ -739,7 +750,7 @@ export const GameStateManager = {
     // CRITICAL: If forfeit has occurred, do NOT trigger normal game end
     // Forfeit must be handled separately to ensure forfeiting player always loses
     if (game.forfeitingPlayerId != null) {
-      if (isBotMatch) {
+      if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} BLOCKED: forfeitingPlayerId=${game.forfeitingPlayerId}`);
       }
       return false;
@@ -750,27 +761,34 @@ export const GameStateManager = {
 
     // Condition 1: Someone has solved the puzzle
     if (p1.isSolved || p2.isSolved) {
-      if (isBotMatch) {
+      if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P1(solved=${p1.isSolved}, cells=${p1.cellsCompleted}), P2(solved=${p2.isSolved}, cells=${p2.cellsCompleted})`);
       }
       return true;
     }
 
-    // Condition 2 & 3: One player is locked and the other has surpassed their score
+    // Condition 2: BOT MATCH SPECIAL - If human (player1) locks out, bot wins immediately
+    // This prevents the game from hanging when the human times out
+    if (game.isBotMatch && p1.isLocked && !p2.isLocked) {
+      console.log(`[checkVictoryConditions] Match ${matchId} ✅ BOT VICTORY: Human (P1) locked out, bot wins immediately (P1: score=${p1.score}, P2: score=${p2.score})`);
+      return true;
+    }
+
+    // Condition 3 & 4: One player is locked and the other has surpassed their score
     if (p1.isLocked && !p2.isLocked && p2.score > p1.score) {
-      if (isBotMatch) {
+      if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P1 locked, P2 ahead (P1: score=${p1.score}, P2: score=${p2.score})`);
       }
       return true;
     }
     if (p2.isLocked && !p1.isLocked && p1.score > p2.score) {
-      if (isBotMatch) {
+      if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P2 locked, P1 ahead (P1: score=${p1.score}, P2: score=${p2.score})`);
       }
       return true;
     }
 
-    // Condition 4: Both players are locked out
+    // Condition 5: Both players are locked out
     if (p1.isLocked && p2.isLocked) {
       return true;
     }

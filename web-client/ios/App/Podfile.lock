@@ -15,6 +15,8 @@ PODS:
     - GoogleUserMessagingPlatform (= 3.0.0)
   - CapacitorCommunityAppleSignIn (7.1.0):
     - Capacitor
+  - CapacitorCommunityInAppReview (7.1.0):
+    - Capacitor
   - CapacitorCordova (7.4.4)
   - CapacitorHaptics (7.0.2):
     - Capacitor
@@ -46,6 +48,7 @@ DEPENDENCIES:
   - "CapacitorApp (from `../../../node_modules/@capacitor/app`)"
   - "CapacitorCommunityAdmob (from `../../../node_modules/@capacitor-community/admob`)"
   - "CapacitorCommunityAppleSignIn (from `../../../node_modules/@capacitor-community/apple-sign-in`)"
+  - "CapacitorCommunityInAppReview (from `../../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
@@ -72,6 +75,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@capacitor-community/admob"
   CapacitorCommunityAppleSignIn:
     :path: "../../../node_modules/@capacitor-community/apple-sign-in"
+  CapacitorCommunityInAppReview:
+    :path: "../../../node_modules/@capacitor-community/in-app-review"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorHaptics:
@@ -93,6 +98,7 @@ SPEC CHECKSUMS:
   CapacitorApp: 63b237168fc869e758481dba283315a85743ee78
   CapacitorCommunityAdmob: 04498ca8d01a097aa7d9d80584094b6b3419ec3f
   CapacitorCommunityAppleSignIn: 271cb2860576fd2961508bbfa7a82117d93eadca
+  CapacitorCommunityInAppReview: 3756d05524c5cf2eccbc8ed460f77f8f8db6c141
   CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
   CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
   CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
@@ -106,6 +112,6 @@ SPEC CHECKSUMS:
   GTMAppAuth: 0ff230db599948a9ad7470ca667337803b3fc4dd
   GTMSessionFetcher: 3a63d75eecd6aa32c2fc79f578064e1214dfdec2
 
-PODFILE CHECKSUM: 00fba0e91a32c44cefd9007c502e6568d9e4e9a0
+PODFILE CHECKSUM: 3c3e2db7be3d9d6529984ea02b95c1cef4d46515
 
 COCOAPODS: 1.16.2
