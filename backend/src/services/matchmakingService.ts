@@ -12,13 +12,13 @@ const DEFAULT_LADDER_ID = 1;
 // This constant is kept for backwards compatibility and as a max window hint.
 const RATING_WINDOW = 1000;
 
-// Bot spawn delay: spawn bot after 12 seconds in queue
-const BOT_SPAWN_DELAY_MS = 12000;
+// Bot spawn delay: spawn bot after 8 seconds in queue
+const BOT_SPAWN_DELAY_MS = 8000;
 
 // Store active matches for players (in-memory cache)
 const playerMatches = new Map<number, number>(); // playerId -> matchId
 
-// Queue timers: track 12-second timers for bot spawning
+// Queue timers: track 8-second timers for bot spawning
 const queueTimers = new Map<number, NodeJS.Timeout>(); // playerId -> timer
 
 // Bot matches: track which matches are bot matches and bot info
@@ -209,7 +209,7 @@ export const MatchmakingService = {
       return { status: 'matched', match_id: match.id };
     }
 
-    // No human opponent found - start 12-second timer to spawn bot
+    // No human opponent found - start 8-second timer to spawn bot
     const botTimer = setTimeout(async () => {
       // Check if player still in queue and doesn't have a match
       const stillInQueue = await MatchmakingQueueModel.isPlayerInQueue(profile.id, DEFAULT_LADDER_ID);
@@ -388,7 +388,7 @@ export const MatchmakingService = {
     return match;
   },
 
-  // Spawn a bot opponent after 12 seconds in queue
+  // Spawn a bot opponent after 8 seconds in queue
   async spawnBotOpponent(humanPlayerId: number, humanRating: number) {
     const bot = await findBotNearRating(humanRating);
     if (!bot) {

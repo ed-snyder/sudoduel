@@ -3,7 +3,7 @@
  * 
  * Supports two types of bot matches:
  * 1. First-time player matches (legacy, simple bot)
- * 2. Queue-based bot matches (after 12s wait, rating-based bots)
+ * 2. Queue-based bot matches (after 8s wait, rating-based bots)
  */
 
 import { query } from '../config/database';
