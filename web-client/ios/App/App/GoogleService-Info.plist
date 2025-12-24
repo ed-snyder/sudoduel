@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.sudoduel.com</string>
+	<string>com.sudoduel.app</string>
 	<key>PROJECT_ID</key>
 	<string>sudoduel-f32a2</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:422309801554:ios:6f5a4b6ba720e536b7b98b</string>
+	<string>1:422309801554:ios:3b578efd10bb8fb7b7b98b</string>
 </dict>
 </plist>

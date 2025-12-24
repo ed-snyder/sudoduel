@@ -52,7 +52,7 @@ export async function initPushNotifications(): Promise<void> {
     });
 
     await PushNotifications.addListener('registrationError', (error) => {
-      console.error('Push registration error:', error);
+      console.error('❌ Push registration error:', JSON.stringify(error));
     });
 
     await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
