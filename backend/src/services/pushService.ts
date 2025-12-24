@@ -58,7 +58,7 @@ export async function sendPushToUser(
   body: string,
   data?: Record<string, string>
 ): Promise<void> {
-  if (!initialized || !serviceAccountCredentials) {
+  if (!initialized) {
     console.log('Push skipped - Firebase not initialized');
     return;
   }
@@ -74,86 +74,58 @@ export async function sendPushToUser(
       return;
     }
 
-    // Get OAuth token using google-auth-library
-    const auth = new GoogleAuth({
-      credentials: serviceAccountCredentials,
-      scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
-    });
-    const client = await auth.getClient();
-    const accessToken = await client.getAccessToken();
-    
-    if (!accessToken.token) {
-      console.error('❌ Failed to get access token');
-      return;
-    }
-    
-    console.log('🔑 Got access token for push, starts with:', accessToken.token.substring(0, 20));
-
-    const projectId = serviceAccountCredentials.project_id;
-    console.log('📤 Sending to FCM project:', projectId);
     let successCount = 0;
     let failureCount = 0;
 
     for (const row of result.rows) {
       const token = row.token;
+      console.log(`📤 Sending push to token: ${token.substring(0, 30)}...`);
       
-      const message = {
-        message: {
-          token: token,
-          notification: {
-            title,
-            body,
-          },
-          data: data || {},
-          apns: {
-            payload: {
-              aps: {
-                sound: 'default',
-                badge: 1,
-              },
-            },
-          },
-          android: {
-            priority: 'high',
-            notification: {
+      const message: admin.messaging.Message = {
+        token: token,
+        notification: {
+          title,
+          body,
+        },
+        data: data || {},
+        apns: {
+          payload: {
+            aps: {
               sound: 'default',
-              channel_id: 'sudoduel_default',
+              badge: 1,
             },
+          },
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            channelId: 'sudoduel_default',
           },
         },
       };
 
       try {
-        const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
-        console.log('📤 FCM URL:', url);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken.token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(message),
-          }
-        );
-
-        if (response.ok) {
-          successCount++;
-          console.log(`✅ Push sent to token ${token.substring(0, 20)}...`);
-        } else {
-          failureCount++;
-          const errorBody = await response.text();
-          console.error(`❌ Push failed for token ${token.substring(0, 20)}...: ${response.status} - ${errorBody}`);
-          
-          // Clean up invalid tokens
-          if (response.status === 404 || errorBody.includes('UNREGISTERED')) {
-            await query('DELETE FROM device_tokens WHERE token = $1', [token]);
-            console.log(`🧹 Cleaned up invalid token`);
-          }
-        }
-      } catch (fetchError: any) {
+        const messageId = await admin.messaging().send(message);
+        successCount++;
+        console.log(`✅ Push sent successfully, messageId: ${messageId}`);
+      } catch (sendError: any) {
         failureCount++;
-        console.error(`❌ Fetch error for token ${token.substring(0, 20)}...: ${fetchError.message}`);
+        console.error(`❌ Push failed for token ${token.substring(0, 20)}...`);
+        console.error(`   Error code: ${sendError.code}`);
+        console.error(`   Error message: ${sendError.message}`);
+        
+        // Log full error details
+        if (sendError.errorInfo) {
+          console.error(`   Error info:`, JSON.stringify(sendError.errorInfo, null, 2));
+        }
+        
+        // Clean up invalid tokens
+        if (sendError.code === 'messaging/registration-token-not-registered' ||
+            sendError.code === 'messaging/invalid-registration-token') {
+          await query('DELETE FROM device_tokens WHERE token = $1', [token]);
+          console.log(`🧹 Cleaned up invalid token`);
+        }
       }
     }
 
