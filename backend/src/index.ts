@@ -11,9 +11,11 @@ import reportsRoutes from './routes/reports';
 import usersRoutes from './routes/users';
 import leaderboardRoutes from './routes/leaderboard';
 import dailyRoutes from './routes/daily';
+import notificationsRoutes from './routes/notifications';
 import { setupWebSocketServer } from './services/websocketServer';
 import { warmupDatabase } from './config/database';
 import { cache } from './services/cacheService';
+import { initFirebase } from './services/pushService';
 import './config/database';
 
 dotenv.config();
@@ -90,6 +92,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/daily', dailyRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Create HTTP server
 const server = createServer(app);
@@ -104,6 +107,9 @@ async function startServer() {
     
     // Warm up database connections BEFORE starting server
     await warmupDatabase();
+    
+    // Initialize Firebase for push notifications
+    initFirebase();
     
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);

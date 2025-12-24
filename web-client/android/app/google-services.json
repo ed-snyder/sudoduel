@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "422309801554",
+    "project_id": "sudoduel-f32a2",
+    "storage_bucket": "sudoduel-f32a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422309801554:android:9496da2a27605955b7b98b",
+        "android_client_info": {
+          "package_name": "com.sudoduel.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD81dCf6PE7SqSEmZ96ibiHBnxWWrTzo3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

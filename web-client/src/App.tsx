@@ -11,10 +11,12 @@ import UpgradeModal from './components/UpgradeModal';
 import DisplayNameSetup from './components/DisplayNameSetup';
 // GuestBanner removed - inline guest indicator now in LobbyPage
 import SecureAccountModal from './components/SecureAccountModal';
+import FriendsListModal from './components/FriendsListModal';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { adService } from './services/adService';
 import { playerAPI } from './services/api';
+import { initPushNotifications } from './services/pushNotifications';
 
 function AppContent() {
   const { 
@@ -30,6 +32,35 @@ function AppContent() {
   const [dailyRun, setDailyRun] = useState(false);
   const [showSecureModal, setShowSecureModal] = useState(false);
   const [replayTutorial, setReplayTutorial] = useState(false);
+  const [showFriendsList, setShowFriendsList] = useState(false);
+
+  // Initialize push notifications after user is authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      // Defer push init to not block main thread
+      const timeoutId = setTimeout(() => {
+        initPushNotifications();
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user, loading]);
+
+  // Handle navigation from push notifications
+  useEffect(() => {
+    const handlePushNavigation = (event: Event) => {
+      const customEvent = event as CustomEvent<{ screen: string; matchId?: string }>;
+      const { screen, matchId: pushMatchId } = customEvent.detail;
+      
+      if (screen === 'friends') {
+        setShowFriendsList(true);
+      } else if (screen === 'lobby' && pushMatchId) {
+        setMatchId(parseInt(pushMatchId));
+      }
+    };
+
+    window.addEventListener('pushNavigate', handlePushNavigation);
+    return () => window.removeEventListener('pushNavigate', handlePushNavigation);
+  }, []);
 
   // Hide splash screen when app is ready
   useEffect(() => {
@@ -232,6 +263,11 @@ function AppContent() {
       <SecureAccountModal 
         isOpen={showSecureModal}
         onClose={() => setShowSecureModal(false)}
+      />
+      <FriendsListModal
+        isOpen={showFriendsList}
+        onClose={() => setShowFriendsList(false)}
+        onMatchFound={setMatchId}
       />
     </>
   );

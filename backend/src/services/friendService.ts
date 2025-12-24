@@ -6,6 +6,7 @@ import { MatchModel } from '../models/Match';
 import { PuzzleModel } from '../models/Puzzle';
 import { query } from '../config/database';
 import { cache, CacheKeys, CacheTTL } from './cacheService';
+import { sendPushToPlayer } from './pushService';
 
 const DEFAULT_LADDER_ID = 1;
 
@@ -90,6 +91,14 @@ export const FriendService = {
         };
       }
 
+      // Send push notification to recipient
+      sendPushToPlayer(
+        targetPlayerId,
+        'New Friend Request',
+        `${profile.display_name || 'Someone'} wants to be your friend!`,
+        { type: 'friend_request', requestId: String(request.id) }
+      ).catch(err => console.error('Push notification failed:', err));
+
       // Get full details
       const pending = await FriendshipModel.getPendingRequestsSent(profile.id);
       const fullRequest = pending.find(r => r.id === request.id);
@@ -150,6 +159,14 @@ export const FriendService = {
         };
       }
 
+      // Send push notification to recipient
+      sendPushToPlayer(
+        toPlayerId,
+        'New Friend Request',
+        `${profile.display_name || 'Someone'} wants to be your friend!`,
+        { type: 'friend_request', requestId: String(request.id) }
+      ).catch(err => console.error('Push notification failed:', err));
+
       return { 
         success: true, 
         message: 'Friend request sent',
@@ -179,6 +196,14 @@ export const FriendService = {
         cache.invalidate(`friends:${otherPlayerId}`);
         cache.invalidate(`friend_count:${profile.id}`);
         cache.invalidate(`friend_count:${otherPlayerId}`);
+        
+        // Notify the original sender that their request was accepted
+        sendPushToPlayer(
+          otherPlayerId,
+          'Friend Request Accepted',
+          `${profile.display_name || 'Someone'} accepted your friend request!`,
+          { type: 'friend_accepted', friendId: String(profile.id) }
+        ).catch(err => console.error('Push notification failed:', err));
       }
       
       return { success: true, message: 'Friend request accepted' };
@@ -329,6 +354,14 @@ export const FriendService = {
       this.cleanupExpiredRequest(request.id);
     }, Math.max(0, timeUntilExpiry));
 
+    // Send push notification to friend
+    sendPushToPlayer(
+      friendId,
+      'Match Request!',
+      `${profile.display_name || 'A friend'} wants to play now!`,
+      { type: 'match_request', requestId: String(request.id) }
+    ).catch(err => console.error('Push notification failed:', err));
+
     return {
       success: true,
       requestId: request.id,
@@ -401,6 +434,14 @@ export const FriendService = {
 
     // Clean up memory
     this.cleanupExpiredRequest(requestId);
+
+    // Notify the sender that match is starting
+    sendPushToPlayer(
+      request.from_player_id,
+      'Match Starting!',
+      `${profile.display_name || 'Your friend'} accepted - game starting!`,
+      { type: 'match_accepted', matchId: String(match.id) }
+    ).catch(err => console.error('Push notification failed:', err));
 
     return {
       success: true,
