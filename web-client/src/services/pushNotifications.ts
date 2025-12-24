@@ -7,6 +7,8 @@ let currentToken: string | null = null;
 let isRegistering = false;
 
 export async function initPushNotifications(): Promise<void> {
+  console.log('🔔 initPushNotifications called');
+  
   if (!Capacitor.isNativePlatform()) {
     console.log('Push notifications only available on native platforms');
     return;
