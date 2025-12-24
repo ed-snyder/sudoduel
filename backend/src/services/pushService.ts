@@ -30,28 +30,16 @@ export function initFirebase() {
     console.log('🔑 Private key length:', parsed.private_key?.length);
     console.log('🔑 Private key has real newlines:', parsed.private_key?.includes('\n'));
     
+    // Store credentials for HTTP API
+    serviceAccountCredentials = parsed;
+    
     admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: parsed.project_id,
     });
     initialized = true;
     console.log('✅ Firebase Admin initialized');
-    
-    // Test OAuth token generation (async, runs in background)
-    (async () => {
-      try {
-        const auth = new GoogleAuth({
-          credentials: parsed,
-          scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
-        });
-        const client = await auth.getClient();
-        const token = await client.getAccessToken();
-        console.log('✅ OAuth token generated successfully, token starts with:', token.token?.substring(0, 20));
-      } catch (tokenError: any) {
-        console.error('❌ OAuth token generation failed:', tokenError.message);
-        console.error('❌ Full error:', JSON.stringify(tokenError, null, 2));
-      }
-    })();
+    console.log('✅ Using FCM HTTP v1 API directly');
   } catch (error) {
     console.error('❌ Firebase init failed:', error);
   }
@@ -61,13 +49,16 @@ export function isFirebaseInitialized(): boolean {
   return initialized;
 }
 
+// Store parsed credentials for HTTP API
+let serviceAccountCredentials: any = null;
+
 export async function sendPushToUser(
   userId: number,
   title: string,
   body: string,
   data?: Record<string, string>
 ): Promise<void> {
-  if (!initialized) {
+  if (!initialized || !serviceAccountCredentials) {
     console.log('Push skipped - Firebase not initialized');
     return;
   }
@@ -83,54 +74,86 @@ export async function sendPushToUser(
       return;
     }
 
-    const tokens = result.rows.map(r => r.token);
+    // Get OAuth token using google-auth-library
+    const auth = new GoogleAuth({
+      credentials: serviceAccountCredentials,
+      scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+    });
+    const client = await auth.getClient();
+    const accessToken = await client.getAccessToken();
+    
+    if (!accessToken.token) {
+      console.error('❌ Failed to get access token');
+      return;
+    }
 
-    const message: admin.messaging.MulticastMessage = {
-      tokens,
-      notification: {
-        title,
-        body,
-      },
-      data: data || {},
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
+    const projectId = serviceAccountCredentials.project_id;
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const row of result.rows) {
+      const token = row.token;
+      
+      const message = {
+        message: {
+          token: token,
+          notification: {
+            title,
+            body,
+          },
+          data: data || {},
+          apns: {
+            payload: {
+              aps: {
+                sound: 'default',
+                badge: 1,
+              },
+            },
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              sound: 'default',
+              channel_id: 'sudoduel_default',
+            },
           },
         },
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          channelId: 'sudoduel_default',
-        },
-      },
-    };
+      };
 
-    const response = await admin.messaging().sendEachForMulticast(message);
-    console.log(`📱 Push sent to user ${userId}: ${response.successCount} success, ${response.failureCount} failed`);
+      try {
+        const response = await fetch(
+          `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+          }
+        );
 
-    // Log detailed error info for debugging
-    if (response.failureCount > 0) {
-      const tokensToRemove: string[] = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          console.error(`❌ Push failed for token ${tokens[idx].substring(0, 20)}...: ${resp.error?.code} - ${resp.error?.message}`);
-          if (resp.error?.code === 'messaging/registration-token-not-registered') {
-            tokensToRemove.push(tokens[idx]);
+        if (response.ok) {
+          successCount++;
+          console.log(`✅ Push sent to token ${token.substring(0, 20)}...`);
+        } else {
+          failureCount++;
+          const errorBody = await response.text();
+          console.error(`❌ Push failed for token ${token.substring(0, 20)}...: ${response.status} - ${errorBody}`);
+          
+          // Clean up invalid tokens
+          if (response.status === 404 || errorBody.includes('UNREGISTERED')) {
+            await query('DELETE FROM device_tokens WHERE token = $1', [token]);
+            console.log(`🧹 Cleaned up invalid token`);
           }
         }
-      });
-      if (tokensToRemove.length > 0) {
-        await query(
-          'DELETE FROM device_tokens WHERE token = ANY($1)',
-          [tokensToRemove]
-        );
-        console.log(`🧹 Cleaned up ${tokensToRemove.length} invalid tokens`);
+      } catch (fetchError: any) {
+        failureCount++;
+        console.error(`❌ Fetch error for token ${token.substring(0, 20)}...: ${fetchError.message}`);
       }
     }
+
+    console.log(`📱 Push sent to user ${userId}: ${successCount} success, ${failureCount} failed`);
   } catch (error) {
     console.error('Push notification error:', error);
   }
