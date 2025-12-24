@@ -86,8 +86,11 @@ export async function sendPushToUser(
       console.error('❌ Failed to get access token');
       return;
     }
+    
+    console.log('🔑 Got access token for push, starts with:', accessToken.token.substring(0, 20));
 
     const projectId = serviceAccountCredentials.project_id;
+    console.log('📤 Sending to FCM project:', projectId);
     let successCount = 0;
     let failureCount = 0;
 
@@ -121,9 +124,10 @@ export async function sendPushToUser(
       };
 
       try {
-        const response = await fetch(
-          `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-          {
+        const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+        console.log('📤 FCM URL:', url);
+        
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
