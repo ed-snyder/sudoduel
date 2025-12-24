@@ -27,3 +27,6 @@ Thumbs.db
 *.swp
 *.swo
 
+*.ipa
+DistributionSummary.plist
+ExportOptions.plist
