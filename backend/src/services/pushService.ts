@@ -15,10 +15,19 @@ export function initFirebase() {
 
   try {
     const parsed = JSON.parse(serviceAccount);
+    
+    // Fix private key if newlines are escaped as literal \n
+    if (parsed.private_key && !parsed.private_key.includes('\n')) {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+      console.log('🔑 Fixed escaped newlines in private key');
+    }
+    
     console.log('🔑 Service account project:', parsed.project_id);
     console.log('🔑 Service account email:', parsed.client_email);
     console.log('🔑 Private key starts with:', parsed.private_key?.substring(0, 30));
-    console.log('🔑 Private key has newlines:', parsed.private_key?.includes('\n'));
+    console.log('🔑 Private key ends with:', parsed.private_key?.substring(parsed.private_key.length - 30));
+    console.log('🔑 Private key length:', parsed.private_key?.length);
+    console.log('🔑 Private key has real newlines:', parsed.private_key?.includes('\n'));
     
     admin.initializeApp({
       credential: admin.credential.cert(parsed),
