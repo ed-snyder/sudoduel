@@ -1,43 +1,8 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { query } from '../config/database';
-import { sendPushToUser, isFirebaseInitialized } from '../services/pushService';
 
 const router = Router();
-
-// GET /api/notifications/test - Test push (REMOVE AFTER TESTING)
-router.get('/test', authMiddleware, async (req: AuthRequest, res: Response) => {
-  console.log('🧪 Test push endpoint called');
-  console.log('Firebase initialized:', isFirebaseInitialized());
-  
-  try {
-    // Check if user has tokens
-    const tokenResult = await query(
-      'SELECT token, platform FROM device_tokens WHERE user_id = $1',
-      [req.userId]
-    );
-    console.log(`User ${req.userId} has ${tokenResult.rows.length} device tokens`);
-    tokenResult.rows.forEach((row, i) => {
-      console.log(`  Token ${i + 1}: ${row.token.substring(0, 30)}... (${row.platform})`);
-    });
-    
-    await sendPushToUser(
-      req.userId!,
-      'Test Push 🎉',
-      'This is a test notification from Sudoduel!',
-      { type: 'test' }
-    );
-    
-    res.json({
-      success: true,
-      firebaseInitialized: isFirebaseInitialized(),
-      tokensFound: tokenResult.rows.length,
-    });
-  } catch (error: any) {
-    console.error('Test push error:', error);
-    res.json({ success: false, error: error.message });
-  }
-});
 
 // POST /api/notifications/register - Register device token
 router.post('/register', authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -67,7 +32,6 @@ router.post('/register', authMiddleware, async (req: AuthRequest, res: Response)
       [req.userId, playerId, token, platform]
     );
 
-    console.log(`📱 Device token registered: user=${req.userId}, platform=${platform}`);
     res.json({ success: true });
   } catch (error: any) {
     console.error('Register token error:', error);
@@ -85,14 +49,12 @@ router.post('/unregister', authMiddleware, async (req: AuthRequest, res: Respons
         'DELETE FROM device_tokens WHERE user_id = $1 AND token = $2',
         [req.userId, token]
       );
-      console.log(`📱 Device token unregistered: user=${req.userId}`);
     } else {
       // Remove all tokens for this user
       await query(
         'DELETE FROM device_tokens WHERE user_id = $1',
         [req.userId]
       );
-      console.log(`📱 All device tokens unregistered: user=${req.userId}`);
     }
 
     res.json({ success: true });
@@ -103,4 +65,3 @@ router.post('/unregister', authMiddleware, async (req: AuthRequest, res: Respons
 });
 
 export default router;
-

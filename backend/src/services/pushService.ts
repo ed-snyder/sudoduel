@@ -1,5 +1,4 @@
 import admin from 'firebase-admin';
-import { GoogleAuth } from 'google-auth-library';
 import { query } from '../config/database';
 
 // Initialize Firebase Admin SDK (call once at server startup)
@@ -20,18 +19,7 @@ export function initFirebase() {
     // Fix private key if newlines are escaped as literal \n
     if (parsed.private_key && !parsed.private_key.includes('\n')) {
       parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
-      console.log('🔑 Fixed escaped newlines in private key');
     }
-    
-    console.log('🔑 Service account project:', parsed.project_id);
-    console.log('🔑 Service account email:', parsed.client_email);
-    console.log('🔑 Private key starts with:', parsed.private_key?.substring(0, 30));
-    console.log('🔑 Private key ends with:', parsed.private_key?.substring(parsed.private_key.length - 30));
-    console.log('🔑 Private key length:', parsed.private_key?.length);
-    console.log('🔑 Private key has real newlines:', parsed.private_key?.includes('\n'));
-    
-    // Store credentials for HTTP API
-    serviceAccountCredentials = parsed;
     
     admin.initializeApp({
       credential: admin.credential.cert(parsed),
@@ -39,7 +27,6 @@ export function initFirebase() {
     });
     initialized = true;
     console.log('✅ Firebase Admin initialized');
-    console.log('✅ Using FCM HTTP v1 API directly');
   } catch (error) {
     console.error('❌ Firebase init failed:', error);
   }
@@ -49,9 +36,6 @@ export function isFirebaseInitialized(): boolean {
   return initialized;
 }
 
-// Store parsed credentials for HTTP API
-let serviceAccountCredentials: any = null;
-
 export async function sendPushToUser(
   userId: number,
   title: string,
@@ -59,7 +43,6 @@ export async function sendPushToUser(
   data?: Record<string, string>
 ): Promise<void> {
   if (!initialized) {
-    console.log('Push skipped - Firebase not initialized');
     return;
   }
 
@@ -70,7 +53,6 @@ export async function sendPushToUser(
     );
 
     if (result.rows.length === 0) {
-      console.log(`No device tokens for user ${userId}`);
       return;
     }
 
@@ -79,7 +61,6 @@ export async function sendPushToUser(
 
     for (const row of result.rows) {
       const token = row.token;
-      console.log(`📤 Sending push to token: ${token.substring(0, 30)}...`);
       
       const message: admin.messaging.Message = {
         token: token,
@@ -106,30 +87,23 @@ export async function sendPushToUser(
       };
 
       try {
-        const messageId = await admin.messaging().send(message);
+        await admin.messaging().send(message);
         successCount++;
-        console.log(`✅ Push sent successfully, messageId: ${messageId}`);
       } catch (sendError: any) {
         failureCount++;
-        console.error(`❌ Push failed for token ${token.substring(0, 20)}...`);
-        console.error(`   Error code: ${sendError.code}`);
-        console.error(`   Error message: ${sendError.message}`);
-        
-        // Log full error details
-        if (sendError.errorInfo) {
-          console.error(`   Error info:`, JSON.stringify(sendError.errorInfo, null, 2));
-        }
+        console.error(`Push failed: ${sendError.code} - ${sendError.message}`);
         
         // Clean up invalid tokens
         if (sendError.code === 'messaging/registration-token-not-registered' ||
             sendError.code === 'messaging/invalid-registration-token') {
           await query('DELETE FROM device_tokens WHERE token = $1', [token]);
-          console.log(`🧹 Cleaned up invalid token`);
         }
       }
     }
 
-    console.log(`📱 Push sent to user ${userId}: ${successCount} success, ${failureCount} failed`);
+    if (failureCount > 0) {
+      console.log(`📱 Push to user ${userId}: ${successCount} success, ${failureCount} failed`);
+    }
   } catch (error) {
     console.error('Push notification error:', error);
   }
@@ -153,4 +127,3 @@ export async function sendPushToPlayer(
     console.error('sendPushToPlayer error:', error);
   }
 }
-
