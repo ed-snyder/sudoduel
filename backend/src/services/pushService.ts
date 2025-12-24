@@ -79,12 +79,15 @@ export async function sendPushToUser(
     const response = await admin.messaging().sendEachForMulticast(message);
     console.log(`📱 Push sent to user ${userId}: ${response.successCount} success, ${response.failureCount} failed`);
 
-    // Clean up invalid tokens
+    // Log detailed error info for debugging
     if (response.failureCount > 0) {
       const tokensToRemove: string[] = [];
       response.responses.forEach((resp, idx) => {
-        if (!resp.success && resp.error?.code === 'messaging/registration-token-not-registered') {
-          tokensToRemove.push(tokens[idx]);
+        if (!resp.success) {
+          console.error(`❌ Push failed for token ${tokens[idx].substring(0, 20)}...: ${resp.error?.code} - ${resp.error?.message}`);
+          if (resp.error?.code === 'messaging/registration-token-not-registered') {
+            tokensToRemove.push(tokens[idx]);
+          }
         }
       });
       if (tokensToRemove.length > 0) {
