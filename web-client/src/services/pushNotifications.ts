@@ -1,5 +1,6 @@
 import { PushNotifications } from '@capacitor/push-notifications';
-import type { Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
+import type { PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
+import { FCM } from '@capacitor-community/fcm';
 import { Capacitor } from '@capacitor/core';
 import { api } from '../config';
 
@@ -22,7 +23,6 @@ export async function initPushNotifications(): Promise<void> {
   isRegistering = true;
 
   try {
-    // Check current permission status
     let permStatus = await PushNotifications.checkPermissions();
     
     if (permStatus.receive === 'prompt') {
@@ -35,36 +35,33 @@ export async function initPushNotifications(): Promise<void> {
       return;
     }
 
-    // Register listeners before calling register()
-    await PushNotifications.addListener('registration', async (token: Token) => {
-      console.log('📱 Push registration success:', token.value.substring(0, 20) + '...');
-      currentToken = token.value;
-      
-      try {
-        await api.post('/api/notifications/register', {
-          token: token.value,
-          platform: Capacitor.getPlatform(),
-        });
-        console.log('✅ Device token sent to backend');
-      } catch (error) {
-        console.error('Failed to register token with backend:', error);
-      }
-    });
+    // Register with APNs first
+    await PushNotifications.register();
+    
+    // Get the FCM token (this is what Firebase needs!)
+    const fcmToken = await FCM.getToken();
+    console.log('📱 FCM Token:', fcmToken.token.substring(0, 30) + '...');
+    currentToken = fcmToken.token;
+    
+    try {
+      await api.post('/api/notifications/register', {
+        token: fcmToken.token,
+        platform: Capacitor.getPlatform(),
+      });
+      console.log('✅ FCM token sent to backend');
+    } catch (error) {
+      console.error('Failed to register token with backend:', error);
+    }
 
-    await PushNotifications.addListener('registrationError', (error) => {
-      console.error('❌ Push registration error:', JSON.stringify(error));
-    });
-
+    // Set up listeners for foreground notifications
     await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
       console.log('Push received in foreground:', notification);
-      // Could show an in-app toast/notification here
     });
 
     await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
       console.log('Push notification tapped:', action);
       const data = action.notification.data;
       
-      // Handle navigation based on notification type
       if (data?.type === 'friend_request' || data?.type === 'friend_accepted') {
         window.dispatchEvent(new CustomEvent('pushNavigate', { detail: { screen: 'friends' } }));
       } else if (data?.type === 'match_request' || data?.type === 'match_accepted') {
@@ -74,9 +71,7 @@ export async function initPushNotifications(): Promise<void> {
       }
     });
 
-    // Register with APNs/FCM
-    await PushNotifications.register();
-    console.log('📱 Push notification registration initiated');
+    console.log('📱 Push notification setup complete');
     
   } catch (error) {
     console.error('Push notification init error:', error);
@@ -101,4 +96,3 @@ export async function unregisterPushNotifications(): Promise<void> {
 export function getCurrentToken(): string | null {
   return currentToken;
 }
-

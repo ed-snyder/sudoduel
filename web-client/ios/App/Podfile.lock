@@ -17,6 +17,9 @@ PODS:
     - GoogleUserMessagingPlatform (= 3.0.0)
   - CapacitorCommunityAppleSignIn (7.1.0):
     - Capacitor
+  - CapacitorCommunityFcm (8.0.1):
+    - Capacitor
+    - FirebaseMessaging
   - CapacitorCommunityInAppReview (7.1.0):
     - Capacitor
   - CapacitorCordova (7.4.4)
@@ -106,6 +109,7 @@ DEPENDENCIES:
   - "CapacitorBrowser (from `../../../node_modules/@capacitor/browser`)"
   - "CapacitorCommunityAdmob (from `../../../node_modules/@capacitor-community/admob`)"
   - "CapacitorCommunityAppleSignIn (from `../../../node_modules/@capacitor-community/apple-sign-in`)"
+  - "CapacitorCommunityFcm (from `../../../node_modules/@capacitor-community/fcm`)"
   - "CapacitorCommunityInAppReview (from `../../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
@@ -146,6 +150,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@capacitor-community/admob"
   CapacitorCommunityAppleSignIn:
     :path: "../../../node_modules/@capacitor-community/apple-sign-in"
+  CapacitorCommunityFcm:
+    :path: "../../../node_modules/@capacitor-community/fcm"
   CapacitorCommunityInAppReview:
     :path: "../../../node_modules/@capacitor-community/in-app-review"
   CapacitorCordova:
@@ -172,6 +178,7 @@ SPEC CHECKSUMS:
   CapacitorBrowser: b98aa3db018a2ce4c68242d27e596c344f3b81b3
   CapacitorCommunityAdmob: 04498ca8d01a097aa7d9d80584094b6b3419ec3f
   CapacitorCommunityAppleSignIn: 271cb2860576fd2961508bbfa7a82117d93eadca
+  CapacitorCommunityFcm: c4f37be670f54d74099169466ff9cca386b4f4a9
   CapacitorCommunityInAppReview: 3756d05524c5cf2eccbc8ed460f77f8f8db6c141
   CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
   CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
@@ -195,6 +202,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: 367e40a363216ef0955340275a26d4995af51486
+PODFILE CHECKSUM: 14aac37df07f48b11068873ba9cbbe1a8d8eb87c
 
 COCOAPODS: 1.16.2
