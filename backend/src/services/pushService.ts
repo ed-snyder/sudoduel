@@ -22,6 +22,7 @@ export function initFirebase() {
     
     admin.initializeApp({
       credential: admin.credential.cert(parsed),
+      projectId: parsed.project_id,
     });
     initialized = true;
     console.log('✅ Firebase Admin initialized');
