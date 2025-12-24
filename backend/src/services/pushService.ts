@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { GoogleAuth } from 'google-auth-library';
 import { query } from '../config/database';
 
 // Initialize Firebase Admin SDK (call once at server startup)
@@ -35,6 +36,20 @@ export function initFirebase() {
     });
     initialized = true;
     console.log('✅ Firebase Admin initialized');
+    
+    // Test OAuth token generation
+    try {
+      const auth = new GoogleAuth({
+        credentials: parsed,
+        scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+      });
+      const client = await auth.getClient();
+      const token = await client.getAccessToken();
+      console.log('✅ OAuth token generated successfully, token starts with:', token.token?.substring(0, 20));
+    } catch (tokenError: any) {
+      console.error('❌ OAuth token generation failed:', tokenError.message);
+      console.error('❌ Full error:', JSON.stringify(tokenError, null, 2));
+    }
   } catch (error) {
     console.error('❌ Firebase init failed:', error);
   }
