@@ -14,8 +14,14 @@ export function initFirebase() {
   }
 
   try {
+    const parsed = JSON.parse(serviceAccount);
+    console.log('🔑 Service account project:', parsed.project_id);
+    console.log('🔑 Service account email:', parsed.client_email);
+    console.log('🔑 Private key starts with:', parsed.private_key?.substring(0, 30));
+    console.log('🔑 Private key has newlines:', parsed.private_key?.includes('\n'));
+    
     admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(serviceAccount)),
+      credential: admin.credential.cert(parsed),
     });
     initialized = true;
     console.log('✅ Firebase Admin initialized');
