@@ -467,8 +467,8 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
         </div>
       </div>
 
-      {/* Main Action Area - More space for premium users */}
-      <div className={`flex-1 flex flex-col items-center px-4 py-2 relative z-20 ${isPremium ? 'justify-start pt-6' : 'justify-center'}`}>
+      {/* Main Action Area */}
+      <div className="flex-1 flex flex-col items-center justify-start pt-6 px-4 py-2 relative z-20">
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
@@ -503,9 +503,9 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
           </div>
         ) : (
           <>
-            <div className={`w-full max-w-sm ${isPremium ? 'mb-5' : 'mb-3'}`}>
+            <div className="w-full max-w-sm mb-5">
               {/* Next Challenge Countdown */}
-              <div className={`text-center ${isPremium ? 'mb-4' : 'mb-2'}`}>
+              <div className="text-center mb-4">
                 <span className="text-muted text-sm font-body">Next Challenge: </span>
                 <span className="text-player font-mono text-sm">{nextChallengeCountdown}</span>
               </div>
@@ -557,13 +557,13 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
 
             <button
               onClick={handleFindMatch}
-              className={`w-full max-w-sm py-4 bg-void border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse ${isPremium ? 'mb-2' : ''}`}
+              className="w-full max-w-sm py-4 bg-void border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse mb-2"
             >
               Find Match
             </button>
 
             {/* Discord & Invite Buttons - Side by side */}
-            <div className={`flex gap-2 w-full max-w-sm ${isPremium ? 'mt-5' : 'mt-3'}`}>
+            <div className="flex gap-2 w-full max-w-sm mt-5">
               {/* Discord Button */}
               <button
                 onClick={() => Browser.open({ url: 'https://discord.gg/24u2NKcQ' })}
