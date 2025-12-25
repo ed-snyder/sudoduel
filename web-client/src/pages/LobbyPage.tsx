@@ -285,7 +285,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
       <BackgroundEffects />
       
       {/* Header with Logo */}
-      <div className="px-4 pt-14 pb-2 flex flex-col items-center safe-top relative z-20">
+      <div className={`px-4 pb-2 flex flex-col items-center safe-top relative z-20 ${isPremium ? 'pt-20' : 'pt-14'}`}>
         <SudoDuelLogo size="xl" />
       </div>
       
