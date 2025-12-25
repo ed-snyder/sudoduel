@@ -59,6 +59,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
   const [rankData, setRankData] = useState<UserRank | null>(null);
   const [rankLoading, setRankLoading] = useState(true);
   const [nextChallengeCountdown, setNextChallengeCountdown] = useState('');
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
@@ -466,8 +467,8 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
         </div>
       </div>
 
-      {/* Main Action Area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-2 relative z-20">
+      {/* Main Action Area - More space for premium users */}
+      <div className={`flex-1 flex flex-col items-center px-4 py-2 relative z-20 ${isPremium ? 'justify-start pt-6' : 'justify-center'}`}>
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
@@ -502,9 +503,9 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
           </div>
         ) : (
           <>
-            <div className="w-full max-w-sm mb-3">
+            <div className={`w-full max-w-sm ${isPremium ? 'mb-5' : 'mb-3'}`}>
               {/* Next Challenge Countdown */}
-              <div className="text-center mb-2">
+              <div className={`text-center ${isPremium ? 'mb-4' : 'mb-2'}`}>
                 <span className="text-muted text-sm font-body">Next Challenge: </span>
                 <span className="text-player font-mono text-sm">{nextChallengeCountdown}</span>
               </div>
@@ -556,13 +557,13 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
 
             <button
               onClick={handleFindMatch}
-              className="w-full max-w-sm py-4 bg-void border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse"
+              className={`w-full max-w-sm py-4 bg-void border-2 border-player text-player text-lg font-display font-black uppercase tracking-widest rounded-xl hover:bg-player/20 hover:shadow-glow-player-intense active:scale-[0.98] transition-all animate-glow-pulse ${isPremium ? 'mb-2' : ''}`}
             >
               Find Match
             </button>
 
             {/* Discord & Invite Buttons - Side by side */}
-            <div className="flex gap-2 w-full max-w-sm mt-3">
+            <div className={`flex gap-2 w-full max-w-sm ${isPremium ? 'mt-5' : 'mt-3'}`}>
               {/* Discord Button */}
               <button
                 onClick={() => Browser.open({ url: 'https://discord.gg/24u2NKcQ' })}
@@ -583,6 +584,8 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
                 onClick={async () => {
                   await navigator.clipboard.writeText('Play me in Sudoduel! https://apps.apple.com/us/app/sudoduel-sudoku-multiplayer/id6756116702');
                   vibrate();
+                  setShowCopiedToast(true);
+                  setTimeout(() => setShowCopiedToast(false), 2000);
                 }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all hover:scale-105 active:scale-95 shimmer-button magenta-glow-pulse"
                 style={{
@@ -602,6 +605,25 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
         )}
       </div>
       
+      {/* Copied to Clipboard Toast */}
+      {showCopiedToast && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-scale-in">
+          <div 
+            className="px-6 py-4 rounded-xl text-center"
+            style={{
+              background: 'rgba(20, 10, 30, 0.95)',
+              border: '2px solid rgba(255, 0, 255, 0.6)',
+              boxShadow: '0 0 30px rgba(255, 0, 255, 0.4)',
+            }}
+          >
+            <div className="text-2xl mb-2">📋</div>
+            <p className="font-body font-semibold" style={{ color: '#FF00FF' }}>
+              Copied link to clipboard!
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Modals - Only render when open, wrapped with Suspense */}
       {showPlayerInfo && (
         <Suspense fallback={<ModalLoader />}>
