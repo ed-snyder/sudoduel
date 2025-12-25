@@ -468,7 +468,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
       </div>
 
       {/* Main Action Area */}
-      <div className={`flex-1 flex flex-col items-center justify-start px-4 py-2 relative z-20 ${isPremium ? 'pt-11' : 'pt-6'}`}>
+      <div className={`flex-1 flex flex-col items-center px-4 py-2 relative z-20 ${isPremium ? 'justify-center' : 'justify-start pt-6'}`}>
         {error && (
           <div 
             className="w-full max-w-sm mb-4 px-4 py-3 bg-void bg-error/10 border border-error/50 rounded-lg"
