@@ -253,7 +253,7 @@ export default function SettingsModal({ isOpen, onClose, onReplayTutorial }: Set
 
           {/* About */}
           <div className="px-4 py-4">
-            <span className="font-body text-muted text-sm">SudoDuel v1.0.3</span>
+            <span className="font-body text-muted text-sm">SudoDuel v1.0.5</span>
           </div>
 
           {/* Replay Tutorial */}
