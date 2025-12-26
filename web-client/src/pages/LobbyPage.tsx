@@ -607,9 +607,9 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
       
       {/* Copied to Clipboard Toast */}
       {showCopiedToast && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div 
-            className="px-6 py-4 rounded-xl text-center"
+            className="px-6 py-4 rounded-xl text-center animate-scale-in"
             style={{
               background: 'rgba(20, 10, 30, 0.95)',
               border: '2px solid rgba(255, 0, 255, 0.6)',
