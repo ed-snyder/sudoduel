@@ -767,14 +767,8 @@ export const GameStateManager = {
       return true;
     }
 
-    // Condition 2: BOT MATCH SPECIAL - If human (player1) locks out, bot wins immediately
-    // This prevents the game from hanging when the human times out
-    if (game.isBotMatch && p1.isLocked && !p2.isLocked) {
-      console.log(`[checkVictoryConditions] Match ${matchId} ✅ BOT VICTORY: Human (P1) locked out, bot wins immediately (P1: score=${p1.score}, P2: score=${p2.score})`);
-      return true;
-    }
-
-    // Condition 3 & 4: One player is locked and the other has surpassed their score
+    // Condition 2 & 3: One player is locked and the other has surpassed their score
+    // This allows the remaining player to continue and try to catch up
     if (p1.isLocked && !p2.isLocked && p2.score > p1.score) {
       if (game.isBotMatch) {
         console.log(`[checkVictoryConditions] Match ${matchId} ✅ VICTORY: P1 locked, P2 ahead (P1: score=${p1.score}, P2: score=${p2.score})`);
@@ -788,7 +782,7 @@ export const GameStateManager = {
       return true;
     }
 
-    // Condition 5: Both players are locked out
+    // Condition 4: Both players are locked out
     if (p1.isLocked && p2.isLocked) {
       return true;
     }
