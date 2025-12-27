@@ -391,12 +391,11 @@ export default function InteractiveTutorial({
     }
   }, [onComplete, playButtonTap, impact]);
 
-  // Handle skip - call onSkip FIRST to ensure UI updates, then sync to server
+  // Handle skip - call onSkip to exit tutorial
   const handleSkip = useCallback(() => {
-    console.log('[Tutorial] handleSkip called');
+    console.log('[Tutorial] handleSkip called - calling onSkip directly');
     playButtonTap();
     impact('medium');
-    setShowSkipConfirm(false);
     
     // Mark complete in localStorage immediately
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
@@ -406,12 +405,11 @@ export default function InteractiveTutorial({
       console.error('[Tutorial] Failed to sync tutorial complete to server:', error);
     });
     
-    // Call onSkip - use setTimeout to ensure state updates propagate
-    console.log('[Tutorial] Scheduling onSkip callback...');
-    setTimeout(() => {
-      console.log('[Tutorial] Calling onSkip callback now');
-      onSkip();
-    }, 0);
+    // Call onSkip DIRECTLY - this should update parent state and exit tutorial
+    onSkip();
+    
+    // Close modal after callback (in case component doesn't unmount immediately)
+    setShowSkipConfirm(false);
   }, [onSkip, playButtonTap, impact]);
 
   // Calculate progress percentages

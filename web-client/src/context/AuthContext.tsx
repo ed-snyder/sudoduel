@@ -193,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const clearJustSignedUp = () => {
+    console.log('[AuthContext] clearJustSignedUp called - setting to false');
     setJustSignedUp(false);
   };
 

@@ -623,7 +623,7 @@ export default function LobbyPage({ onMatchFound, onStartSoloMode, onSecureAccou
           </div>
         </div>
       )}
-
+      
       {/* Modals - Only render when open, wrapped with Suspense */}
       {showPlayerInfo && (
         <Suspense fallback={<ModalLoader />}>

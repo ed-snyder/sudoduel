@@ -173,19 +173,16 @@ function AppContent() {
   
   // Handle tutorial skip (no skill selection made)
   const handleTutorialSkip = useCallback(() => {
-    console.log('[App] handleTutorialSkip called');
+    console.log('[App] handleTutorialSkip called - clearing justSignedUp');
     
-    // Clear flag IMMEDIATELY to exit tutorial
-    console.log('[App] Clearing justSignedUp flag...');
-    clearJustSignedUp();
+    // Set localStorage first as backup
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
-    console.log('[App] Tutorial skip complete - UI should update now');
     
-    // Refresh user data in background (don't block UI)
-    refreshUser().catch((error) => {
-      console.error('[App] Failed to refresh user after skip:', error);
-    });
-  }, [clearJustSignedUp, refreshUser]);
+    // Clear the flag - this should cause re-render and exit tutorial
+    clearJustSignedUp();
+    
+    console.log('[App] justSignedUp cleared, tutorial should exit');
+  }, [clearJustSignedUp]);
 
   // Handle display name setup completion
   const handleDisplayNameComplete = () => {
