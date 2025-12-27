@@ -823,12 +823,19 @@ export default function InteractiveTutorial({
         {/* Grid section */}
         <div className="flex-1 flex items-center justify-center px-2">
           <div 
-            className={`relative w-full max-w-full transition-opacity duration-300 ${
+            className={`transition-opacity duration-300 ${
               isGridDimmed ? 'opacity-40' : 'opacity-100'
             }`}
             style={{ pointerEvents: isGridDimmed ? 'none' : 'auto' }}
           >
-            <div className={`w-full flex justify-center ${highlightEntireGrid ? 'tutorial-grid-glow' : ''}`}>
+            {/* This wrapper matches the grid's size and positioning */}
+            <div 
+              className={`relative ${highlightEntireGrid ? 'tutorial-grid-glow' : ''}`}
+              style={{
+                aspectRatio: '1 / 1',
+                width: 'min(100vw - 24px, 400px)',
+              }}
+            >
               <SudokuGrid
                 grid={displayGrid}
                 initialGrid={displayInitialGrid}
@@ -847,23 +854,23 @@ export default function InteractiveTutorial({
                 highlightEntireGrid={highlightEntireGrid}
                 dimNonHighlighted={highlightRow !== null || highlightCol !== null || highlightBox !== null}
               />
+              
+              {/* Highlighted cell overlay - positioned relative to grid */}
+              {highlightedCell && !isGridDimmed && (
+                <div 
+                  className="absolute pointer-events-none cell-highlight-pulse"
+                  style={{
+                    left: `${(highlightedCell.col / 9) * 100}%`,
+                    top: `${(highlightedCell.row / 9) * 100}%`,
+                    width: `${100 / 9}%`,
+                    height: `${100 / 9}%`,
+                    border: '3px solid #00FFFF',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              )}
             </div>
-            
-            {/* Highlighted cell overlay */}
-            {highlightedCell && !isGridDimmed && (
-              <div 
-                className="absolute pointer-events-none cell-highlight-pulse"
-                style={{
-                  left: `${(highlightedCell.col / 9) * 100}%`,
-                  top: `${(highlightedCell.row / 9) * 100}%`,
-                  width: `${100 / 9}%`,
-                  height: `${100 / 9}%`,
-                  border: '3px solid #00FFFF',
-                  borderRadius: '4px',
-                  boxSizing: 'border-box',
-                }}
-              />
-            )}
           </div>
         </div>
 
