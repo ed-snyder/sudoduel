@@ -855,7 +855,7 @@ export default function InteractiveTutorial({
                 dimNonHighlighted={highlightRow !== null || highlightCol !== null || highlightBox !== null}
               />
               
-              {/* Highlighted cell overlay - positioned relative to grid */}
+              {/* Highlighted cell overlay - positioned relative to grid, above grid z-index */}
               {highlightedCell && !isGridDimmed && (
                 <div 
                   className="absolute pointer-events-none cell-highlight-pulse"
@@ -867,6 +867,7 @@ export default function InteractiveTutorial({
                     border: '3px solid #00FFFF',
                     borderRadius: '4px',
                     boxSizing: 'border-box',
+                    zIndex: 50,
                   }}
                 />
               )}
