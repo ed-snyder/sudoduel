@@ -393,17 +393,23 @@ export default function InteractiveTutorial({
 
   // Handle skip
   const handleSkip = useCallback(async () => {
+    console.log('[Tutorial] handleSkip called');
     playButtonTap();
     impact('medium');
     setShowSkipConfirm(false);
     
     try {
+      console.log('[Tutorial] Calling markTutorialComplete API...');
       await playerAPI.markTutorialComplete();
+      console.log('[Tutorial] API call succeeded');
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
+      console.log('[Tutorial] Calling onSkip callback...');
       onSkip();
+      console.log('[Tutorial] onSkip callback finished');
     } catch (error) {
-      console.error('Failed to mark tutorial complete:', error);
+      console.error('[Tutorial] Failed to mark tutorial complete:', error);
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
+      console.log('[Tutorial] Calling onSkip callback after error...');
       onSkip();
     }
   }, [onSkip, playButtonTap, impact]);

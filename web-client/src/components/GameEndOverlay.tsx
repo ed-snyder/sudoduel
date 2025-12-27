@@ -71,7 +71,7 @@ const triggerHeavyHaptic = async () => {
 
 export default function GameEndOverlay({
   isActive,
-  reason,
+  reason: _reason,
   onComplete,
 }: GameEndOverlayProps) {
   const [phase, setPhase] = useState<'hidden' | 'showing' | 'exiting'>('hidden');
@@ -128,7 +128,7 @@ export default function GameEndOverlay({
     return null;
   }
 
-  const displayText = reason === 'timeout' ? "TIME'S UP!" : "GAME OVER!";
+  const displayText = "GAME OVER!";
   
   // Colors matching DEFEAT text style (magenta with cyan glow)
   const fillColor = '#FF00FF';

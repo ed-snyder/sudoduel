@@ -718,7 +718,7 @@ export default function SoloModePage({ onExit }: SoloModePageProps) {
                   : '0 0 30px rgba(255, 51, 102, 0.5)'
               }}
             >
-              {gameStatus === 'won' ? 'PUZZLE COMPLETE!' : "TIME'S UP!"}
+              {gameStatus === 'won' ? 'PUZZLE COMPLETE!' : "GAME OVER!"}
             </h1>
             
             <p className="text-secondary font-body text-lg">

@@ -173,15 +173,20 @@ function AppContent() {
   
   // Handle tutorial skip (no skill selection made)
   const handleTutorialSkip = async () => {
+    console.log('[App] handleTutorialSkip called');
     // Refresh user data
     try {
+      console.log('[App] Refreshing user...');
       await refreshUser();
+      console.log('[App] User refreshed');
     } catch (error) {
-      console.error('[Tutorial] Failed to refresh user on skip:', error);
+      console.error('[App] Failed to refresh user on skip:', error);
     }
     
+    console.log('[App] Clearing justSignedUp flag...');
     clearJustSignedUp();
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
+    console.log('[App] Tutorial skip complete');
   };
 
   // Handle display name setup completion
