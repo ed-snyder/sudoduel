@@ -5,7 +5,6 @@ import TutorialProgress from './TutorialProgress';
 import TutorialMessage from './TutorialMessage';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
 import { useHaptics } from '../../hooks/useHaptics';
-import { useAuth } from '../../context/AuthContext';
 import { playerAPI } from '../../services/api';
 import type { TutorialPhase } from './tutorialData';
 import { 
@@ -19,19 +18,15 @@ import './InteractiveTutorial.css';
 
 interface InteractiveTutorialProps {
   onComplete: () => void;
-  onSkip: () => void;
   onSkillSelect?: (level: 'beginner' | 'experienced') => Promise<void>;
   isReplay?: boolean;
 }
 
 export default function InteractiveTutorial({ 
   onComplete, 
-  onSkip, 
   onSkillSelect,
   isReplay = false,
 }: InteractiveTutorialProps) {
-  // Get clearJustSignedUp directly from context for reliable skip
-  const { clearJustSignedUp } = useAuth();
   
   // Core state
   const [phase, setPhase] = useState<TutorialPhase>('intro');
@@ -49,7 +44,6 @@ export default function InteractiveTutorial({
   const [practiceCount, setPracticeCount] = useState(0);
   const [showTimerDelta, setShowTimerDelta] = useState<{ value: number; key: number } | null>(null);
   const [showLockoutSplash, setShowLockoutSplash] = useState(false);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showShake, setShowShake] = useState(false);
   const [highlightedNumber, setHighlightedNumber] = useState<number | null>(null);
   const [highlightedCell, setHighlightedCell] = useState<{ row: number; col: number } | null>(null);
@@ -395,31 +389,6 @@ export default function InteractiveTutorial({
     }
   }, [onComplete, playButtonTap, impact]);
 
-  // Handle skip - directly clear justSignedUp to exit tutorial
-  const handleSkip = useCallback(() => {
-    console.log('[Tutorial] handleSkip called - clearing justSignedUp directly');
-    playButtonTap();
-    impact('medium');
-    
-    // Mark complete in localStorage immediately
-    localStorage.setItem('sudoduel_tutorial_completed', 'true');
-    
-    // Sync to server in background (fire and forget)
-    playerAPI.markTutorialComplete().catch((error) => {
-      console.error('[Tutorial] Failed to sync tutorial complete to server:', error);
-    });
-    
-    // DIRECTLY clear justSignedUp from context - bypasses callback prop issues
-    console.log('[Tutorial] Calling clearJustSignedUp directly from context');
-    clearJustSignedUp();
-    
-    // Also call onSkip for any additional cleanup
-    onSkip();
-    
-    // Close modal
-    setShowSkipConfirm(false);
-  }, [onSkip, playButtonTap, impact, clearJustSignedUp]);
-
   // Calculate progress percentages
   const myProgress = useMemo(() => {
     const filledCells = grid.flat().filter(c => c !== 0).length;
@@ -762,31 +731,9 @@ export default function InteractiveTutorial({
 
   return (
     <div className={`interactive-tutorial ${showShake ? 'tutorial-shake' : ''}`}>
-      {/* Progress dots and Skip button container */}
+      {/* Progress dots container */}
       <div className="fixed top-12 left-0 right-0 z-[2520] flex items-center justify-center px-4">
-        {/* Spacer for balance */}
-        <div className="w-14" />
-        
-        {/* Progress dots - centered */}
-        <div className="flex-1 flex justify-center">
-          <TutorialProgress currentPhase={phase} />
-        </div>
-        
-        {/* Skip button - right aligned, vertically centered with dots */}
-        <button
-          onClick={() => {
-            playButtonTap();
-            impact('light');
-            setShowSkipConfirm(true);
-          }}
-          className="w-14 py-1 rounded-lg font-body text-sm text-muted tutorial-skip-button"
-          style={{
-            background: 'rgba(26, 6, 64, 0.6)',
-            border: '1px solid rgba(139, 0, 255, 0.3)',
-          }}
-        >
-          Skip
-        </button>
+        <TutorialProgress currentPhase={phase} />
       </div>
 
       {/* Main game layout */}
@@ -967,52 +914,6 @@ export default function InteractiveTutorial({
 
       {/* Phase-specific content overlay */}
       {renderPhaseContent()}
-
-      {/* Skip confirmation modal */}
-      {showSkipConfirm && (
-        <div 
-          className="fixed inset-0 z-[2530] flex items-center justify-center p-4"
-          onClick={() => setShowSkipConfirm(false)}
-        >
-          <div className="absolute inset-0 bg-void/80" />
-          <div 
-            className="relative bg-surface border border-grid-line rounded-xl p-6 max-w-xs w-full animate-scale-in"
-            style={{ boxShadow: '0 0 30px rgba(139, 0, 255, 0.3)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-heading font-bold text-lg text-primary text-center mb-2">
-              Skip tutorial?
-            </h3>
-            <p className="text-secondary font-body text-sm text-center mb-6">
-              You can replay it anytime from Settings
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleSkip}
-                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
-                style={{
-                  background: 'rgba(26, 6, 64, 0.8)',
-                  border: '2px solid rgba(139, 0, 255, 0.4)',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                }}
-              >
-                Skip
-              </button>
-              <button
-                onClick={() => setShowSkipConfirm(false)}
-                className="flex-1 py-3 rounded-lg font-body font-semibold transition-all"
-                style={{
-                  background: 'rgba(0, 255, 255, 0.1)',
-                  border: '2px solid rgba(0, 255, 255, 0.5)',
-                  color: '#00FFFF',
-                }}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
 import { MusicProvider } from './context/MusicContext';
@@ -170,19 +170,6 @@ function AppContent() {
     // Also mark in localStorage as backup
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
   };
-  
-  // Handle tutorial skip (no skill selection made)
-  const handleTutorialSkip = useCallback(() => {
-    console.log('[App] handleTutorialSkip called - clearing justSignedUp');
-    
-    // Set localStorage first as backup
-    localStorage.setItem('sudoduel_tutorial_completed', 'true');
-    
-    // Clear the flag - this should cause re-render and exit tutorial
-    clearJustSignedUp();
-    
-    console.log('[App] justSignedUp cleared, tutorial should exit');
-  }, [clearJustSignedUp]);
 
   // Handle display name setup completion
   const handleDisplayNameComplete = () => {
@@ -217,7 +204,6 @@ function AppContent() {
     return (
       <InteractiveTutorial 
         onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
         onSkillSelect={handleSkillSelect}
       />
     );
@@ -228,7 +214,6 @@ function AppContent() {
     return (
       <InteractiveTutorial 
         onComplete={() => setReplayTutorial(false)}
-        onSkip={() => setReplayTutorial(false)}
         isReplay={true}
       />
     );

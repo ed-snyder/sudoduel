@@ -165,16 +165,6 @@
   animation: progress-fill 2s ease-out forwards;
 }
 
-/* Skip button hover effect */
-.tutorial-skip-button {
-  transition: all 0.2s ease;
-}
-
-.tutorial-skip-button:hover {
-  color: rgba(255, 255, 255, 0.8);
-  border-color: rgba(139, 0, 255, 0.5);
-}
-
 /* Win conditions card styling */
 .win-condition-item {
   display: flex;
