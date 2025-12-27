@@ -135,10 +135,10 @@ export default function InteractiveTutorial({
         clearTimeout(box3Timeout);
       };
     } else if (phase === 'sudoku-rules-practice') {
-      // Auto-advance to tap-cell after 3.5s
+      // Auto-advance to tap-cell after 1.5s
       const timeout = setTimeout(() => {
         setPhase('tap-cell');
-      }, 3500);
+      }, 1500);
       return () => clearTimeout(timeout);
     }
   }, [phase]);
