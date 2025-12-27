@@ -391,27 +391,25 @@ export default function InteractiveTutorial({
     }
   }, [onComplete, playButtonTap, impact]);
 
-  // Handle skip
-  const handleSkip = useCallback(async () => {
+  // Handle skip - call onSkip FIRST to ensure UI updates, then sync to server
+  const handleSkip = useCallback(() => {
     console.log('[Tutorial] handleSkip called');
     playButtonTap();
     impact('medium');
     setShowSkipConfirm(false);
     
-    try {
-      console.log('[Tutorial] Calling markTutorialComplete API...');
-      await playerAPI.markTutorialComplete();
-      console.log('[Tutorial] API call succeeded');
-      localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      console.log('[Tutorial] Calling onSkip callback...');
-      onSkip();
-      console.log('[Tutorial] onSkip callback finished');
-    } catch (error) {
-      console.error('[Tutorial] Failed to mark tutorial complete:', error);
-      localStorage.setItem('sudoduel_tutorial_completed', 'true');
-      console.log('[Tutorial] Calling onSkip callback after error...');
-      onSkip();
-    }
+    // Mark complete in localStorage immediately
+    localStorage.setItem('sudoduel_tutorial_completed', 'true');
+    
+    // Call onSkip IMMEDIATELY - don't wait for API
+    console.log('[Tutorial] Calling onSkip callback...');
+    onSkip();
+    console.log('[Tutorial] onSkip callback finished');
+    
+    // Sync to server in background (fire and forget)
+    playerAPI.markTutorialComplete().catch((error) => {
+      console.error('[Tutorial] Failed to sync tutorial complete to server:', error);
+    });
   }, [onSkip, playButtonTap, impact]);
 
   // Calculate progress percentages
