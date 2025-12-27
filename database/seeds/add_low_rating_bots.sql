@@ -1,21 +1,11 @@
--- Seed 65 bot accounts for matchmaking
--- Bot distribution (includes lower ratings for beginners):
--- 400-600: 5 bots (beginner players)
--- 600-800: 5 bots (low-rated players)
--- 800-1000: 5 bots (below-average players)
--- 1000-1200: 5 bots
--- 1200-1300: 8 bots
--- 1300-1400: 10 bots
--- 1400-1500: 10 bots
--- 1500-1600: 9 bots
--- 1600-1700: 5 bots
--- 1700-1800: 3 bots
+-- Add 15 low-rating bot accounts for beginner matchmaking
+-- These bots fill the gap below 1000 rating
+-- Run this on production database to add bots without re-seeding
 
--- Helper function to generate random alphanumeric string
 DO $$
 DECLARE
     bot_count INTEGER := 0;
-    bot_id BIGINT;
+    existing_bot_count INTEGER;
     bot_user_id BIGINT;
     bot_profile_id BIGINT;
     bot_rating DOUBLE PRECISION;
@@ -24,24 +14,23 @@ DECLARE
     bot_email TEXT;
     rating_range RECORD;
 BEGIN
-    -- Rating ranges with counts (now includes lower ratings for beginners)
+    -- Check how many bots already exist
+    SELECT COUNT(*) INTO existing_bot_count 
+    FROM player_profiles WHERE is_bot = TRUE;
+    
+    RAISE NOTICE 'Existing bot count: %', existing_bot_count;
+    
+    -- Only add low-rating bots (400-1000 range)
     FOR rating_range IN 
         SELECT 400 AS min_rating, 600 AS max_rating, 5 AS count
         UNION ALL SELECT 600, 800, 5
         UNION ALL SELECT 800, 1000, 5
-        UNION ALL SELECT 1000, 1200, 5
-        UNION ALL SELECT 1200, 1300, 8
-        UNION ALL SELECT 1300, 1400, 10
-        UNION ALL SELECT 1400, 1500, 10
-        UNION ALL SELECT 1500, 1600, 9
-        UNION ALL SELECT 1600, 1700, 5
-        UNION ALL SELECT 1700, 1800, 3
     LOOP
         FOR i IN 1..rating_range.count LOOP
             -- Generate random 6-character alphanumeric suffix
-            bot_username := 'Guest_' || upper(substring(md5(random()::text) from 1 for 6));
+            bot_username := 'Guest_' || upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 6));
             bot_display_name := bot_username;
-            bot_email := 'bot_' || bot_count || '@sudoduel.internal';
+            bot_email := 'bot_low_' || existing_bot_count || '_' || bot_count || '@sudoduel.internal';
             
             -- Generate random rating within range
             bot_rating := rating_range.min_rating + (random() * (rating_range.max_rating - rating_range.min_rating));
@@ -61,8 +50,18 @@ BEGIN
             VALUES (bot_profile_id, 1, bot_rating, 150, 0.06, 0);
             
             bot_count := bot_count + 1;
+            
+            RAISE NOTICE 'Created bot: % with rating %', bot_display_name, ROUND(bot_rating);
         END LOOP;
     END LOOP;
     
-    RAISE NOTICE 'Created % bot accounts', bot_count;
+    RAISE NOTICE 'Created % new low-rating bot accounts', bot_count;
 END $$;
+
+-- Verify the new bots were created
+SELECT pp.display_name, pr.rating 
+FROM player_profiles pp
+JOIN player_ratings pr ON pr.player_id = pp.id
+WHERE pp.is_bot = TRUE AND pr.rating < 1000
+ORDER BY pr.rating;
+
