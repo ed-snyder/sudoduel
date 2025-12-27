@@ -294,6 +294,7 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   const { showAdIfNeeded, recordGamePlayed, shouldShowAd } = useAds();
   const [adComplete, setAdComplete] = useState(false);
   const adShownRef = useRef(false);
+  const adTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameRecordedRef = useRef(false);
   
   // Countdown system state
@@ -350,6 +351,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Reset ad state
     setAdComplete(false);
     adShownRef.current = false;
+    if (adTimerRef.current) {
+      clearTimeout(adTimerRef.current);
+      adTimerRef.current = null;
+    }
     gameRecordedRef.current = false;
     setShowGameEndOverlay(false);
     setPendingGameResult(null);
@@ -473,12 +478,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   }, [showGameEndOverlay, pendingGameResult, mySlot, recordGamePlayed]);
 
   // Show ad AFTER "Game Over" text appears (1.5 second delay)
+  // Using ref for timer to prevent cleanup from canceling it on effect re-runs
   useEffect(() => {
     if (!showGameEndOverlay || adShownRef.current || !pendingGameResult) return;
     
     // Mark as processed IMMEDIATELY to prevent race conditions from re-runs
-    // (recordGamePlayed updates gamesPlayed state, which recreates shouldShowAd callback,
-    // which would re-trigger this effect and cancel the timer if we didn't guard early)
     adShownRef.current = true;
     
     const winnerSlot = pendingGameResult.winner_slot;
@@ -493,8 +497,9 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     
     // If should show ad, wait for "Game Over" text to appear, then show ad
     if (needsAd) {
-      // Wait 1.5 seconds for "Game Over" text to be visible, then show ad
-      const adTimer = setTimeout(() => {
+      // Store timer in ref so it survives effect re-runs (don't use cleanup to cancel)
+      adTimerRef.current = setTimeout(() => {
+        adTimerRef.current = null;
         showAdIfNeeded(resultType).then(() => {
           setAdComplete(true);
         }).catch((error) => {
@@ -503,12 +508,22 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
           setAdComplete(true);
         });
       }, 1500);
-      return () => clearTimeout(adTimer);
     } else {
       // No ad needed, proceed immediately
       setAdComplete(true);
     }
+    // NOTE: No cleanup function - we don't want effect re-runs to cancel the timer
   }, [showGameEndOverlay, pendingGameResult, mySlot, shouldShowAd, showAdIfNeeded]);
+  
+  // Cleanup ad timer on unmount only
+  useEffect(() => {
+    return () => {
+      if (adTimerRef.current) {
+        clearTimeout(adTimerRef.current);
+        adTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Haptic feedback on game end
   // (Times up sound plays immediately in GAME_END handler)
@@ -1304,6 +1319,10 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
         // Reset ad state for new game end
         setAdComplete(false);
         adShownRef.current = false;
+        if (adTimerRef.current) {
+          clearTimeout(adTimerRef.current);
+          adTimerRef.current = null;
+        }
         gameRecordedRef.current = false;
         setOverlayAnimationDone(false);
         
