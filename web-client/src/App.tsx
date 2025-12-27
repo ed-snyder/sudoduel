@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
 import { MusicProvider } from './context/MusicContext';
@@ -172,7 +172,7 @@ function AppContent() {
   };
   
   // Handle tutorial skip (no skill selection made)
-  const handleTutorialSkip = () => {
+  const handleTutorialSkip = useCallback(() => {
     console.log('[App] handleTutorialSkip called');
     
     // Clear flag IMMEDIATELY to exit tutorial
@@ -185,7 +185,7 @@ function AppContent() {
     refreshUser().catch((error) => {
       console.error('[App] Failed to refresh user after skip:', error);
     });
-  };
+  }, [clearJustSignedUp, refreshUser]);
 
   // Handle display name setup completion
   const handleDisplayNameComplete = () => {

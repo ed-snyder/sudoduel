@@ -286,14 +286,14 @@ export default function InteractiveTutorial({
         setShowTimerDelta({ value: 5, key: timerDeltaKeyRef.current });
         setFakeTimer(prev => prev + 5);
         
-        setTimeout(() => setShowTimerDelta(null), 1500);
+        setTimeout(() => setShowTimerDelta(null), 1000);
         
-        // Auto-advance after feedback
+        // Auto-advance after feedback (1 second for snappier feel)
         autoAdvanceTimeoutRef.current = setTimeout(() => {
           setLastMoveResult(null);
           setPhase('practice-more');
           setSelectedCell(null);
-        }, 1500);
+        }, 1000);
       }
     } else if (phase === 'practice-more') {
       if (isCorrect) {
@@ -401,15 +401,17 @@ export default function InteractiveTutorial({
     // Mark complete in localStorage immediately
     localStorage.setItem('sudoduel_tutorial_completed', 'true');
     
-    // Call onSkip IMMEDIATELY - don't wait for API
-    console.log('[Tutorial] Calling onSkip callback...');
-    onSkip();
-    console.log('[Tutorial] onSkip callback finished');
-    
     // Sync to server in background (fire and forget)
     playerAPI.markTutorialComplete().catch((error) => {
       console.error('[Tutorial] Failed to sync tutorial complete to server:', error);
     });
+    
+    // Call onSkip - use setTimeout to ensure state updates propagate
+    console.log('[Tutorial] Scheduling onSkip callback...');
+    setTimeout(() => {
+      console.log('[Tutorial] Calling onSkip callback now');
+      onSkip();
+    }, 0);
   }, [onSkip, playButtonTap, impact]);
 
   // Calculate progress percentages
