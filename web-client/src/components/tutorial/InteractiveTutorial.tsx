@@ -393,6 +393,8 @@ export default function InteractiveTutorial({
 
   // Handle skip
   const handleSkip = useCallback(async () => {
+    playButtonTap();
+    impact('medium');
     setShowSkipConfirm(false);
     
     try {
@@ -404,7 +406,7 @@ export default function InteractiveTutorial({
       localStorage.setItem('sudoduel_tutorial_completed', 'true');
       onSkip();
     }
-  }, [onSkip]);
+  }, [onSkip, playButtonTap, impact]);
 
   // Calculate progress percentages
   const myProgress = useMemo(() => {
@@ -748,22 +750,32 @@ export default function InteractiveTutorial({
 
   return (
     <div className={`interactive-tutorial ${showShake ? 'tutorial-shake' : ''}`}>
-      {/* Progress dots */}
-      <div className="fixed top-12 left-0 right-0 z-[2520]">
-        <TutorialProgress currentPhase={phase} />
+      {/* Progress dots and Skip button container */}
+      <div className="fixed top-12 left-0 right-0 z-[2520] flex items-center justify-center px-4">
+        {/* Spacer for balance */}
+        <div className="w-14" />
+        
+        {/* Progress dots - centered */}
+        <div className="flex-1 flex justify-center">
+          <TutorialProgress currentPhase={phase} />
+        </div>
+        
+        {/* Skip button - right aligned, vertically centered with dots */}
+        <button
+          onClick={() => {
+            playButtonTap();
+            impact('light');
+            setShowSkipConfirm(true);
+          }}
+          className="w-14 py-1 rounded-lg font-body text-sm text-muted tutorial-skip-button"
+          style={{
+            background: 'rgba(26, 6, 64, 0.6)',
+            border: '1px solid rgba(139, 0, 255, 0.3)',
+          }}
+        >
+          Skip
+        </button>
       </div>
-
-      {/* Skip button */}
-      <button
-        onClick={() => setShowSkipConfirm(true)}
-        className="fixed top-12 right-4 z-[2520] px-4 py-2 rounded-lg font-body text-sm text-muted tutorial-skip-button"
-        style={{
-          background: 'rgba(26, 6, 64, 0.6)',
-          border: '1px solid rgba(139, 0, 255, 0.3)',
-        }}
-      >
-        Skip
-      </button>
 
       {/* Main game layout */}
       <div className="h-full flex flex-col pt-24">
