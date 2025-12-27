@@ -5,6 +5,7 @@ import TutorialProgress from './TutorialProgress';
 import TutorialMessage from './TutorialMessage';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
 import { useHaptics } from '../../hooks/useHaptics';
+import { useAuth } from '../../context/AuthContext';
 import { playerAPI } from '../../services/api';
 import type { TutorialPhase } from './tutorialData';
 import { 
@@ -29,6 +30,9 @@ export default function InteractiveTutorial({
   onSkillSelect,
   isReplay = false,
 }: InteractiveTutorialProps) {
+  // Get clearJustSignedUp directly from context for reliable skip
+  const { clearJustSignedUp } = useAuth();
+  
   // Core state
   const [phase, setPhase] = useState<TutorialPhase>('intro');
   const [grid, setGrid] = useState<number[][]>(() => 
@@ -391,9 +395,9 @@ export default function InteractiveTutorial({
     }
   }, [onComplete, playButtonTap, impact]);
 
-  // Handle skip - call onSkip to exit tutorial
+  // Handle skip - directly clear justSignedUp to exit tutorial
   const handleSkip = useCallback(() => {
-    console.log('[Tutorial] handleSkip called - calling onSkip directly');
+    console.log('[Tutorial] handleSkip called - clearing justSignedUp directly');
     playButtonTap();
     impact('medium');
     
@@ -405,12 +409,16 @@ export default function InteractiveTutorial({
       console.error('[Tutorial] Failed to sync tutorial complete to server:', error);
     });
     
-    // Call onSkip DIRECTLY - this should update parent state and exit tutorial
+    // DIRECTLY clear justSignedUp from context - bypasses callback prop issues
+    console.log('[Tutorial] Calling clearJustSignedUp directly from context');
+    clearJustSignedUp();
+    
+    // Also call onSkip for any additional cleanup
     onSkip();
     
-    // Close modal after callback (in case component doesn't unmount immediately)
+    // Close modal
     setShowSkipConfirm(false);
-  }, [onSkip, playButtonTap, impact]);
+  }, [onSkip, playButtonTap, impact, clearJustSignedUp]);
 
   // Calculate progress percentages
   const myProgress = useMemo(() => {
