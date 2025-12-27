@@ -476,6 +476,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
   useEffect(() => {
     if (!showGameEndOverlay || adShownRef.current || !pendingGameResult) return;
     
+    // Mark as processed IMMEDIATELY to prevent race conditions from re-runs
+    // (recordGamePlayed updates gamesPlayed state, which recreates shouldShowAd callback,
+    // which would re-trigger this effect and cancel the timer if we didn't guard early)
+    adShownRef.current = true;
+    
     const winnerSlot = pendingGameResult.winner_slot;
     const isDraw = winnerSlot === null;
     const didWin = winnerSlot === mySlot;
@@ -483,12 +488,11 @@ export default function GamePage({ matchId, onGameEnd, onRematch, onFindNewMatch
     // Determine result type
     const resultType: 'win' | 'loss' | 'draw' = isDraw ? 'draw' : didWin ? 'win' : 'loss';
     
-    // Capture current shouldShowAd result to avoid dependency issues
+    // Capture current shouldShowAd result
     const needsAd = shouldShowAd(resultType);
     
     // If should show ad, wait for "Game Over" text to appear, then show ad
     if (needsAd) {
-      adShownRef.current = true;
       // Wait 1.5 seconds for "Game Over" text to be visible, then show ad
       const adTimer = setTimeout(() => {
         showAdIfNeeded(resultType).then(() => {
